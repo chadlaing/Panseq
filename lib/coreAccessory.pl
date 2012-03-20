@@ -12,7 +12,15 @@ Takes in a single directory name and configuration file as input
 Outputs all files to the directory specified in the configuration file.
 =cut
 
-my $configFile='/home/phac/workspace/Panseq_standalone/lib/core_config.txt';
+my $configFile;
+if(defined $ARGV[0]){
+	$configFile=$ARGV[0];
+}
+else{
+	print STDERR "Please specify a configuration file!\n";
+	exit(1);
+}
+
 
 #run
 my $ca = CoreAccessory->new();
