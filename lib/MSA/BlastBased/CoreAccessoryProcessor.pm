@@ -53,7 +53,9 @@ sub _coreAccessoryProcessorInitialize{
 	$self->queryNameObjectHash($paramsRef->{'queryNameObjectHash'}) // confess ('queryNameObjectHash required in coreAccessoryProcessor');
 	$self->_coreGenomeThreshold($paramsRef->{'coreGenomeThreshold'}) // confess ('coreGenomeThreshold required in coreAccessoryProcessor');
 	$self->_accessoryType($paramsRef->{'accessoryType'}) // confess ('accessoryType required in coreAccessoryProcessor');
-	$self->_snpType($paramsRef->{'snpType'}) // confess ('snpType required in coreAccessoryProcessor');		
+	$self->_snpType($paramsRef->{'snpType'}) // confess ('snpType required in coreAccessoryProcessor');	
+	$self->_muscleExecutable($paramsRef->{'muscleExecutable'}) // confess ('muscleExecutable required in coreAccessoryProcessor');			
+	
 	
 	#inheritance
 	$self->_coreAccessoryInitialize(@_);
@@ -119,7 +121,7 @@ sub _combineTempFiles{
 			
 			#remove temp files	
 			foreach(@filesToCombine){
-				#unlink;
+				unlink;
 			}
 		}
 	}
@@ -352,7 +354,7 @@ sub _processCoreResult{
 	
 	print $tempInFH @fastaArray;
 	
-	my $muscleCommand = MuscleCmd->new();
+	my $muscleCommand = MuscleCmd->new($self->_muscleExecutable);
 	$muscleCommand->setIn($tempInFH->filename);
 	$muscleCommand->setOut($tempOutFH->filename);
 	$muscleCommand->run();

@@ -80,6 +80,11 @@ sub _blastDirectory{
 	$self->{'_CoreAccessory_blastDirectory'}=shift // return $self->{'_CoreAccessory_blastDirectory'};
 }
 
+sub _muscleExecutable{
+	my $self=shift;
+	$self->{'_CoreAccessory_muscleDirectory'}=shift // return $self->{'_CoreAccessory_muscleDirectory'};
+}
+
 sub _novelSeedName{
 	my $self=shift;
 	$self->{'_CoreAccessory_novelSeedName'}=shift // return $self->{'_CoreAccessory_novelSeedName'};
@@ -191,7 +196,7 @@ sub runCoreAccessory{
 			
 			#get no_duplicates novel regions
 			my $novelRegionFinder = NovelRegionFinder->new();
-						
+									
 			#runNovelRegionFinder return file name of novelRegions file
 			my $novelRegionFile = $novelRegionFinder->runNovelRegionFinder($self->_createNovelConfigFile);
 			
@@ -270,7 +275,8 @@ sub runCoreAccessory{
 				'queryNameObjectHash'=>$self->queryNameObjectHash,
 				'coreGenomeThreshold'=>$self->_coreGenomeThreshold,
 				'accessoryType'=>$self->_accessoryType,	
-				'snpType'=>$self->_snpType			
+				'snpType'=>$self->_snpType,
+				'muscleExecutable'=>$self->_muscleExecutable			
 			});
 			
 			$self->logger->info("INFO:\tBLAST\+ finished. Gathering core \/ accessory information");			
@@ -394,6 +400,7 @@ sub _validateCoreSettings{
 			$self->_percentIdentityCutoff($self->percentIdentityCheck($value)) if $setting eq 'percentIdentityCutoff'; 
 			$self->_segmentCoreInput($self->yesOrNoCheck($value)) if $setting eq 'segmentCoreInput';
 			$self->_blastDirectory($self->isADirectory($value)) if $setting eq 'blastDirectory';
+			$self->_muscleExecutable($value) if $setting eq 'muscleExecutable';
 			
 			#unique checks	
 			$self->_percentIdentityCutoff($self->percentIdentityCheck($value)) if $setting eq 'percentIdentityCutoff';

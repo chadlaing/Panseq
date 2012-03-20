@@ -24,6 +24,7 @@ use Object::Tiny::RW qw{
   _maxiters
   _diagsNum
   _refine
+  _muscleExecutable
 };
 
 use Carp;
@@ -31,12 +32,15 @@ use Carp;
 #constructor
 sub new {
 	my ($class) = shift;
+	my $executable=shift;
+	
 	my $self = {};
 	bless $self, $class;
 
 	$self->_stable(0);
 	$self->_diagsNum(0);
 	$self->_refine(0);
+	$self->_muscleExecutable($executable) // confess("The location of the muscle executable must be specified");
 	return $self;
 }
 
@@ -156,7 +160,7 @@ sub isRefineOn {
 #primary method
 sub run {
 	my $self       = shift;
-	my $systemLine = 'muscle -quiet';
+	my $systemLine = $self->_muscleExecutable . ' -quiet';
 	unless ( $self->_in || $self->_inPipe ) {
 		confess 'Require input using setIn() or setInPipe()';
 	}

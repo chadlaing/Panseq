@@ -107,20 +107,22 @@ sub validateNovelSettings{
 sub runNovelRegionFinder{
 	my($self)=shift;
 	my $configFile=shift;
+	
+	$self->logger->info("INFO:\tStarting runNovelRegionFinder with configFile: $configFile");
 		
 	#initialization
 	$self->validateNovelSettings($self->getSettingsFromConfigurationFile($configFile));
-	$self->createDirectories() unless $self->_skipGatherFiles;
-	
+
 	#this allows the NovelRegionFinder to be called without having to recombine files
 	#and create directories	
 	if($self->_skipGatherFiles){
 		my $fileManipulator = FileManipulation->new();
 		
-		$self->logger->info("INFO:\tUsing previously created combined query file: " . $self->combinedQueryFile);
-		$self->getSequenceNamesAsHashRef($fileManipulator->getFastaHeadersFromFile($self->combinedQueryFile));
+		$self->logger->info("INFO:\tSkip gathering files. Using previously created combined query file: " . $self->combinedQueryFile);
+		$self->queryNameObjectHash($self->getSequenceNamesAsHashRef($fileManipulator->getFastaHeadersFromFile($self->combinedQueryFile)));
 	}
 	else{
+		$self->createDirectories();
 		$self->getQueryNamesAndCombineAllInputFiles();
 		$self->logger->info("INFO:\tCreated combined query file");
 	}	

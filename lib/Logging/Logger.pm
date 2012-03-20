@@ -29,7 +29,7 @@ sub _loggerInitialize{
 	    {
 		    level => $DEBUG,  # one of DEBUG, INFO, WARN, ERROR, FATAL
 		    #file  => 'STDERR',
-		    file=>'/home/phac/panseq/RUNLOG.txt'
+		    file=>'>>/home/phac/panseq/RUNLOG.txt'
 	    }
 	);
 	my $logger= get_logger();
