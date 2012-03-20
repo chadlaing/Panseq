@@ -247,7 +247,7 @@ sub runCoreAccessory{
 		}
 		
 		#run the comparisons
-		if($self->_coreComparisonType eq 'blast'){
+		if(1){
 			#create blast db
 			my $blastDB = $self->_createBlastDB();		
 			
@@ -315,9 +315,6 @@ sub runCoreAccessory{
 			$forker->wait_all_children;				
 			
 		}
-		elsif($self->_coreComparisonType eq 'nucmer'){
-			#do the nucmer compares
-		}	
 		
 		$self->logger->info("INFO:\tFinished CoreAccessory Analysis");		
 	}

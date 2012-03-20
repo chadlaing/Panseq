@@ -27,9 +27,8 @@ sub _loggerInitialize{
 	
 	Log::Log4perl->easy_init(
 	    {
-		    level => $DEBUG,  # one of DEBUG, INFO, WARN, ERROR, FATAL
-		    #file  => 'STDERR',
-		    file=>'>>/home/phac/panseq/RUNLOG.txt'
+		    level => $INFO,  # one of DEBUG, INFO, WARN, ERROR, FATAL
+		    file  => 'STDERR',
 	    }
 	);
 	my $logger= get_logger();
