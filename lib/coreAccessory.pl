@@ -12,7 +12,7 @@ Takes in a single directory name and configuration file as input
 Outputs all files to the directory specified in the configuration file.
 =cut
 
-my $configFile='/home/phac/workspace/Panseq_dev/Panseq2/lib/MSA/BlastBased/core_config.txt';
+my $configFile='/home/phac/workspace/Panseq_standalone/lib/core_config.txt';
 
 #run
 my $ca = CoreAccessory->new();

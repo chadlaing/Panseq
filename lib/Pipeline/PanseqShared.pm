@@ -107,7 +107,7 @@ sub getSettingsFromConfigurationFile{
 	
 	if(@_){
 		my $fileName=shift;
-		my $inFile = IO::File->new('<' . $fileName) or die "$!";
+		my $inFile = IO::File->new('<' . $fileName) or die "\nCannot open $fileName\n $!";
 		my %settingsHash;
 		
 		while(my $line = $inFile->getline){
