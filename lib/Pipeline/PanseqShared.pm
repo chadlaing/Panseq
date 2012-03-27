@@ -9,7 +9,8 @@ use FindBin::libs;
 use Carp;
 use File::Path qw{make_path remove_tree};
 use File::Copy;
-use Logging::Logger
+use Logging::Logger;
+use FileInteraction::LinePackage;
 our @ISA = qw/Logger/;
 
 #object creation
@@ -111,10 +112,11 @@ sub getSettingsFromConfigurationFile{
 		my %settingsHash;
 		
 		while(my $line = $inFile->getline){
+			next unless $line =~ m/\t/;
 			my $la = LinePackage->new($line);
 			
-			my $setting = $la->lineArray->[0];
-			my $value = $la->lineArray->[1];
+			my $setting = $la->lineArray->[0] // 'no_value';
+			my $value = $la->lineArray->[1] // 'no_value';
 			$settingsHash{$setting}=$value;	
 		}		
 		$inFile->close();

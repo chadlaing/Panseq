@@ -88,7 +88,7 @@ sub printPhylipFormat{
 	for(my $i=1; $i<=scalar(keys %{$self->tableHash});$i++){
 		$self->printOut(
 			$i,
-			":\t",
+			"\t",
 			$names[$i-1],
 			"\n"
 		);

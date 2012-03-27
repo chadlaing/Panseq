@@ -27,6 +27,9 @@ sub getName{
 		if($name =~ m/name=\|(\w+)\|/){
 			$self->name($1);
 		}
+		elsif($name =~ m/lcl\|(\w+)\|/){
+			$self->name($1);
+		}
 		elsif($name =~ m/(ref\|\w\w_\w\w\w\w\w\w|gb\|\w\w\w\w\w\w\w\w|emb\|\w\w\w\w\w\w\w\w)/){
 			$self->name($1);
 		}
