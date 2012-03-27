@@ -192,7 +192,6 @@ sub runCoreAccessory{
 			
 			$self->logger->debug("DEBUG:\tAfter combining all input files there are: " . (scalar keys %{$self->queryNameObjectHash}));
 			$self->logger->info("INFO:\t" . 'Determining non-redundant pan-genome');
-			exit(0);
 			$self->_createSeedAndNotSeedFiles();				
 			
 			#get no_duplicates novel regions
