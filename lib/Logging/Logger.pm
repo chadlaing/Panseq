@@ -27,8 +27,8 @@ sub _loggerInitialize{
 	
 	Log::Log4perl->easy_init(
 	    {
-		    level => $INFO,  # one of DEBUG, INFO, WARN, ERROR, FATAL
-		    file  => 'STDERR',
+		    level => $DEBUG,  # one of DEBUG, INFO, WARN, ERROR, FATAL
+		    file  => '/home/phac/O104/analysis/phage/log.txt',
 	    }
 	);
 	my $logger= get_logger();
