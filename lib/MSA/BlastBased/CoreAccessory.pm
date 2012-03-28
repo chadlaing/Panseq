@@ -140,7 +140,7 @@ sub _createNovelConfigFile{
 		'novelRegionFinderMode' . "\t" . 'no_duplicates' . "\n",
 		'createGraphic' . "\t" . 'no' . "\n",
 		'skipGatherFiles' . "\t" . '1' . "\n",
-		'combinedReferenceFile' . "\t" . $self->_seedFileName . "\n",
+		'combinedReferenceFile' . "\t" . $self->combinedQueryFile . "\n",
 		'combinedQueryFile' . "\t" . $self->_notSeedFileName . "\n"	
 	);
 		
@@ -200,8 +200,6 @@ sub runCoreAccessory{
 			#runNovelRegionFinder return file name of novelRegions file
 			my $novelRegionFile = $novelRegionFinder->runNovelRegionFinder($self->_createNovelConfigFile);
 			
-			$self->logger->debug("DEBUG:\tAfter running novel region finder there are: " . (scalar keys %{$self->queryNameObjectHash}));
-			
 			#combine the novel regions with the seed file for a complete pan-genome
 			my $combiner = FileManipulation->new();
 			$inputLociFile = $self->_baseDirectory . 'panGenome.fasta';
@@ -209,7 +207,6 @@ sub runCoreAccessory{
 			$combiner->outputFilehandle($combinedFH);
 			$combiner->vanillaCombineFiles([($self->_seedFileName,$novelRegionFile)]);	
 			$combinedFH->close();
-			$self->logger->debug("DEBUG:\tAfter creating panGenome.fasta there are: " . (scalar keys %{$self->queryNameObjectHash}));
 		}
 		elsif($self->_coreInputType eq 'primers'){
 			#set $inputLociFile to fasta file of loci returned from primer search
@@ -246,9 +243,7 @@ sub runCoreAccessory{
 				$self->_fragmentationSize
 			);
 			$segmentedPanFH->close();
-			$inputLociFile = $segmentedFile;
-			
-			$self->logger->debug("DEBUG:\tAfter segmenting there are: " . (scalar keys %{$self->queryNameObjectHash}));		
+			$inputLociFile = $segmentedFile;	
 		}
 		
 		#run the comparisons
@@ -290,8 +285,7 @@ sub runCoreAccessory{
 				$manyBlast->arrayOfXMLFiles,
 				$self->_numberOfCores
 			);
-			
-			$self->logger->debug("DEBUG:\tAfter processing BLAST results there are: " . (scalar keys %{$self->queryNameObjectHash}));
+		
 			#create phylogeny files			
 			$self->logger->info("INFO:\tCore \/ accessory information gathered\. Creating phylogeny files\.");
 			
@@ -318,9 +312,7 @@ sub runCoreAccessory{
 				}			
 				$forker->finish;
 			}
-			$forker->wait_all_children;	
-			$self->logger->debug("DEBUG:\tAfter creating phylogeny files there are : " . (scalar keys %{$self->queryNameObjectHash}));			
-			
+			$forker->wait_all_children;				
 		}
 		
 		$self->logger->info("INFO:\tFinished CoreAccessory Analysis");		

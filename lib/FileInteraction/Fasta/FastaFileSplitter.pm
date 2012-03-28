@@ -46,7 +46,7 @@ sub splitFastaFile{
 	my $fileName=shift;
 	my $numberOfSplits=shift;
 	
-	$self->logger->info("Splitting $fileName into $numberOfSplits files");	
+	$self->logger->info("INFO:\tSplitting $fileName into $numberOfSplits files");	
 	
 	my $fileHandle = IO::File->new( '<' . $fileName ) or die "cannot open $fileName" . $!;
 	my %fastaSizes;
@@ -77,7 +77,7 @@ sub splitFastaFile{
 		$self->_numberOfTempFiles($numberOfSeqs);
 	}
 	
-	$self->logger->info('INFO: Number of temp query files to create: ' . $self->_numberOfTempFiles);
+	$self->logger->info('INFO:\tNumber of temp query files to create: ' . $self->_numberOfTempFiles);
 	
 	#package into approximately equal temp files
 	#use the Bio::DB in SequenceRetriever

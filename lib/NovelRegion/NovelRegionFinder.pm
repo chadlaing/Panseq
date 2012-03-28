@@ -689,15 +689,18 @@ sub getNoDuplicates{
 	
 	foreach my $query(keys %{$self->comparisonHash}){
 		next unless defined $self->_queryFastaNamesHash->{$query};
-			
+		
+		$self->logger->debug("DEBUG:\tGET_NO_DUPLICATES: query: $query");
 		foreach my $ref(keys %{$self->comparisonHash->{$query}}){
 			next if $query eq $ref;
 				
 			#if a query name as a reference hit
 			if(defined $self->_queryFastaNamesHash->{$ref}){
-				next unless ((defined $checkedQuery{$ref}) || (scalar (keys %checkedQuery) ==0));
-			}				
+				next unless ((defined $checkedQuery{$ref}));
+			}	
+					
 			$nonDuplicatedCoords{$query} .= $self->comparisonHash->{$query}->{$ref};
+			$self->logger->debug("DEBUG:\tGET_NO_DUPLICATES: ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}");	
 		}
 		$checkedQuery{$query}=1;
 	}
@@ -726,10 +729,18 @@ sub getNegativeImageCoords{
 				my $start=$1;
 				my $end=$2;
 				
+				$self->logger->debug("\nDEBUG:\tNEG:\tMatch coords: start:$start end:$end");
+				
 				if(($start > ($prevEnd+1)) && ($start != 1) && (($start +1) < $end)){
-					$missingCoords .= ',' . ($prevEnd +1) . '..' . ($start -1);
 					
-					$self->logger->debug("DEBUG:\tNEG:\tpassed checks: $missingCoords prevEnd:$prevEnd start:$start");
+					#kludge for 1..1 init match
+					my $advancement=1;
+					if($prevEnd eq '1'){
+						$advancement=0;
+					}	
+					$missingCoords .= ',' . ($prevEnd + $advancement) . '..' . ($start -1);
+					
+					$self->logger->debug("DEBUG:\tNEG:\tpassed checks: missingCoords: $missingCoords prevEnd:$prevEnd start:$start");
 				}
 				
 				$prevEnd=$end;				

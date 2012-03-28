@@ -328,13 +328,13 @@ sub getQueryNamesAndCombineAllInputFiles{
 			#for a unique novelRegionFinder run, need an all vs. all comparison
 			$self->logger->debug("DEBUG:\tnovelRegionFinderMode: " . $self->novelRegionFinderMode);
 			
-			if($self->novelRegionFinderMode eq 'common_to_all' || $self->novelRegionFinderMode eq 'unique'){
+			#if($self->novelRegionFinderMode eq 'common_to_all' || $self->novelRegionFinderMode eq 'unique'){
 				my $outRefFH = IO::File->new('>>'. $self->combinedReferenceFile) or die "$!";
 				$fileManipulator->outputFilehandle($outRefFH);
 				$fileManipulator->vanillaCombineFiles([$self->combinedQueryFile]);
 				$outRefFH->close();
 				$self->logger->info("INFO:\tCreating all strains file as: " . $self->combinedReferenceFile);				
-			}
+			#}
 			
 			#unique requires that all vs. all be performed
 			if($self->novelRegionFinderMode eq 'unique'){
