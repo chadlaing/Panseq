@@ -268,7 +268,8 @@ sub getCommonToAll{
 	#using "one" as the w.r.t sequence, get all reference hits for the query
 	#take negative image
 				
-	my %oneSeqHash;
+	my %oneSeqHash; #this is a hash so that it can be fed into sortAndCompileCoordsHash
+	
 	my @queryNames = keys %{$self->queryNameObjectHash};
 	my $oneSeq = SequenceName->new($queryNames[0]);	
 	
@@ -285,39 +286,23 @@ sub getCommonToAll{
 			$self->logger->debug("DEBUG:\tCTA: hit: $hit");			
 			
 			if (defined $self->_queryFastaNamesHash->{$hit}){
-				next;				
+				next;
+				#we only want sequence matches in the reference, for the negative image				
 			}	
 			else{
 				$self->logger->debug("DEBUG:\t$hit not defined in queryFastaNamesHash");
 			}	
 			$oneSeqHash{$query} .= $self->comparisonHash->{$query}->{$hit};
 			
-			$self->logger->debug("DEBUG:\tCTA: oneSeqHash{query}: $query: $oneSeqHash{$query}");		
+			$self->logger->debug("DEBUG:\tCTA: oneSeq: " . $oneSeq->name . " oneSeqHash{query}:" . $oneSeqHash{$query});		
 		}	
 	}
-		
-	my $sortedHashRef = $self->sortAndCompileCoordsHash(\%oneSeqHash);
-	
-	if($self->logger->level eq 'DEBUG'){
-		$self->logger->debug("DEBUG:\tChecking the oneSeq hash");
-		#print out the oneSeq hash
-		foreach my $oneQ(keys %oneSeqHash){
-			$self->logger->debug("DEBUG:\t\t$oneQ: $oneSeqHash{$oneQ}");		
-		}
-	}
-	else{
-		$self->logger->info("INFO:\t".$self->logger->level);
-	}
-	
-	
-	
-	my $negativeImageHashRef = $self->getNegativeImageCoords($sortedHashRef);
-	
-#	foreach my $k(keys %{$negativeImageHashRef}){
-#		$self->logger->debug("DEBUG:\tBefore trim key: $k value:". $negativeImageHashRef->{$k});		
-#	}	
-	
-	return $self->trimOneSeqToAllQuerySequences($negativeImageHashRef);	
+
+	return $self->trimOneSeqToAllQuerySequences(
+		$self->getNegativeImageCoords(
+			$self->sortAndCompileCoordsHash(\%oneSeqHash)
+		)	
+	);	
 	
 }
 
@@ -325,36 +310,24 @@ sub trimOneSeqToAllQuerySequences{
 	my($self)=shift;
 	
 	if(@_){
-		my $hashRef=shift;
+		my $hashRef=shift; #this is the hashRef of all reference regions not found in oneSeq
 		my %trimmedHash;
 		
-		$self->logger->debug("DEBUG:\tTrim: begin trim");
+		$self->logger->debug("DEBUG:\tTrim: begin trim, number of hashRef keys is: " . scalar keys %{$hashRef});
 		
-		foreach my $oneSeq(keys %{$hashRef}){
-			my $comparisonHashRef = $self->comparisonHash->{$oneSeq};
-				
-			unless($self->containsAllQueryNames($comparisonHashRef)){
-				next; 
-			}
+		#should only be one sequence name, but possibly multiple keys due to the oneSeq selection in getCommonToAll
+		foreach my $oneSeqQueryName(keys %{$hashRef}){		
+			my $comparisonHashRef = $self->comparisonHash->{$oneSeqQueryName};
 			
-			$self->logger->debug("DEBUG:\tTrim: $oneSeq contains all query names");
-			
-			$trimmedHash{$oneSeq}=$hashRef->{$oneSeq};
-			
-			$self->logger->debug("DEBUG:\tTrimmedHash: " . $oneSeq . ':' . $hashRef->{$oneSeq});
-			
-			
+			#the following loop stores only query hits in the %coords hash
 			my %coords;
 			foreach my $comparisonHit(keys %{$comparisonHashRef}){
-				$self->logger->debug("DEBUG:\tTrim: comparisonHit: $comparisonHit");
-				
-				next unless defined $self->_queryFastaNamesHash->{$comparisonHit};
-				
-				$self->logger->debug("DEBUG:\tTrim: made the cut: $comparisonHit: ". $self->comparisonHash->{$oneSeq}->{$comparisonHit});
-				
-				$coords{$comparisonHit} = $self->comparisonHash->{$oneSeq}->{$comparisonHit};				
-			}
-			$trimmedHash{$oneSeq} = $self->getCommonCoordsWRTinputCoords($trimmedHash{$oneSeq},\%coords); #input: coords as string , hashRefToCheck
+				$self->logger->debug("DEBUG:\tTrim: comparisonHit: $comparisonHit");	
+				next unless defined $self->_queryFastaNamesHash->{$comparisonHit};				
+				$self->logger->debug("DEBUG:\tTrim: made the cut: $comparisonHit: ". $comparisonHashRef->{$comparisonHit});				
+				$coords{$comparisonHit} = $comparisonHashRef->{$comparisonHit};				
+			}			
+			$trimmedHash{$oneSeqQueryName} = $self->getCommonCoordsWRTinputCoords($hashRef->{$oneSeqQueryName},\%coords); #input: coords as string , hashRefToCheck
 		}
 		return \%trimmedHash;
 	}
@@ -367,8 +340,8 @@ sub getCommonCoordsWRTinputCoords{
 	my($self)=shift;
 	
 	if(scalar(@_)==2){
-		my $inputCoordString = shift;
-		my $hashRef = shift;
+		my $inputCoordString = shift // die "undefined inputCoordString in getCommonCoordsWRTinputCoords\n";
+		my $hashRef = shift; #all the query seqs and their hits (no ref hits)
 		my $newString;
 		
 		$self->logger->debug("DEBUG:\tWRT inputCoordString: $inputCoordString");
@@ -376,6 +349,7 @@ sub getCommonCoordsWRTinputCoords{
 		#algorithm
 		#get seqName list for each inputCoord (all query sequence matches for the given oneSeq are in the hashRef)
 		#cycle through seqName list, trimming as it goes
+		
 		my $seqNameCoordsHashRef = $self->getSeqNameCoordList($hashRef);
 		
 		my $iteration=0;
@@ -432,7 +406,7 @@ sub getTrimmedCoords{
 		
 		my $offset = $start-1;
 		
-		$self->logger->debug("DEBUG:\tcoords: $coords start: $start end: $end offset:$offset");
+		$self->logger->debug("DEBUG:\tGTC coords: $coords start: $start end: $end offset:$offset");
 		
 		my $sequence = '0' . ('0' x ($end - $start +1)); #to account for 1 offset
 		
@@ -444,6 +418,7 @@ sub getTrimmedCoords{
 		foreach my $sName(keys %{$hashRef}){
 			if($trigger==1){
 				$seqNameCounter++;
+				$self->logger->info("INFO:\tMatching $sName");
 			}
 			else{
 				$self->logger->warn("WARN:\tCommon sequence not present in getTrimmedCoords for $previousName");
@@ -458,25 +433,26 @@ sub getTrimmedCoords{
 			foreach my $eachMatch(keys %{$hashRef->{$sName}}){
 				my $eachCoord = $hashRef->{$sName}->{$eachMatch};
 				
-				$self->logger->debug("DEBUG:\teachCoord: $eachCoord eachMatch $eachMatch");
+				$self->logger->debug("DEBUG:\teachMatch $eachMatch");
 				
-				if($eachCoord =~ /\,(\d+)\.\.(\d+)/){
-					my $eachStart=$1;
-					my $eachEnd=$2;		
+				while($eachCoord =~ /\,(\d+)\.\.(\d+)/gc){
 					
-					$self->logger->debug("DEBUG:\teachStart: $eachStart eachEnd: $eachEnd");
+					my $eachStart=$1;
+					my $eachEnd=$2;						
+					
+					$self->logger->debug("DEBUG:\t$eachMatch $eachStart:$eachEnd");
 					
 					#check to make sure each start/end is within the range
 					if($eachStart > $end){
-						$self->logger->debug("DEBUG:\teachStart greater than end");
+						$self->logger->debug("DEBUG:\tNEXT eachStart greater than end");
 						next;
 					}
 					
 					if($eachEnd < $start){
-						$self->logger->debug("DEBUG:\teachEnd less than start");
+						$self->logger->debug("DEBUG:\tNEXT eachEnd less than start");
 						next;						
 					}
-					
+					$self->logger->debug("DEBUG:\tMATCH eachStart: $eachStart eachEnd: $eachEnd");
 					$eachStart = $start if $eachStart < $start; 
 					$eachEnd = $end if $eachEnd > $end;
 										
@@ -489,18 +465,16 @@ sub getTrimmedCoords{
 					$eachEnd = $eachEnd - $offset;
 					
 					#get substring, increase count by 1, replace in sequence string
-					$self->logger->debug("DEBUG:\tAfter adjustment sequence: $sequence eachStart: $eachStart eachEnd: $eachEnd");
+					$self->logger->debug("DEBUG:\tAfter adjustment eachStart: $eachStart eachEnd: $eachEnd");
 					
 					my $substring = substr($sequence,$eachStart, ($eachEnd - $eachStart +1));
 					my $prevNum = $seqNameCounter -1;
 
 					$substring =~ s/$prevNum/$seqNameCounter/g;
 					substr($sequence,$eachStart,$eachLength)=$substring;
+					$self->logger->debug("$sequence");
 					$trigger=1;
-				}
-				else{
-					confess "no coords in getTrimmedCoords loop\n";
-				}				
+				}			
 			}
 		}
 		return $self->convertMatchedStringToCoords($sequence,$seqNameCounter, $start);		
@@ -729,7 +703,7 @@ sub getNegativeImageCoords{
 				my $start=$1;
 				my $end=$2;
 				
-				$self->logger->debug("\nDEBUG:\tNEG:\tMatch coords: start:$start end:$end");
+				$self->logger->debug("DEBUG:\tNEG:\tMatch coords: start:$start end:$end");
 				
 				if(($start > ($prevEnd+1)) && ($start != 1) && (($start +1) < $end)){
 					
@@ -741,12 +715,12 @@ sub getNegativeImageCoords{
 					$missingCoords .= ',' . ($prevEnd + $advancement) . '..' . ($start -1);
 					
 					$self->logger->debug("DEBUG:\tNEG:\tpassed checks: missingCoords: $missingCoords prevEnd:$prevEnd start:$start");
-				}
-				
+				}				
 				$prevEnd=$end;				
 			}
 			
 			#check the last end
+			$self->logger->debug("DEBUG:\tKey: $key");
 			if(($self->_queryFastaNamesHash->{$key} > $prevEnd) && ($prevEnd != 0)){
 				
 				$self->logger->debug("DEBUG:\tNEG: prevEnd: $prevEnd");

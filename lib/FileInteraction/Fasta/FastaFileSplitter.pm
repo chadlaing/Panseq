@@ -77,7 +77,7 @@ sub splitFastaFile{
 		$self->_numberOfTempFiles($numberOfSeqs);
 	}
 	
-	$self->logger->info('INFO:\tNumber of temp query files to create: ' . $self->_numberOfTempFiles);
+	$self->logger->info("INFO:\tNumber of temp query files to create: " . $self->_numberOfTempFiles);
 	
 	#package into approximately equal temp files
 	#use the Bio::DB in SequenceRetriever

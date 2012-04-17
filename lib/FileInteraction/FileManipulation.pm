@@ -117,7 +117,8 @@ sub combineFilesIntoSingleFile{
 					$line = $self->cleanLine($line) if ($line =~ /^>/);
 				}
 				$self->printOut($line);
-			}			
+			}
+			$self->printOut("\n");			
 			$inFile->close();
 		}
 	}
@@ -131,7 +132,7 @@ sub cleanLine{
 	my($self)=shift;
 	
 	my $line=shift;
-	$line =~ s/[\s\'\"\.\:]/_/g;
+	$line =~ s/[\s\'\"\.\:\+]/_/g;
 	return ($line . "\n");
 }
 
