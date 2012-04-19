@@ -9,12 +9,12 @@ use diagnostics;
 use FindBin::libs;
 use Carp;
 use Mummer::DeltaBlockFactory;
-use FileInteraction::LinePackage;
 use FileInteraction::Fasta::SequenceName;
 use FileInteraction::FileManipulation;
 use FileInteraction::Fasta::SequenceRetriever;
-use Mummer::MummerIO;
-use Mummer::MummerParallel;
+#use Mummer::MummerIO;
+#use Mummer::MummerParallel;
+use Mummer::MummerGPU;
 use Pipeline::PanseqShared;
 
 our @ISA=qw/PanseqShared/;
@@ -126,22 +126,23 @@ sub runNovelRegionFinder{
 		$self->getQueryNamesAndCombineAllInputFiles();
 		$self->logger->info("INFO:\tCreated combined query file");
 	}	
-		
-	my $manyMums = MummerParallel->new(
-		$self->mummerDirectory,
-		$self->combinedReferenceFile,
-		$self->combinedQueryFile,
-		22
-	);
-#	$manyMums->setB($self->_novel_nucB);
-#	$manyMums->setC($self->_novel_nucC);
-#	$manyMums->setD($self->_novel_nucD);
-#	$manyMums->setG($self->_novel_nucG);
-#	$manyMums->setL($self->_novel_nucL);
-	$manyMums->baseDirectory($self->_baseDirectory);
-	$manyMums->run();
 	
-	$self->logger->info("INFO:\tNucmer finished. Gathering novel regions.");	
+	my $mummer = MummerGPU->new();
+	$mummer->run({
+		'queryFile'=>$self->combinedQueryFile,
+		'referenceFile'=>$self->combinedReferenceFile,
+		'mummerDirectory'=>$self->mummerDirectory,
+		'deltaFile'=>$self->_baseDirectory . 'combinedDelta.delta',
+		'baseDirectory'=>$self->_baseDirectory,
+		'numberOfCores'=>$self->_numberOfCores	
+	});
+	
+	$self->logger->info("INFO:\tNucmer finished. Gathering novel regions.");		
+	
+	#use delta filter to limit size of match 
+	#my $newDeltaName = $mummer->deltaFile . '_filtered';
+	#my $tempSystemLine = $self->mummerDirectory . 'delta-filter -l 5000 ' . $mummer->deltaFile . ' > ' . $newDeltaName;
+	#$mummer->deltaFile($newDeltaName);
 		
 	#usage is:
 	# my $obj->new();
@@ -149,7 +150,7 @@ sub runNovelRegionFinder{
 	#		<hashRef of query names $hash{$name}=1>, <adjacent joining size, or "0" to not join novel regions>);		
 		
 	my $novelRegionsHashRef = $self->findNovelRegions({
-		'deltaFile'=>$manyMums->deltaFile,
+		'deltaFile'=>$mummer->deltaFile,
 	});
 			
 	$self->logger->info("INFO:\tNovel regions gathered. Extracting.");	

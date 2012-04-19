@@ -11,7 +11,6 @@ use IO::File;
 use FileInteraction::Fasta::SequenceName;
 use FileInteraction::SegmentMaker;
 use Parallel::ForkManager;
-use FileInteraction::LinePackage;
 use File::Path qw{make_path remove_tree};
 use Blast::FormatBlastDB;
 use Blast::BlastIO;
