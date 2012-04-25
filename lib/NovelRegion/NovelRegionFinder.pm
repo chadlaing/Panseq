@@ -915,7 +915,6 @@ sub buildHashOfAllComparisons{
 		
 		while(my $block = $dbFactory->nextDeltaBlock(1)){	#turns on absolute start/end positions with the true value
 			$self->updateComparisonHash($block,'query');
-			$self->updateComparisonHash($block,'reference'); #this allows for running a single Nucmer comparison but still getting the all vs. all output
 		}
 		$inputFH->close();		
 	}
