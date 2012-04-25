@@ -223,6 +223,7 @@ sub runCoreAccessory{
 			$cleaner->combineFilesIntoSingleFile([$inputLociFile],1);
 			$cleanFH->close;
 			$inputLociFile = $cleanFileName;
+			$self->getQueryNamesAndCombineAllInputFiles();
 		}
 		else{
 			print STDERR "incorrect type specified in coreInputType\n";

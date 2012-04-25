@@ -57,8 +57,7 @@ sub isADirectory {
 			return $dirName;
 		}
 		else {
-			confess $self->_context
-			  . ": $dirName directory names must start with '/' in configuration file!\n";
+			confess $self->_context . ": $dirName directory names must start with '/' in configuration file!\n";
 		}
 	}
 	else {
@@ -91,8 +90,7 @@ sub isAFilename {
 			return $fileName;
 		}
 		else {
-			confess $self->_context
-			  . ": $fileName filenames must start with '/' in configuration file!\n";
+			confess $self->_context . ": $fileName filenames must start with '/' in configuration file!\n";
 		}
 	}
 	else {
@@ -189,6 +187,7 @@ sub yesOrNo {
 	}
 }
 
+#TODO: Remove? probably legacy code
 #checks for acceptible tree generation program/method
 sub isTreeGenProgram {
 	my ($self) = shift;
@@ -217,8 +216,7 @@ sub isTreeGenProgram {
 			return 'phylipBPMP';
 		}
 		else {
-			confess $self->_context
-			  . ": $value not recognized as a known Phylogenetic Tree Program/Method!\n";
+			confess $self->_context . ": $value not recognized as a known Phylogenetic Tree Program/Method!\n";
 		}
 	}
 	else {
@@ -277,8 +275,7 @@ sub isPhyMLSampling {
 		}
 		else {
 			confess $self->_context
-			  . ": $value not recognized. Valid Sampling method notations are 'BEST,'NNI' and 'SPR' !\n"
-			  ;
+			  . ": $value not recognized. Valid Sampling method notations are 'BEST,'NNI' and 'SPR' !\n";
 		}
 	}
 	else {
@@ -286,6 +283,7 @@ sub isPhyMLSampling {
 	}
 }
 
+#Also used for phylip
 sub isEqualibrimFreq {
 	my ($self) = shift;
 	if (@_) {
@@ -308,8 +306,34 @@ sub isEqualibrimFreq {
 	}
 }
 
+#mrBayes unique validations
+
+sub isRateVarType {
+	my ($self) = shift;
+	if (@_) {
+		my $value = shift;
+
+		if (   ( $value eq 'equal' )
+			|| ( $value eq 'gamma' )
+			|| ( $value eq 'propinv' )
+			|| ( $value eq 'invgamma' )
+			|| ( $value eq 'adgamma' ) )
+		{
+			return $value;
+		}
+		else {
+			confess $self->_context
+			  . ": $value not recognized. Rate variation must be specified or set to equal, gamma, propinv, invgamma or adgamma!\n";
+		}
+	}
+	else {
+		confess $self->_context . ": nothing sent to isRateVarType!\n";
+	}
+}
+
 #Advanced methods (these require more than one input)
 #requires a secondary number to validate greater than.
+#TODO: Resolve abiguity - Should be called greater than or equal to?
 sub isGreaterThan {
 	my ($self) = shift;
 
@@ -323,8 +347,7 @@ sub isGreaterThan {
 			return $value;
 		}
 		else {
-			confess $self->_context
-			  . ": $value should be a value greater than $startValue in configuration file!\n";
+			confess $self->_context . ": $value should be a value greater than $startValue in configuration file!\n";
 		}
 	}
 	else {
@@ -347,25 +370,56 @@ sub isAnIntGreaterThan {
 }
 
 #requires a secondary lower bound value and a tertiary upper bound value
+#usage isBetween($value, $startValue, $endValue,$isInclusive);
 sub isBetween {
+	my ($self) = shift;
+	if (@_) {
+		my $value       = shift;
+		my $startValue  = shift;
+		my $endValue    = shift;
+		my $isInclusive = shift;
+		if ($isInclusive) {
+			if (   looks_like_number($value)
+				&& ( $value >= $startValue )
+				&& ( $value <= $endValue ) )
+			{
+				return $value;
+			}
+			else {
+				confess $self->_context
+				  . ": $value should be a value between $endValue and $startValue in configuration file!\n";
+			}
+		}
+		else {
+			if (   looks_like_number($value)
+				&& ( $value > $startValue )
+				&& ( $value < $endValue ) )
+			{
+				return $value;
+			}
+			else {
+				confess $self->_context
+				  . ": $value should be a value between $endValue and $startValue in configuration file!\n";
+			}
+		}
+	}
+	else {
+		confess $self->_context . ": nothing sent to isBetween!\n";
+	}
+}
+
+#requires a secondary lower bound value and a tertiary upper bound value
+sub isAnIntBetween {
 	my ($self) = shift;
 	if (@_) {
 		my $value      = shift;
 		my $startValue = shift;
 		my $endValue   = shift;
-		if (   looks_like_number($value)
-			&& ( $value > $startValue )
-			&& ( $value < $endValue ) )
-		{
-			return $value;
-		}
-		else {
-			confess $self->_context
-			  . ": $value should be a value between $endValue and $startValue in configuration file!\n";
-		}
+		$value = $self->isAnInt($value);
+		$value = $self->isBetween( $value, $startValue, $endValue );
 	}
 	else {
-		confess $self->_context . ": nothing sent to isBetween!\n";
+		confess $self->_context . ": nothing sent to isAnIntBetween!\n";
 	}
 }
 1;
