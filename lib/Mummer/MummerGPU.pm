@@ -162,7 +162,7 @@ sub run{
 					$systemLine .='nucmer';
 				}		
 				
-				$systemLine .= '--maxmatch -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l . ' -p ' . $self->_baseDirectory . $self->_p . ' ' . $self->_referenceFile . ' ' . $self->_queryFile;
+				$systemLine .= ' --maxmatch -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l . ' -p ' . $self->_baseDirectory . $self->_p . ' ' . $self->_referenceFile . ' ' . $self->_queryFile;
 #				$systemLine .= ' -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l . ' -p ' . $self->_baseDirectory . $tempNum . '_temp'. ' ' . $tempRefFH->filename . ' ' . $self->_queryFile;
 #			
 #			$self->logger->info("INFO:\tsystemLine: $systemLine");			
