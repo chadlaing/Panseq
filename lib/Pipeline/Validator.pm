@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 
-#Validation Module 19/1/12 - JC
+#Validation Module
 
 #Handles common validation situations. Goal is to make validation more robust.
 
@@ -38,7 +38,7 @@ sub setContext {
 	my $self = shift;
 	$self->_context(shift);
 	unless ( $self->_context ) {
-		confess 'no new context specifed.';
+		croak 'no new context specifed.';
 	}
 }
 
@@ -57,11 +57,11 @@ sub isADirectory {
 			return $dirName;
 		}
 		else {
-			confess $self->_context . ": $dirName directory names must start with '/' in configuration file!\n";
+			croak $self->_context . ": $dirName directory names must start with '/' in configuration file!\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isADirectory!\n";
+		croak $self->_context . ": nothing sent to isADirectory!\n";
 	}
 }
 
@@ -74,11 +74,11 @@ sub doesDirectoryExist {
 			return $dirName;
 		}
 		else {
-			confess $self->_context . ": $dirName directory not found\n";
+			croak $self->_context . ": $dirName directory not found\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to doesDirectoryExist!\n";
+		croak $self->_context . ": nothing sent to doesDirectoryExist!\n";
 	}
 }
 
@@ -86,15 +86,10 @@ sub isAFilename {
 	my ($self) = shift;
 	if (@_) {
 		my $fileName = shift;
-		if ( $fileName =~ /^\// ) {
-			return $fileName;
-		}
-		else {
-			confess $self->_context . ": $fileName filenames must start with '/' in configuration file!\n";
-		}
+		return $fileName;
 	}
 	else {
-		confess $self->_context . ": nothing sent to isAFilename!\n";
+		croak $self->_context . ": nothing sent to isAFilename!\n";
 	}
 }
 
@@ -107,11 +102,11 @@ sub doesFileExist {
 			return $fileName;
 		}
 		else {
-			confess $self->_context . ": $fileName file not found\n";
+			croak $self->_context . ": $fileName file not found\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to doesFileExist!\n";
+		croak $self->_context . ": nothing sent to doesFileExist!\n";
 	}
 }
 
@@ -125,13 +120,12 @@ sub isAnInt {
 			return $value;
 		}
 		else {
-			confess $self->_context
-			  . ": $value is not an integer and should be in configuration file! Check for trailing spaces.\n";
+			croak $self->_context . ": $value is not an integer and should be in configuration file! Check for trailing spaces.\n";
 
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isAnInt!\n";
+		croak $self->_context . ": nothing sent to isAnInt!\n";
 	}
 }
 
@@ -142,22 +136,22 @@ sub isAValidPercentID {
 	if (@_) {
 		my $number = shift;
 
-		if ( ( $number <= 1 ) && ( $number >= 0 ) ) {
+		if ( ( $number < 1 ) && ( $number >= 0 ) ) {
 			return $number;
 		}
 
-		elsif ( ( $number <= 100 ) && ( $number >= 0 ) ) {
+		elsif ( ( $number <= 100 ) ) {
 			return $number / 100;
 		}
 		else {
-			confess $self->_context
+			croak $self->_context
 			  . ":$number is an invalid entry for isAValidPercentID.\n",
 			  "Values must be between 0 and 1";
 
 		}
 	}
 	else {
-		confess $self->_context . ": Nothing sent to isAValidPercentID!\n";
+		croak $self->_context . ": Nothing sent to isAValidPercentID!\n";
 
 	}
 }
@@ -176,14 +170,92 @@ sub yesOrNo {
 			return 'no';
 		}
 		else {
-			confess $self->_context
+			croak $self->_context
 			  . ": $type is an invalid type for yesOrNo!\n",
 			  "Valid types are yes or no, 1 or 0.\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to yesOrNo!\n";
+		croak $self->_context . ": nothing sent to yesOrNo!\n";
 
+	}
+}
+
+#methods taken from panseq Shared and the like
+
+sub accessoryTypeCheck {
+	my ($self) = shift;
+
+	if (@_) {
+		my $type = shift;
+
+		if ( ( $type eq 'binary' ) || ( $type eq 'percent' ) || ( $type eq 'sequence' ) ) {
+			return $type;
+		}
+		else {
+			croak $self->_context . ":$type is not a valid accessoryType!\n", "Valid options are binary, percent and sequence!\n";
+		}
+	}
+	else {
+		croak $self->_context . ":nothing sent to accessoryTypeCheck!\n";
+	}
+}
+
+sub coreComparisonTypeCheck {
+	my ($self) = shift;
+
+	if (@_) {
+		my $type = shift;
+
+		if ( ( $type eq 'blast' ) || ( $type eq 'nucmer' ) ) {
+			return $type;
+		}
+		else {
+			croak $self->_context . ":$type is not a valid coreComparisonType!\n", "Valid options are blast and nucmer!\n";
+		}
+	}
+	else {
+		croak $self->_context . ":nothing sent to accessoryTypeCheck!\n";
+	}
+}
+
+sub blastTypeCheck {
+	my ($self) = shift;
+
+	if (@_) {
+		my $type = shift;
+
+		if ( $type eq 'blastn' ) {
+			return $type;
+		}
+		elsif ( $type eq 'tblastn' ) {
+			return $type;
+		}
+		else {
+			croak $self->_context . ":$type is an invalid entry for blastType in the configuration file!\n
+				Currently supported values are blastn and tblastn";
+		}
+	}
+	else {
+		croak $self->_context . ":Nothing sent to blastTypeCheck!\n";
+	}
+}
+
+sub novelRegionFinderModeCheck {
+	my ($self) = shift;
+
+	if (@_) {
+		my $mode = shift;
+
+		if ( ( $mode eq 'no_duplicates' ) || ( $mode eq 'common_to_all' ) || ( $mode eq 'unique' ) ) {
+			return $mode;
+		}
+		else {
+			croak "$mode is not a valid novelRegionFinderMode!\n", "valid modes are no_duplicates, common_to_all and unique.\n";
+		}
+	}
+	else {
+		croak "nothing sent to novelRegionFinderModeCheck\n";
 	}
 }
 
@@ -216,11 +288,11 @@ sub isTreeGenProgram {
 			return 'phylipBPMP';
 		}
 		else {
-			confess $self->_context . ": $value not recognized as a known Phylogenetic Tree Program/Method!\n";
+			croak $self->_context . ": $value not recognized as a known Phylogenetic Tree Program/Method!\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isTreeGenProgram!\n";
+		croak $self->_context . ": nothing sent to isTreeGenProgram!\n";
 	}
 }
 
@@ -253,12 +325,11 @@ sub isEquilibriumModel {
 			return 'GTR';
 		}
 		else {
-			confess $self->_context
-			  . ": $value not recognized. Equilibrium frequencies must be specified or set to e (emperical) or m (model)!\n";
+			croak $self->_context . ": $value not recognized. Equilibrium frequencies must be specified or set to e (emperical) or m (model)!\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isEqualibrimFreq!\n";
+		croak $self->_context . ": nothing sent to isEqualibrimFreq!\n";
 	}
 }
 
@@ -274,12 +345,11 @@ sub isPhyMLSampling {
 			return $value;
 		}
 		else {
-			confess $self->_context
-			  . ": $value not recognized. Valid Sampling method notations are 'BEST,'NNI' and 'SPR' !\n";
+			croak $self->_context . ": $value not recognized. Valid Sampling method notations are 'BEST,'NNI' and 'SPR' !\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isPhyMLSampling!\n";
+		croak $self->_context . ": nothing sent to isPhyMLSampling!\n";
 	}
 }
 
@@ -297,12 +367,11 @@ sub isEqualibrimFreq {
 			return $value;
 		}
 		else {
-			confess $self->_context
-			  . ": $value not recognized. Equilibrium frequencies must be specified or set to e (emperical) or m (model)!\n";
+			croak $self->_context . ": $value not recognized. Equilibrium frequencies must be specified or set to e (emperical) or m (model)!\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isEqualibrimFreq!\n";
+		croak $self->_context . ": nothing sent to isEqualibrimFreq!\n";
 	}
 }
 
@@ -322,12 +391,12 @@ sub isRateVarType {
 			return $value;
 		}
 		else {
-			confess $self->_context
+			croak $self->_context
 			  . ": $value not recognized. Rate variation must be specified or set to equal, gamma, propinv, invgamma or adgamma!\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isRateVarType!\n";
+		croak $self->_context . ": nothing sent to isRateVarType!\n";
 	}
 }
 
@@ -347,11 +416,11 @@ sub isGreaterThan {
 			return $value;
 		}
 		else {
-			confess $self->_context . ": $value should be a value greater than $startValue in configuration file!\n";
+			croak $self->_context . ": $value should be a value greater than $startValue in configuration file!\n";
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isGreaterThan!\n";
+		croak $self->_context . ": nothing sent to isGreaterThan!\n";
 	}
 }
 
@@ -365,7 +434,7 @@ sub isAnIntGreaterThan {
 		$value = $self->isGreaterThan( $value, $startValue );
 	}
 	else {
-		confess $self->_context . ": nothing sent to isAnIntGreaterThan!\n";
+		croak $self->_context . ": nothing sent to isAnIntGreaterThan!\n";
 	}
 }
 
@@ -386,8 +455,7 @@ sub isBetween {
 				return $value;
 			}
 			else {
-				confess $self->_context
-				  . ": $value should be a value between $endValue and $startValue in configuration file!\n";
+				croak $self->_context . ": $value should be a value between $endValue and $startValue in configuration file!\n";
 			}
 		}
 		else {
@@ -398,13 +466,12 @@ sub isBetween {
 				return $value;
 			}
 			else {
-				confess $self->_context
-				  . ": $value should be a value between $endValue and $startValue in configuration file!\n";
+				croak $self->_context . ": $value should be a value between $endValue and $startValue in configuration file!\n";
 			}
 		}
 	}
 	else {
-		confess $self->_context . ": nothing sent to isBetween!\n";
+		croak $self->_context . ": nothing sent to isBetween!\n";
 	}
 }
 
@@ -419,7 +486,7 @@ sub isAnIntBetween {
 		$value = $self->isBetween( $value, $startValue, $endValue );
 	}
 	else {
-		confess $self->_context . ": nothing sent to isAnIntBetween!\n";
+		croak $self->_context . ": nothing sent to isAnIntBetween!\n";
 	}
 }
 1;

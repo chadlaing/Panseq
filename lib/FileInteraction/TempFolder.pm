@@ -42,7 +42,7 @@ sub new {
 sub end {
 	my $self = shift;
 	chdir $self->rootFolder;
-#	$self->_removeFolder();
+	$self->_removeFolder();
 }
 
 #helper methods

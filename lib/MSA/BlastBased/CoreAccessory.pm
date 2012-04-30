@@ -106,7 +106,6 @@ sub _fragmentationSize{
 }
 
 
-
 sub new{
 	my($class)  = shift;
     my $self= {};
@@ -248,26 +247,7 @@ sub runCoreAccessory{
 		
 		#run the comparisons
 		if(1){
-			#create blast db
-			my $blastDB = $self->_createBlastDB();		
-			
-			#run blast / set params
-			my $blaster = BlastIO->new({
-				'blastDirectory'=>$self->_blastDirectory,
-				'type'=>$self->_blastType,
-			    'db'=>$blastDB,
-				'outfmt'=>'5',
-				'evalue'=>'0.00001'
-			});
-			
-			$self->logger->info("INFO:\tRunning BLAST\+ in parallel");
-			
-			my $manyBlast = BlastParallel->new();			
-			$manyBlast->runBlastParallel({
-				'blastIO'=>$blaster,
-				'inputLociFile'=>$inputLociFile,
-				'numberOfCores'=>$self->_numberOfCores
-			});
+			my $xmlFiles = $self->_runBlast($inputLociFile,$self->_numberOfCores);
 			
 			my $cap = CoreAccessoryProcessor->new({
 				'baseDirectory'=>$self->_baseDirectory,
@@ -281,10 +261,14 @@ sub runCoreAccessory{
 			
 			$self->logger->info("INFO:\tBLAST\+ finished. Gathering core \/ accessory information");			
 			
-			$cap->processBlastXML(
-				$manyBlast->arrayOfXMLFiles,
-				$self->_numberOfCores
-			);
+			foreach my $file(@{$xmlFiles}){
+				$cap->processBlastXML(
+					$file,
+					$self->_numberOfCores,
+					2
+				);
+			}
+			$cap->_combineResultTempFiles($self->_numberOfCores);
 		
 			#create phylogeny files			
 			$self->logger->info("INFO:\tCore \/ accessory information gathered\. Creating phylogeny files\.");
@@ -323,6 +307,54 @@ sub runCoreAccessory{
 	}
 }
 
+sub _runBlast{ 
+	my $self=shift;
+	my $inputFile=shift;
+	my $numberOfSplits=shift;
+	my @blastOutputFileNames;
+	
+	#create blast db
+	#my $blastDB = $self->_createBlastDB();		
+	my $blastDB= '/home/phac/all_ecoli/analysis/panseq/no_plasmids_core/output/blastdb';
+			
+	$self->logger->info("INFO:\tRunning BLAST\+ in seuence");
+	
+	#blast in parallel works for small datasets, but multi-GB files among multiple processors
+	#create an unacceptable memory requirement
+	my $splitter = FastaFileSplitter->new();
+	$splitter->splitFastaFile($inputFile,$numberOfSplits);
+	my $forker = Parallel::ForkManager->new($numberOfSplits);
+	my $counter=0;
+	
+	foreach my $splitFile(@{$splitter->arrayOfSplitFiles}){
+		#run blast / set params 
+		my $blastFileName = $self->_baseDirectory . $counter . '_blastoutput.xml';
+		
+		my $blaster = BlastIO->new({
+			'blastDirectory'=>$self->_blastDirectory,
+			'type'=>$self->_blastType,
+			'db'=>$blastDB,
+			'outfmt'=>'5',
+			'evalue'=>'0.00001',
+			'word_size'=>20,
+			'num_threads'=>$self->_numberOfCores
+		});
+		
+		
+		push @blastOutputFileNames, $blastFileName;
+		$counter++;
+		
+		$forker->start and next;
+			$blaster->runBlastn(
+				'query'=>$splitFile,
+				'out'=>$blastFileName
+			);
+		$forker->finish();	
+		
+	}
+	$forker->wait_all_children();
+	return \@blastOutputFileNames;
+}
 
 sub _createPhylogenyFiles{
 	my($self)=shift;
@@ -384,30 +416,39 @@ sub _createBlastDB{
 
 
 
-sub _validateCoreSettings{
-	my($self)=shift;
-	
-	if(@_){
-		my $settingsHashRef=shift;
-		
-		foreach my $setting(keys %{$settingsHashRef}){
+sub _validateCoreSettings {
+	my ($self) = shift;
+
+	my $validator = $self->_validator;
+
+	if (@_) {
+		my $settingsHashRef = shift;
+
+		foreach my $setting ( keys %{$settingsHashRef} ) {
 			my $value = $settingsHashRef->{$setting};
-			
-			$self->_percentIdentityCutoff($self->percentIdentityCheck($value)) if $setting eq 'percentIdentityCutoff'; 
-			$self->_segmentCoreInput($self->yesOrNoCheck($value)) if $setting eq 'segmentCoreInput';
-			$self->_blastDirectory($self->isADirectory($value)) if $setting eq 'blastDirectory';
-			$self->_muscleExecutable($value) if $setting eq 'muscleExecutable';
-			
-			#unique checks	
-			$self->_percentIdentityCutoff($self->percentIdentityCheck($value)) if $setting eq 'percentIdentityCutoff';
-			$self->_coreGenomeThreshold($self->_coreGenomeThresholdCheck($value)) if $setting eq 'coreGenomeThreshold';			
-			$self->_novelRegionFinderMode($self->novelRegionFinderModeCheck($value)) if $setting eq 'novelRegionFinderMode';
-			$self->_runType($self->runTypeCheck($value)) if $setting eq 'runType';
-			$self->_accessoryType($self->_accessoryTypeCheck($value)) if $setting eq 'accessoryType';
-			$self->_coreInputType($value) if $setting eq 'coreInputType';
-			$self->_coreComparisonType($self->_coreComparisonTypeCheck($value)) if $setting eq 'coreComparisonType';
-			$self->_blastType($self->_blastTypeCheck($value)) if $setting eq 'blastType';
-			$self->_fragmentationSize($self->isAnInt($value)) if $setting eq 'fragmentationSize';
+
+			$self->_segmentCoreInput( $validator->yesOrNo($value) )       if $setting eq 'segmentCoreInput';
+			$self->_blastDirectory( $validator->isADirectory($value) )    if $setting eq 'blastDirectory';
+			$self->_muscleExecutable( $validator->doesFileExist($value) ) if $setting eq 'muscleExecutable';
+
+			#unique checks
+			$self->_percentIdentityCutoff( $validator->isAValidPercentID($value)*100 ) if $setting eq 'percentIdentityCutoff';
+			$self->_coreGenomeThreshold( $validator->isAnIntGreaterThan( $value, -1 ) ) if $setting eq 'coreGenomeThreshold';
+			$self->_novelRegionFinderMode( $validator->novelRegionFinderModeCheck($value) ) if $setting eq 'novelRegionFinderMode';
+			$self->_accessoryType( $validator->accessoryTypeCheck($value) )                 if $setting eq 'accessoryType';
+			$self->_coreInputType($value)                                                   if $setting eq 'coreInputType';
+			#set snpType
+			$self->_coreComparisonType( $validator->coreComparisonTypeCheck($value) )       if $setting eq 'coreComparisonType';
+			if ( $setting eq 'blastType' ) {
+				$self->_blastType( $validator->blastTypeCheck($value) );
+				if ( $value eq 'blastn' ) {
+					$self->_snpType('nucleotide');
+				}
+				elsif ( $value eq 'tblastn' ) {
+					$self->_snpType('protein');
+				}
+			}
+			$self->_fragmentationSize( $validator->isAnInt($value) ) if $setting eq 'fragmentationSize';
 		}
 	}
 }

@@ -85,27 +85,21 @@ sub splitFastaFile{
 	
 	my $tempNum=0;
 	my $count=0;
+	my @sortedKeys = sort {$fastaSizes{$a} <=> $fastaSizes{$b}} keys %fastaSizes;
 	
-	foreach my $seq(sort {$fastaSizes{$a} <=> $fastaSizes{$b}} keys %fastaSizes){
-		$count++;
+	for(my $start=0;$start < $self->_numberOfTempFiles;$start++){
+		my $tempFileName = $fileName . $start. '.FastaTemp';
+		push @{$self->arrayOfSplitFiles}, $tempFileName;
+		my $tempFH = IO::File->new('>' . $tempFileName) or die "Cannot open $tempFileName\n $!";
 		
-		#print to appropriate temp file
-		if($tempNum == $self->_numberOfTempFiles){
-			$tempNum=0;
+		for(my $seqNum=$start;($seqNum + $self->_numberOfTempFiles) < scalar(@sortedKeys); $seqNum+=$self->_numberOfTempFiles){
+			my $seq=$sortedKeys[$seqNum];
+			print $tempFH ('>' . $seq . "\n" . $queryDB->extractRegion($seq) . "\n");
+		
+			$self->logger->debug("DEBUG: Adding $seq to $tempFileName");			
 		}
-		
-		my $tempFileName = $fileName . $tempNum . '.FastaTemp';
-		push (@{$self->arrayOfSplitFiles}, $tempFileName) unless $count >  $self->_numberOfTempFiles;
-		
-		my $tempFH = IO::File->new('>>' . $tempFileName) or die "Cannot open $tempFileName\n $!";
-		
-		print $tempFH ('>' . $seq . "\n" . $queryDB->extractRegion($seq) . "\n");
-		
-		$self->logger->debug("DEBUG: Adding $seq to $tempFileName");
-		
-		$tempFH->close();
-		$tempNum++;
-	}	
+		$tempFH->close();		
+	}
 }
 
 1;

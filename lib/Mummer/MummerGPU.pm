@@ -108,7 +108,7 @@ sub run{
 	$self->_queryFile($settingsHashRef->{'queryFile'}) // confess("queryFile required in MummerGPU");
 	$self->_referenceFile($settingsHashRef->{'referenceFile'}) // confess("referenceFile required in MummerGPU");
 	$self->_mummerDirectory($settingsHashRef->{'mummerDirectory'}) // confess("mummerDirectory required in MummerGPU");
-	$self->deltaFile($settingsHashRef->{'deltaFile'}) // confess("deltaFile required in MummerGPU");
+#	$self->deltaFile($settingsHashRef->{'deltaFile'}) // confess("deltaFile required in MummerGPU");
 	$self->_baseDirectory($settingsHashRef->{'baseDirectory'}) // confess("baseDirectory required in MummerGPU");
 	$self->_numberOfCores($settingsHashRef->{'numberOfCores'}) // $self->_numberOfCores(1);
 	$self->_gpu($settingsHashRef->{'gpu'}) // $self->_gpu(0);
