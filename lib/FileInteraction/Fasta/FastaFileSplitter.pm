@@ -90,8 +90,10 @@ sub splitFastaFile {
 		my $tempFileName = $fileName . $start . '.FastaTemp';
 		push @{ $self->arrayOfSplitFiles }, $tempFileName;
 		my $tempFH = IO::File->new( '>' . $tempFileName ) or die "Cannot open $tempFileName\n $!";
-		for(my $seqNum=$start;($seqNum + $self->_numberOfTempFiles) < scalar(@sortedKeys); $seqNum+=$self->_numberOfTempFiles){
+		for(my $seqNum=$start;$seqNum < scalar(@sortedKeys); $seqNum+=$self->_numberOfTempFiles){
+			$self->logger->debug("DEBUG:\tseqNum: $seqNum");
 			my $seq = $sortedKeys[$seqNum];
+			$self->logger->debug("DEBUG:\tseq: $seq");
 			print $tempFH ( '>' . $seq . "\n" . $queryDB->extractRegion($seq) . "\n" );
 			
 			$self->logger->debug("DEBUG: Adding $seq to $tempFileName");
