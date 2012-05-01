@@ -247,7 +247,7 @@ sub runCoreAccessory{
 		
 		#run the comparisons
 		if(1){
-			my $xmlFiles = $self->_runBlast($inputLociFile,$self->_numberOfCores);
+			my $xmlFiles = $self->_runBlast($inputLociFile,3);
 			
 			my $cap = CoreAccessoryProcessor->new({
 				'baseDirectory'=>$self->_baseDirectory,
@@ -314,8 +314,7 @@ sub _runBlast{
 	my @blastOutputFileNames;
 	
 	#create blast db
-	#my $blastDB = $self->_createBlastDB();		
-	my $blastDB= '/home/phac/all_ecoli/analysis/panseq/no_plasmids_core/output/blastdb';
+	my $blastDB = $self->_createBlastDB();		
 			
 	$self->logger->info("INFO:\tRunning BLAST\+ in seuence");
 	
@@ -393,8 +392,6 @@ sub _createPhylogenyFiles{
 		exit(1);
 	}
 }
-
-
 
 sub _createBlastDB{
 	my($self)=shift;	

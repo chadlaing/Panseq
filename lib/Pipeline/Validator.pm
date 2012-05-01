@@ -338,9 +338,9 @@ sub isPhyMLSampling {
 	if (@_) {
 		my $value = shift;
 
-		if (   ( $self->_s eq 'BEST' )
-			|| ( $self->_s eq 'NNI' )
-			|| ( $self->_s eq 'SPR' ) )
+		if (   ( $value eq 'BEST' )
+			|| ( $value eq 'NNI' )
+			|| ( $value eq 'SPR' ) )
 		{
 			return $value;
 		}
