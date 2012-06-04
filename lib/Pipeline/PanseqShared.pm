@@ -7,12 +7,10 @@ use warnings;
 use diagnostics;
 use FindBin::libs;
 use Carp;
-use File::Path qw{make_path remove_tree};
 use File::Copy;
-use Logging::Logger;
 use FileInteraction::LinePackage;
 use Pipeline::Validator;
-our @ISA = qw/Logger Validator/;
+our @ISA = qw/Validator/;
 
 #object creation
 sub new {
@@ -103,7 +101,6 @@ sub _validator {
 sub _panseqSharedInitialize {
 	my $self = shift;
 	$self->_validator(Validator->new() );
-	$self->_loggerInitialize(@_);
 }
 
 sub getSettingsFromConfigurationFile {
@@ -172,23 +169,6 @@ sub validateUniversalSettings {
 	}
 }
 
-sub createDirectories {
-	my ($self) = shift;
-
-	if ( defined $self->_baseDirectory ) {
-
-		$self->logger->info( "INFO:\tCreating directories " . $self->_baseDirectory );
-
-		#uses File::Path
-		remove_tree( $self->_baseDirectory );
-		make_path( $self->_baseDirectory );
-	}
-	else {
-		print STDERR "baseDirectory undefined!\n";
-		exit(1);
-	}
-}
-
 sub getQueryNamesAndCombineAllInputFiles {
 	my ($self) = shift;
 
@@ -201,18 +181,13 @@ sub getQueryNamesAndCombineAllInputFiles {
 		my $queryOutputFH   = IO::File->new( '>' . $queryFileName ) or die "$!";
 		$fileManipulator->outputFilehandle($queryOutputFH);    #set filehandle
 
-		$self->logger->info("INFO:\tCreating combined query files in $queryFileName");
-
 		#store for posterity
 		$self->combinedQueryFile($queryFileName);
-		$fileManipulator->combineFilesIntoSingleFile( $fileManipulator->getFileNamesFromDirectory( $self->queryDirectory ), 1 )
-		  ;                                                    #second argument cleans file
+		$fileManipulator->combineFilesIntoSingleFile( $fileManipulator->getFileNamesFromDirectory( $self->queryDirectory ), 1 );                                                    #second argument cleans file
 		$queryOutputFH->close();
 
 		if ( $self->can('novelRegionFinderMode') ) {
 			my $referenceFileName = $self->_baseDirectory . 'referenceFilesCombined.fasta';
-
-			$self->logger->info("INFO:\tCreating combined reference files in $referenceFileName");
 
 			$self->combinedReferenceFile($referenceFileName);    #save for posterity
 			my $refFH = IO::File->new( '>' . $referenceFileName ) or die "$!";
@@ -221,16 +196,10 @@ sub getQueryNamesAndCombineAllInputFiles {
 			$refFH->close();
 
 			#for a unique novelRegionFinder run, need an all vs. all comparison
-			$self->logger->debug( "DEBUG:\tnovelRegionFinderMode: " . $self->novelRegionFinderMode );
-
-			#if($self->novelRegionFinderMode eq 'common_to_all' || $self->novelRegionFinderMode eq 'unique'){
 			my $outRefFH = IO::File->new( '>>' . $self->combinedReferenceFile ) or die "$!";
 			$fileManipulator->outputFilehandle($outRefFH);
 			$fileManipulator->vanillaCombineFiles( [ $self->combinedQueryFile ] );
 			$outRefFH->close();
-			$self->logger->info( "INFO:\tCreating all strains file as: " . $self->combinedReferenceFile );
-
-			#}
 
 			#unique requires that all vs. all be performed
 			if ( $self->novelRegionFinderMode eq 'unique' ) {
@@ -241,8 +210,6 @@ sub getQueryNamesAndCombineAllInputFiles {
 		}
 
 		$self->queryNameObjectHash( $self->getSequenceNamesAsHashRef( $fileManipulator->getFastaHeadersFromFile( $self->combinedQueryFile ) ) );
-
-		$self->logger->info("INFO:\tGathered query names from $queryFileName");
 	}
 	else {
 		print STDERR "The universe has reversed polarity\n";
@@ -269,7 +236,6 @@ sub getSequenceNamesAsHashRef {
 			else {
 				$seqNames{ $seqName->name } = $seqName;
 			}
-			$self->logger->debug( "DEBUG:\tAdding" . $seqName->name . "to QNOH" );
 		}    #end foreach
 		return \%seqNames;
 	}    # end if

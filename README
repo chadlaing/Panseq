@@ -19,9 +19,9 @@ USAGE
 =====
 The Panseq standalone scripts consist of three modules.
 
-1. lib/novelRegionFinder.pl
-2. lib/coreAccessory.pl
-3. lib/lociSelector.pl 
+1. lib/novel_region_finder.pl
+2. lib/core_accessory.pl
+3. lib/loci_selector.pl 
 
 
 Setup
@@ -33,6 +33,7 @@ Object::Tiny::RW
 Bio::DB::Fasta
 Log::Log4perl
 FindBin::libs
+Log::Log4perl
 
 And the following free, external programs must also be installed:
 
@@ -43,12 +44,12 @@ Muscle: www.drive5.com/muscle
 
 Running Panseq
 ==============
-All the adjustments to the novelRegionFinder and coreAccessory modes of Panseq are made by adjusting options to a tab-delimited configuration file, which is specified as the only argument to the script.
+All the adjustments to the novel_region_finder and core_accessory modes of Panseq are made by adjusting options to a tab-delimited configuration file, which is specified as the only argument to the script.
 
 Novel Region Finder
 -------------------
 
-  perl novelRegionFinder.pl novel_settings.txt
+  perl novel_region_finder.pl novel_settings.txt
 
 would run the novelRegionFinder given the settings specified in novel_settings.txt.
 
@@ -91,7 +92,7 @@ Uses
 Core Accessory Analysis
 -----------------------
 
-  perl coreAccessory.pl core_settings.txt
+  perl core_accessory.pl core_settings.txt
 
 would run a coreAccessory analysis given the settings specified in core_settings.txt.
 
@@ -139,7 +140,7 @@ This uses either a custom input file or a non-redundant pan-genome for all of th
 Loci Selector
 -------------
 
-  perl lociSelector.pl <input file name> <loci number, or 'best'> > <output file name>
+  perl loci_selector.pl <input file name> <loci number, or 'best'> > <output file name>
 
 would run a lociSelector analysis on the data present in <input file name>, selecting the given number of loci, or "best", and outputting the results to <output file name>
 

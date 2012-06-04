@@ -8,8 +8,8 @@ use FindBin::libs;
 use IO::File;
 use Carp;
 use FileInteraction::FlexiblePrinter;
-use Logging::Logger;
-our @ISA = qw/FlexiblePrinter Logger/;
+use Log::Log4perl;
+our @ISA = qw/FlexiblePrinter/;
 
 sub new {
 	my ($class) = shift;
@@ -25,16 +25,29 @@ sub maxLineSize {
 	$self->{'_fileManipulation_maxLineSize'} = shift // return $self->{'_fileManipulation_maxLineSize'};
 }
 
+sub logger{
+	my $self = shift;
+	$self->{'_fileManipulation_logger'} = shift // return $self->{'_fileManipulation_logger'};
+}
+
+sub fastaHeaders{
+	my $self=shift;
+	$self->{'_fileManipulation_fastaHeaders'} = shift // return $self->{'_fileManipulation_fastaHeaders'};
+}
+
 #methods
 sub _fileManipulationInitialize {
 	my $self = shift;
 
 	#inheritance
 	$self->_flexiblePrinterInitialize(@_);
-	$self->_loggerInitialize(@_);
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 
 	#defaults
 	$self->maxLineSize(10000);
+	$self->fastaHeaders([]);
 }
 
 sub getFileNamesFromDirectory {
@@ -47,15 +60,15 @@ sub getFileNamesFromDirectory {
 		my @dir = readdir DIRECTORY;
 		closedir DIRECTORY;
 
-		$self->logger->info("INFO:\tGetting file names from $directory");
+		$self->logger->info("Getting file names from $directory");
 
 		foreach my $fileName (@dir) {
 			next if substr( $fileName, 0, 1 ) eq '.';
 
-			#DEBUG
-			$self->logger->debug("DEBUG:\tGetting $fileName from $directory");
+			#$self->logger->debug
+			$self->logger->debug("Getting $fileName from $directory");
 
-			#DEBUG
+			#$self->logger->debug
 			push @fileNames, ( $directory . $fileName );
 		}
 		return \@fileNames;
@@ -86,6 +99,7 @@ sub getFastaHeadersFromFile {
 			}
 		}
 		$inFile->close;
+		$self->fastaHeaders(\@fastaHeaders);
 		return \@fastaHeaders;
 	}
 	else {
@@ -108,10 +122,10 @@ sub combineFilesIntoSingleFile {
 
 		foreach my $file ( @{$arrayRef} ) {
 
-			#DEBUG
-			$self->logger->debug( "DEBUG:\tAdding $file to combined file: " . $self->outputFilehandle );
+			#$self->logger->debug
+			$self->logger->debug( "Adding $file to combined file: " . $self->outputFilehandle );
 
-			#DEBUG
+			#$self->logger->debug
 
 			my $inFile = IO::File->new( '<' . $file ) or die "$! \n Cannot open $file \n";
 			while ( my $line = $inFile->getline ) {
@@ -165,12 +179,12 @@ sub vanillaCombineFiles {
 	my $arrayRef = shift;
 	my $destroy = shift // 0;
 
-	$self->logger->debug("DEBUG:\tIn vanillaCombineFiles");
+	$self->logger->debug("In vanillaCombineFiles");
 
 	foreach my $file ( @{$arrayRef} ) {
 		my $inFile = IO::File->new( '<' . $file ) or die "$! \n Cannot open $file \n";
 
-		$self->logger->debug("DEBUG:\tcombining $file");
+		$self->logger->debug("combining $file");
 
 		while ( my $line = $inFile->getline ) {
 			$self->printOut($line);
@@ -190,13 +204,13 @@ sub combineDeltaFiles {
 	#header
 	my $header = $referenceName . ' ' . $queryName . "\n" . 'NUCMER' . "\n";
 
-	$self->logger->debug("DEBUG:\tIn combineDeltaFiles");
+	$self->logger->debug("In combineDeltaFiles");
 	$self->printOut($header);
 
 	foreach my $file ( @{$arrayRef} ) {
 		my $inFile = IO::File->new( '<' . $file ) or die "$! \n Cannot open $file \n";
 
-		$self->logger->debug("DEBUG:\tcombining $file");
+		$self->logger->debug("combining $file");
 
 		#skip header lines (first 3 lines)
 		print $inFile->getline();
@@ -211,4 +225,3 @@ sub combineDeltaFiles {
 	}
 }
 1;
-

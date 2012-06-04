@@ -10,14 +10,7 @@ use IO::File;
 use Parallel::ForkManager;
 use FileInteraction::Fasta::FastaFileSplitter;
 use Blast::BlastIO;
-use Logging::Logger;
-our @ISA = qw/Logger/;
-
-#object creation
-use Object::Tiny::RW qw{
-	arrayOfXMLFiles
-	combinedXMLFileName	
-};
+use Log::Log4perl;
 
 sub new{
 	my($class)  = shift;
@@ -27,11 +20,27 @@ sub new{
     return $self;
 }
 
+#class variables
+sub arrayOfXMLFiles{
+	my $self=shift;
+	$self->{'_arrayOfXMLFiles'} = shift // return $self->{'_arrayOfXMLFiles'}
+}
+
+sub combinedXMLFileName{
+	my $self=shift;
+	$self->{'_combinedXMLFileName'} = shift // return $self->{'_combinedXMLFileName'};
+}
+
+sub logger{
+	my $self=shift;
+	$self->{'_logger'} = shift // return $self->{'_logger'};
+}
+
 sub _blastParallelInitialize{
 	my($self)=shift;
 	
-	#inheritance
-	$self->_loggerInitialize(@_);
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 	
 	#anonymous array
 	$self->arrayOfXMLFiles([]);

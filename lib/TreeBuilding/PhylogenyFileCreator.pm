@@ -6,17 +6,50 @@ use FindBin::libs;
 use IO::File;
 use FileInteraction::LinePackage;
 use FileInteraction::FlexiblePrinter;
+use Log::Log4perl;
 
 our @ISA = qw{FlexiblePrinter}; #includes outputFilehandle and printOut
 
-#object creation
-use Object::Tiny::RW qw{
-	nameOrderArray
-	tableHash
-	isHeader
-	phylipInfoFH
-};
+sub new{
+	my($class)  = shift;
+    my $self= {};
+    bless ($self, $class);
+    $self->initialize(@_);
+    return $self;
+}
 
+sub nameOrderArray{
+	my $self=shift;
+	$self->{'_nameOrderArray'}=shift // return $self->{'_nameOrderArray'};
+}
+
+sub tableHash{
+	my $self=shift;
+	$self->{'_tableHash'}=shift // return $self->{'_tableHash'};
+}
+
+sub isHeader{
+	my $self=shift;
+	$self->{'_isHeader'}=shift // return $self->{'_isHeader'};
+}
+
+sub phylipInfoFH{
+	my $self=shift;
+	$self->{'_phylipInfoFH'}=shift // return $self->{'_phylipInfoFH'};
+}
+
+sub logger{
+	my $self=shift;
+	$self->{'_logger'}=shift // return $self->{'_logger'};
+}
+
+#methods
+sub initialize{
+	my $self=shift;
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
+}
 
 sub createFile{
 	my($self)=shift;
@@ -24,6 +57,8 @@ sub createFile{
 	if(@_){
 		my $type=shift;
 		my $tabFile=shift;
+		
+		$self->logger->info("Creating $type phylogeny file from $tabFile");
 		
 		#deal with header/no-header files
 		if(@_){

@@ -2,11 +2,6 @@
 
 package FormatBlastDB;
 
-#object creation
-use Object::Tiny::RW qw{
-	programDirectory
-};
-
 sub new {
 	my ($class) = shift;
 	my $self = {};
@@ -14,6 +9,18 @@ sub new {
 	$self->initialize(@_);
 	return $self;
 }
+
+#variables
+sub programDirectory{
+	my $self=shift;
+	$self->{'_programDirectory'}=shift // return $self->{'_programDirectory'};
+}
+
+sub logger{
+	my $self=shift;
+	$self->{'_logger'}=shift // return $self->{'_logger'};
+}
+
 
 #methods
 sub initialize{
@@ -27,6 +34,9 @@ sub initialize{
 		print STDERR "Program directory must be specified in FormatBlastDB\n";
 		exit(1);
 	}
+	
+	#logging
+	$self->logger( Log::Log4perl->get_logger());
 }
 
 
@@ -46,7 +56,9 @@ sub runMakeBlastDb{
 		$systemLine .= ' -out '. $runValues{'out'} if defined $runValues{'out'};
 		$systemLine .= ' -title ' . $runValues{'title'} if defined $runValues{'title'};
 		$systemLine .= ' -in ' . $runValues{'in'} if defined $runValues{'in'};
+		$systemLine .= ' -logfile STDERR';
 		
+		$self->logger->info("Running makeblastdb with the following: $systemLine");
 		system($systemLine); 
 	}
 	else{
