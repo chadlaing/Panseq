@@ -9,7 +9,7 @@ use diagnostics;
 use FindBin::libs;
 use IO::File;
 use FileInteraction::Fasta::SequenceName;
-use FileInteraction::SegmentMaker;
+use FileInteraction::Fasta::SegmentMaker;
 use Parallel::ForkManager;
 use File::Path qw{make_path remove_tree};
 use Blast::FormatBlastDB;
@@ -18,16 +18,13 @@ use Blast::BlastParallel;
 use Carp;
 use FileInteraction::FileManipulation;
 use NovelRegion::NovelRegionFinder;
-use FileInteraction::Fasta::SequenceRetriever;
 use Pipeline::PanseqShared;
 use FileInteraction::FlexiblePrinter;
 use MSA::BlastBased::CoreAccessoryProcessor;
 use TreeBuilding::PhylogenyFileCreator;
 use Data::Dumper;
-use Logging::Logger;
 
 our @ISA = qw/PanseqShared FlexiblePrinter/;
-
 
 sub _percentIdentityCutoff{
 	my $self=shift;
@@ -105,6 +102,10 @@ sub _fragmentationSize{
 	$self->{'_PanseqShared_fragmentationSize'}=shift // return $self->{'_PanseqShared_fragmentationSize'};
 }
 
+sub logger{
+	my $self=shift;
+	$self->{'_logger'}=shift // return $self->{'_logger'};
+}
 
 sub new{
 	my($class)  = shift;
@@ -120,6 +121,9 @@ sub _coreAccessoryInitialize{
 	#inheritance
 	$self->_panseqSharedInitialize(@_);
 	$self->_flexiblePrinterInitialize(@_);
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 }
 
 #methods
@@ -174,149 +178,18 @@ sub _createSeedAndNotSeedFiles{
 	$notSeedFH->close();
 }
 
-sub runCoreAccessory{
-	my($self)=shift;
-	
-	if(@_){
-		my $configFile=shift;
-		
-		#initialization		
-		$self->_validateCoreSettings($self->getSettingsFromConfigurationFile($configFile));
-		$self->createDirectories();
-		
-		my $inputLociFile;
-		if($self->_coreInputType eq 'panGenome'){
-			$self->getQueryNamesAndCombineAllInputFiles();
-			
-			$self->logger->debug("DEBUG:\tAfter combining all input files there are: " . (scalar keys %{$self->queryNameObjectHash}));
-			$self->logger->info("INFO:\t" . 'Determining non-redundant pan-genome');
-			$self->_createSeedAndNotSeedFiles();				
-			
-			#get no_duplicates novel regions
-			my $novelRegionFinder = NovelRegionFinder->new();
-									
-			#runNovelRegionFinder return file name of novelRegions file
-			my $novelRegionFile = $novelRegionFinder->runNovelRegionFinder($self->_createNovelConfigFile);
-			
-			#combine the novel regions with the seed file for a complete pan-genome
-			my $combiner = FileManipulation->new();
-			$inputLociFile = $self->_baseDirectory . 'panGenome.fasta';
-			my $combinedFH = IO::File->new('>' . $inputLociFile);
-			$combiner->outputFilehandle($combinedFH);
-			$combiner->vanillaCombineFiles([($self->_seedFileName,$novelRegionFile)]);	
-			$combinedFH->close();
-		}
-		elsif($self->_coreInputType eq 'primers'){
-			#set $inputLociFile to fasta file of loci returned from primer search
-		}
-		elsif($self->_coreInputType =~ /(^\/.+)/){
-			$inputLociFile=$1;
-			$self->logger->info("INFO:\tUsing " . $inputLociFile . ' as input for Core / Accessory analysis.');
-			
-			#clean input headers
-			my $cleaner = FileManipulation->new();
-			
-			my $cleanFileName = $self->_baseDirectory . 'cleanedUserProvidedFile.fasta';
-			my $cleanFH = IO::File->new('>' . $cleanFileName);
-			$cleaner->outputFilehandle($cleanFH);
-			$cleaner->combineFilesIntoSingleFile([$inputLociFile],1);
-			$cleanFH->close;
-			$inputLociFile = $cleanFileName;
-			$self->getQueryNamesAndCombineAllInputFiles();
-		}
-		else{
-			print STDERR "incorrect type specified in coreInputType\n";
-			exit(1);
-		}
-		
-		#segment the input if required
-		if($self->_segmentCoreInput eq 'yes'){
-			$self->logger->info("INFO:\tSegmenting the input sequences");
-			#create outputFH
-			my $segmentedFile = $self->_baseDirectory. 'inputLoci_segments.fasta';
-			my $segmentedPanFH = IO::File->new('>' . $segmentedFile) or die "$!";
-			
-			my $segmenter = SegmentMaker->new($segmentedPanFH);
-			$segmenter->segmentTheSequence(
-				$inputLociFile,
-				$self->_fragmentationSize
-			);
-			$segmentedPanFH->close();
-			$inputLociFile = $segmentedFile;	
-		}
-		
-		#run the comparisons
-		if(1){
-			my $xmlFiles = $self->_runBlast($inputLociFile,3);
-			
-			my $cap = CoreAccessoryProcessor->new({
-				'baseDirectory'=>$self->_baseDirectory,
-				'percentIdentityCutoff'=>$self->_percentIdentityCutoff,
-				'queryNameObjectHash'=>$self->queryNameObjectHash,
-				'coreGenomeThreshold'=>$self->_coreGenomeThreshold,
-				'accessoryType'=>$self->_accessoryType,	
-				'snpType'=>$self->_snpType,
-				'muscleExecutable'=>$self->_muscleExecutable			
-			});
-			
-			$self->logger->info("INFO:\tBLAST\+ finished. Gathering core \/ accessory information");			
-			
-			foreach my $file(@{$xmlFiles}){
-				$cap->processBlastXML(
-					$file,
-					$self->_numberOfCores,
-					2
-				);
-			}
-			$cap->_combineResultTempFiles($self->_numberOfCores);
-		
-			#create phylogeny files			
-			$self->logger->info("INFO:\tCore \/ accessory information gathered\. Creating phylogeny files\.");
-			
-			my $forker=Parallel::ForkManager->new($self->_numberOfCores);			
-			my $count=0;
-			for(1..2){
-				$count++;
-				$forker->start and next;
-				if($count==1){
-					$self->_createPhylogenyFiles(
-						'phylip',
-						$cap->_coreTempFile,
-						$self->_baseDirectory . 'core_alignment.phylip',
-						$self->_baseDirectory . 'core_alignment_info.txt'	
-					);
-				}
-				elsif($count==2 && $self->_accessoryType eq 'binary'){
-					$self->_createPhylogenyFiles(
-						'phylip',
-						$cap->_accessoryTempFile,
-						$self->_baseDirectory . 'accessory_alignment.phylip',
-						$self->_baseDirectory . 'accessory_alignment_info.txt'				
-					);
-				}			
-				$forker->finish;
-			}
-			$forker->wait_all_children;				
-		}
-		
-		$self->logger->info("INFO:\tFinished CoreAccessory Analysis");		
-	}
-	else{
-		print STDERR "incorrect number of arguments sent to runDetermineCoreAccessory\n";
-		exit(1);
-	}
-}
-
 sub _runBlast{ 
 	my $self=shift;
+	
 	my $inputFile=shift;
 	my $numberOfSplits=shift;
+	
 	my @blastOutputFileNames;
 	
 	#create blast db
 	my $blastDB = $self->_createBlastDB();		
 			
-	$self->logger->info("INFO:\tRunning BLAST\+ in seuence");
+	$self->logger->info("Running BLAST\+ in seuence");
 	
 	#blast in parallel works for small datasets, but multi-GB files among multiple processors
 	#create an unacceptable memory requirement

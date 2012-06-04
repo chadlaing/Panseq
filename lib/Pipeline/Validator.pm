@@ -121,7 +121,6 @@ sub isAnInt {
 		}
 		else {
 			croak $self->_context . ": $value is not an integer and should be in configuration file! Check for trailing spaces.\n";
-
 		}
 	}
 	else {
@@ -129,14 +128,16 @@ sub isAnInt {
 	}
 }
 
-#tolerates percentage in decimal or whole number but will convert value to decimal form.
+#Tolerates percentage in decimal or whole number but will convert value to decimal form.
+#TODO: In the unlikely case of values of 1, this method will unfortunately take the percentage value
+#need to think of clever way to deal with this more elegantly
 sub isAValidPercentID {
 	my ($self) = shift;
 
 	if (@_) {
 		my $number = shift;
 
-		if ( ( $number < 1 ) && ( $number >= 0 ) ) {
+		if ( ( $number <= 1 ) && ( $number >= 0 ) ) {
 			return $number;
 		}
 
@@ -255,44 +256,7 @@ sub novelRegionFinderModeCheck {
 		}
 	}
 	else {
-		croak "nothing sent to novelRegionFinderModeCheck\n";
-	}
-}
-
-#TODO: Remove? probably legacy code
-#checks for acceptible tree generation program/method
-sub isTreeGenProgram {
-	my ($self) = shift;
-	if (@_) {
-		my $value = shift;
-		if ( $value =~ /[pP][hH][yY][mM][lL]/ ) {
-			return 'phyML';
-		}
-		elsif ( $value =~ /[mM][rR][Bb][aA][yY][eE][sS]/ ) {
-			return 'mrBayes';
-		}
-		elsif ( $value =~ /[pP][hH][yY][mM][lL][nN][jJ]/ ) {
-			return 'phylipNJ';
-		}
-		elsif (( $value =~ /[pP][hH][yY][mM][lL][mM][pP]/ )
-			|| ( $value =~ /[pP][hH][yY][mM][pP][aA][rR][sS]/ ) )
-		{
-			return 'phylipMP';
-		}
-		elsif ( $value =~ /[pP][hH][yY][mM][lL][bB][pP][nN][jJ]/ ) {
-			return 'phylipBPNJ';
-		}
-		elsif (( $value =~ /[pP][hH][yY][mM][lL][bB][pP][mM][pP]/ )
-			|| ( $value =~ /[pP][hH][yY][mM][lL][bB][pP][aA][rR][sS]/ ) )
-		{
-			return 'phylipBPMP';
-		}
-		else {
-			croak $self->_context . ": $value not recognized as a known Phylogenetic Tree Program/Method!\n";
-		}
-	}
-	else {
-		croak $self->_context . ": nothing sent to isTreeGenProgram!\n";
+		croak $self->_context . ":nothing sent to novelRegionFinderModeCheck\n";
 	}
 }
 
@@ -353,6 +317,38 @@ sub isPhyMLSampling {
 	}
 }
 
+sub equilEstiValue {
+	my $self = shift;
+	if (@_) {
+		my $value = shift;
+		if ( $value eq 'e' ) {
+			return 'e';
+		}
+		else {
+			return $self->isGreaterThan( $value, 0, 0 );
+		}
+	}
+	else {
+		croak $self->_context . ":nothing sent to equilEstiValue\n";
+	}
+}
+
+sub phyML_v {
+	my $self = shift;
+	if (@_) {
+		my $value = shift;
+		if ( $value eq 'e' ) {
+			return 'e';
+		}
+		else {
+			return $self->isBetween( $value, 0, 1, 1 );
+		}
+	}
+	else {
+		croak $self->_context . ":nothing sent to phyML_v\n";
+	}
+}
+
 #Also used for phylip
 sub isEqualibrimFreq {
 	my ($self) = shift;
@@ -402,21 +398,34 @@ sub isRateVarType {
 
 #Advanced methods (these require more than one input)
 #requires a secondary number to validate greater than.
-#TODO: Resolve abiguity - Should be called greater than or equal to?
+#usage isGreaterThan($value, $startValue, $isInclusive);
 sub isGreaterThan {
 	my ($self) = shift;
 
 	if (@_) {
-		my $value      = shift;
-		my $startValue = shift;
+		my $value       = shift;
+		my $startValue  = shift;
+		my $isInclusive = shift;
 
-		if ( looks_like_number($value)
-			&& ( $value > $startValue ) )
-		{
-			return $value;
+		if ($isInclusive) {
+			if ( looks_like_number($value)
+				&& ( $value >= $startValue ) )
+			{
+				return $value;
+			}
+			else {
+				croak $self->_context . ": $value should be a value greater than $startValue in configuration file!\n";
+			}
 		}
 		else {
-			croak $self->_context . ": $value should be a value greater than $startValue in configuration file!\n";
+			if ( looks_like_number($value)
+				&& ( $value > $startValue ) )
+			{
+				return $value;
+			}
+			else {
+				croak $self->_context . ": $value should be a value greater than $startValue in configuration file!\n";
+			}
 		}
 	}
 	else {
@@ -432,6 +441,7 @@ sub isAnIntGreaterThan {
 		my $startValue = shift;
 		$value = $self->isAnInt($value);
 		$value = $self->isGreaterThan( $value, $startValue );
+		return $value;
 	}
 	else {
 		croak $self->_context . ": nothing sent to isAnIntGreaterThan!\n";
@@ -484,6 +494,7 @@ sub isAnIntBetween {
 		my $endValue   = shift;
 		$value = $self->isAnInt($value);
 		$value = $self->isBetween( $value, $startValue, $endValue );
+		return $value;
 	}
 	else {
 		croak $self->_context . ": nothing sent to isAnIntBetween!\n";

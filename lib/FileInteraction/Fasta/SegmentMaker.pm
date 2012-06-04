@@ -5,10 +5,9 @@ package SegmentMaker;
 use FindBin::libs;
 use IO::File;
 use FileInteraction::FlexiblePrinter;
+use Log::Log4perl;
 
 our @ISA = qw{FlexiblePrinter}; #includes outputFilehandle and printOut
-
-use Object::Tiny::RW;
 
 sub new{
 	my($class)  = shift;
@@ -16,6 +15,12 @@ sub new{
     bless ($self, $class);
     $self->initialize(@_);
     return $self;
+}
+
+#variables
+sub logger{
+	my $self=shift;
+	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
 ##methods
@@ -26,6 +31,9 @@ sub initialize{
 		my $fh=shift;
 		$self->outputFilehandle($fh);
 	}	
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 }
 
 sub segmentTheSequence{
@@ -34,6 +42,8 @@ sub segmentTheSequence{
 	if(scalar(@_)==2){
 		my $inputFile=shift;
 		my $fragmentSize = shift; 
+		
+		$self->logger->info("Segmenting $inputFile into $fragmentSize bp fragments");
 		
 		open(INPUTSEG, "<", $inputFile) or die "no input file $!";		
 

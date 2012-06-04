@@ -8,8 +8,7 @@ use Carp;
 use IO::File;
 use FileInteraction::Fasta::SequenceRetriever;
 use FileInteraction::FileManipulation;
-use Logging::Logger;
-our @ISA = qw/Logger/;
+use Log::Log4perl;
 
 #object creation
 sub new {
@@ -31,14 +30,19 @@ sub arrayOfSplitFiles {
 	$self->{'_FastaFileSplitter_arrayOfSplitFiles'} = shift // return $self->{'_FastaFileSplitter_arrayOfSplitFiles'};
 }
 
+sub logger{
+	my $self=shift;
+	$self->{'_FastaFileSplitter_logger'} = shift // return $self->{'_FastaFileSplitter_logger'};
+}
+
 #methods
 sub _fastaFileSplitterInitialize {
 	my $self = shift;
 
 	$self->arrayOfSplitFiles( [] );    #init as an anonymous array
 
-	#inheritance
-	$self->_loggerInitialize();
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 }
 
 sub splitFastaFile {

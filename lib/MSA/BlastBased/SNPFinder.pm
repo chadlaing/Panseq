@@ -3,14 +3,7 @@ package SNPFinder;
 
 use FindBin::libs;
 use FileInteraction::Fasta::SequenceName;
-
-use Object::Tiny::RW qw{
-	startHash
-	sequenceHash
-	allowableChars
-	queryNameOrderHash
-	firstSwitch
-};
+use Log::Log4perl;
 
 sub new{
 	my($class)  = shift;
@@ -19,6 +12,38 @@ sub new{
     $self->initialize(@_);
     return $self;
 }
+
+#class vars
+sub logger{
+	my $self=shift;
+	$self->{'_logger'} = shift // return $self->{'_logger'};
+}
+
+sub startHash{
+	my $self=shift;
+	$self->{'_startHash'} = shift // return $self->{'_startHash'};
+}
+
+sub sequenceHash{
+	my $self=shift;
+	$self->{'_sequenceHash'} = shift // return $self->{'_sequenceHash'};
+}
+
+sub allowableChars{
+	my $self=shift;
+	$self->{'_allowableChars'} = shift // return $self->{'_allowableChars'};
+}
+
+sub queryNameOrderHash{
+	my $self=shift;
+	$self->{'_queryNameOrderHash'}=shift // return $self->{'_queryNameOrderHash'};
+}
+
+sub firstSwitch{
+	my $self=shift;
+	$self->{'_firstSwitch'}=shift // return $self->{'_firstSwitch'};
+}
+#methods
 
 sub initialize{
 	my($self)=shift;
@@ -47,6 +72,9 @@ sub initialize{
 		print "SNPFinder requires a string of allowable characters to initialize!\n";
 		exit(1);
 	}
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 }
 
 sub findSNPs{
@@ -113,10 +141,16 @@ sub findSNPs{
 				}
 			}
 			$singleLine[0]=$infoLine;
-
-			push @returnArray, (join("\t",@singleLine) . "\n");
+			
+			if(scalar(@singleLine) > 0){
+				push @returnArray, (join("\t",@singleLine) . "\n");
+			}
+			else{
+				$self->logger->debug("Single line empty");
+			}
+			
 		}
-		return @returnArray;
+		return \@returnArray;
 	}
 	else{
 		print STDERR "No arrayRef of fasta sequences sent to initialize SNPFinder object!\n";

@@ -11,25 +11,32 @@ use warnings;
 use FindBin::libs;
 use Carp;
 use IO::File;
-use Logging::Logger;
 use File::Temp;
 use Parallel::ForkManager;
 use FileInteraction::FileManipulation;
-our @ISA = qw/Logger/;
+use Log::Log4perl;
+use Bio::SeqIO;
+use File::Copy;
 
 #object creation
 sub new{
 	my $class=shift;
     my $self = {};
     bless ($self, $class);
-    $self->_createMummerFilesInitialize(@_);   
+    $self->_mummerGPUInitialize(@_);   
     return $self;
 }
 
 #class variables
+
 sub _queryFile{
 	my $self=shift;
 	$self->{'_queryFile'}=shift // return $self->{'_queryFile'};
+}
+
+sub logger{
+	my $self=shift;
+	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
 sub _numberOfCores{
@@ -55,6 +62,16 @@ sub _baseDirectory{
 sub _referenceFile{
 	my $self=shift;
 	$self->{'_referenceFile'}=shift // return $self->{'_referenceFile'};
+}
+
+sub _refFileSizeLimit{
+	my $self=shift;
+	$self->{'_refFileSizeLimit'}=shift // return $self->{'_refFileSizeLimit'};	
+}
+
+sub _systemLineBase{
+	my $self=shift;
+	$self->{'_systemLineBase'}=shift // return $self->{'_systemLineBase'};
 }
 
 sub _gpu{
@@ -94,11 +111,11 @@ sub _p{
 }
 
 
-sub _createMummerFilesInitialize{
+sub _mummerGPUInitialize{
 	my $self=shift;
 	
-	#inheritance
-	$self->_loggerInitialize(@_);	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 }
 
 sub run{
@@ -108,8 +125,8 @@ sub run{
 	$self->_queryFile($settingsHashRef->{'queryFile'}) // confess("queryFile required in MummerGPU");
 	$self->_referenceFile($settingsHashRef->{'referenceFile'}) // confess("referenceFile required in MummerGPU");
 	$self->_mummerDirectory($settingsHashRef->{'mummerDirectory'}) // confess("mummerDirectory required in MummerGPU");
-#	$self->deltaFile($settingsHashRef->{'deltaFile'}) // confess("deltaFile required in MummerGPU");
 	$self->_baseDirectory($settingsHashRef->{'baseDirectory'}) // confess("baseDirectory required in MummerGPU");
+	$self->_refFileSizeLimit($settingsHashRef->{'refFileSizeLimit'}) // $self->_refFileSizeLimit(100000000);
 	$self->_numberOfCores($settingsHashRef->{'numberOfCores'}) // $self->_numberOfCores(1);
 	$self->_gpu($settingsHashRef->{'gpu'}) // $self->_gpu(0);
 	$self->_b($settingsHashRef->{'b'}) // $self->_b(200);
@@ -119,76 +136,110 @@ sub run{
 	$self->_g($settingsHashRef->{'g'}) // $self->_g(100);
 	$self->_p($settingsHashRef->{'p'}) // $self->_p('out');
 	
-#	my $forkManager = Parallel::ForkManager->new($self->_numberOfCores);
-#	{
-#		local $/='>';
-#		my $refFH = IO::File->new('<'. $self->_referenceFile) or die "$!";
-#		
-#		my $tempNum=0;		
-#		while(<$refFH>){
-#			my $fasta=$_;
-#			next if $fasta eq '>';
-#			
-#			my $header;
-#			my $seq;
-#			if($fasta =~ /(^\N+)\R+/){
-#				$header=$1;
-#				$seq=$fasta;
-#				$seq =~ s/\Q$header//;
-#				$seq =~ s/\R//g;
-#			}
-#			else{
-#				$self->logger->fatal("FATAL:\theader: $header");
-#				$self->logger->fatal("FATAL:\tseq: $seq");
-#				$self->logger->fatal("FATAL:\tfasta: $fasta");
-#				exit(1);
-#			}
-#			
-#			$forkManager->start and next();
-#				#print out the currentfile as temp
-#				my $tempRefFH = File::Temp->new();
-#				my $tempQueryFH = File::Temp->new();
-#				
-#				#create ref temp
-#				print $tempRefFH '>'. $header . "\n" . $seq . "\n";
-#		
-				#run the mummerGPU
-				my $systemLine = $self->_mummerDirectory;
-				
-				if($self->_gpu == 1){
-					$systemLine .='mummergpu';
+	$self->_systemLineBase($self->_mummerDirectory);
+	if($self->_gpu == 1){
+		$self->_systemLineBase($self->_systemLineBase . 'mummergpu');
+	}
+	else{
+		$self->_systemLineBase($self->_systemLineBase. 'nucmer');
+	}						
+	$self->_systemLineBase($self->_systemLineBase . ' --maxmatch -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l);
+	
+	my $forkManager = Parallel::ForkManager->new($self->_numberOfCores);
+	my $tempNum=0;
+	my $tempRefString='';
+	my $refFileSize=0;		
+	my $clearFlag=0;	
+
+	my $refFastaFH = Bio::SeqIO->new(
+                            -file   => $self->_referenceFile,
+                            -format => 'fasta'
+                    );   			
+	
+	while(my $fasta = $refFastaFH->next_seq()){			
+			$clearFlag=0;
+			
+			$tempRefString .='>' . $fasta->id . $fasta->desc . "\n" . $fasta->seq . "\n";
+			$refFileSize += $fasta->length;				
+			
+			if($refFileSize < $self->_refFileSizeLimit){
+				next;
 			}
-				else{
-					$systemLine .='nucmer';
-				}		
+			else{
+				$self->logger->info("Temp ref file size (bp): $refFileSize");
+				$refFileSize=0;
+			}
+						
+			$forkManager->start and next();
+				#print out the currentfile as temp
+				my $tempRefFH = File::Temp->new();
+				#my $tempQueryFH=File::Temp->new();
+				#copy($self->_queryFile, $tempQueryFH->filename());
 				
-				$systemLine .= ' --maxmatch -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l . ' -p ' . $self->_baseDirectory . $self->_p . ' ' . $self->_referenceFile . ' ' . $self->_queryFile;
-#				$systemLine .= ' -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l . ' -p ' . $self->_baseDirectory . $tempNum . '_temp'. ' ' . $tempRefFH->filename . ' ' . $self->_queryFile;
-#			
-#			$self->logger->info("INFO:\tsystemLine: $systemLine");			
-			system($systemLine);
-			$self->deltaFile($self->_baseDirectory . $self->_p . '.delta');
-			$self->logger->info("INFO:\tDelta file: " . $self->deltaFile);
-#			$forkManager->finish;			
-#			
-#		}
-#		continue{ 
-#			$tempNum++;
-#		}
-#		$refFH->close();		
-#	}
-#	
-#	$forkManager->wait_all_children();
-#	$self->_combineDeltaFiles();
+				$self->logger->debug("Temp ref file name: " . $tempRefFH->filename);
+				#create ref temp
+				print $tempRefFH $tempRefString;
+		
+				$self->_launchMummer(
+					$self->_baseDirectory . $tempNum . '_temp',
+					$tempRefFH->filename,
+					#$tempQueryFH->filename()
+					$self->_queryFile
+				);				
+			$forkManager->finish;			
+			
+		}
+		continue{ 
+			$tempNum++;
+			if($clearFlag==1){
+				$tempRefString='';
+			}
+		}
+	$refFastaFH->close();		
+
+	#run mummer on any stored values
+	if($refFileSize > 0){
+		my $tempRefFH = File::Temp->new();
+		print $tempRefFH $tempRefString;
+		$self->logger->info("Temp ref file size (bp): $refFileSize");
+		
+		$self->_launchMummer(
+			$self->_baseDirectory . $tempNum . '_temp',
+			$tempRefFH->filename,
+			$self->_queryFile
+		);	
+		$tempRefFH->close();
+	}	
+	$forkManager->wait_all_children();
+	$self->deltaFile($self->_baseDirectory . $self->_p . '.delta');
+	$self->logger->info("Delta file: " . $self->deltaFile);
+	
+	$self->_combineDeltaFiles();
 }
 
+sub _launchMummer{
+	my $self=shift;
+	
+	#-p as first option,
+	#refFileName as second option,
+	#queryFileName as third option
+	
+	my $p=shift;
+	my $ref=shift;
+	my $query=shift;
+	
+
+	my $systemLine=$self->_systemLineBase . ' -p ' . $p . ' ' . $ref . ' ' . $query;
+	$self->logger->info("Launching mummer with: $systemLine");
+	system($systemLine);	
+}
 
 sub _combineDeltaFiles{
 	my $self=shift;
 	
 	#combine the deltaFiles
 	my $deltaFH=IO::File->new('>'.$self->deltaFile) or die "$!";
-	$self->logger->info("INFO:\tCombining the delta files");		
+	$self->logger->info("Combining the delta files");		
 	
 	my $manny = FileManipulation->new();
 	$manny->outputFilehandle($deltaFH);

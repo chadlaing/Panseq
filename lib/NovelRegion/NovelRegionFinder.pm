@@ -12,11 +12,9 @@ use Mummer::DeltaBlockFactory;
 use FileInteraction::Fasta::SequenceName;
 use FileInteraction::FileManipulation;
 use FileInteraction::Fasta::SequenceRetriever;
-
-#use Mummer::MummerIO;
-#use Mummer::MummerParallel;
 use Mummer::MummerGPU;
 use Pipeline::PanseqShared;
+use Log::Log4perl;
 
 our @ISA = qw/PanseqShared/;
 
@@ -65,15 +63,29 @@ sub combinedReferenceFile {
 	$self->{'_NRF_combinedReferenceFile'} = shift // return $self->{'_NRF_combinedReferenceFile'};
 }
 
+sub novelRegionsHashRef {
+	my $self = shift;
+	$self->{'_NRF_novelRegionsHashRef'} = shift // return $self->{'_NRF_novelRegionsHashRef'};
+}
+
+sub logger {
+	my $self = shift;
+	$self->{'_NRF_logger'} = shift // return $self->{'_NRF_logger'};
+}
+
 #methods
 sub _novelRegionFinderInitialize {
 	my $self = shift;
 
 	#inheritance
 	$self->_panseqSharedInitialize(@_);
-
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
+	
 	#anonymous
 	$self->_queryFastaNamesHash( {} );
+	$self->comparisonHash({});
 }
 
 sub validateNovelSettings {
@@ -106,82 +118,7 @@ sub validateNovelSettings {
 	}
 }
 
-sub runNovelRegionFinder {
-	my ($self) = shift;
-	my $configFile = shift;
 
-	$self->logger->info("INFO:\tStarting runNovelRegionFinder with configFile: $configFile");
-
-	#initialization
-	$self->validateNovelSettings( $self->getSettingsFromConfigurationFile($configFile) );
-
-	#this allows the NovelRegionFinder to be called without having to recombine files
-	#and create directories
-	if ( $self->_skipGatherFiles ) {
-		my $fileManipulator = FileManipulation->new();
-
-		$self->logger->info( "INFO:\tSkip gathering files. Using previously created combined query file: " . $self->combinedQueryFile );
-		$self->queryNameObjectHash( $self->getSequenceNamesAsHashRef( $fileManipulator->getFastaHeadersFromFile( $self->combinedQueryFile ) ) );
-	}
-	else {
-		$self->createDirectories();
-		$self->getQueryNamesAndCombineAllInputFiles();
-		$self->logger->info("INFO:\tCreated combined query file");
-	}
-
-	my $mummer = MummerGPU->new();
-	$mummer->run(
-		{
-			'queryFile'       => $self->combinedQueryFile,
-			'referenceFile'   => $self->combinedReferenceFile,
-			'mummerDirectory' => $self->mummerDirectory,
-			'baseDirectory'   => $self->_baseDirectory,
-			'numberOfCores'   => $self->_numberOfCores
-		}
-	);
-
-	$self->logger->info("INFO:\tNucmer finished. Gathering novel regions.");
-
-	#use delta filter to limit size of match
-	#my $newDeltaName = $mummer->deltaFile . '_filtered';
-	#my $tempSystemLine = $self->mummerDirectory . 'delta-filter -l 5000 ' . $mummer->deltaFile . ' > ' . $newDeltaName;
-	#$mummer->deltaFile($newDeltaName);
-
-	#usage is:
-	# my $obj->new();
-	# $obj->findNovelRegions(<delta file name>, <search type, one of 'common_to_all','unique' and 'no_duplicates'>,
-	#		<hashRef of query names $hash{$name}=1>, <adjacent joining size, or "0" to not join novel regions>);
-
-	my $novelRegionsHashRef = $self->findNovelRegions( { 'deltaFile' => $mummer->deltaFile, } );
-
-	$self->logger->info("INFO:\tNovel regions gathered. Extracting.");
-
-	#open output filehandle
-	my $outputFileName = $self->_baseDirectory . 'novelRegions.fasta';
-	my $novelOutputFH = IO::File->new( '>' . $outputFileName ) or die "$!";
-
-	#order: <novel hash ref>, minimumNovelRegionSize, <output FH if different from STDOUT>
-	my $gr = SequenceRetriever->new( $self->combinedQueryFile );
-
-	$self->logger->debug(
-		"DEBUG:\tExtracting and printing regions from Hash
-		\tnovelRegionHashRef: $novelRegionsHashRef
-		\tnovelOutputFH: $novelOutputFH
-		\tcutoffSize: " . $self->minimumNovelRegionSize
-	);
-
-	$gr->extractAndPrintRegionsFromHash(
-		{
-			'novelRegionHashRef' => $novelRegionsHashRef,
-			'novelOutputFH'      => $novelOutputFH,
-			'cutoffSize'         => $self->minimumNovelRegionSize
-		}
-	);
-	$novelOutputFH->close();
-
-	$self->logger->info("INFO:\tNovel regions extracted.");
-	return $outputFileName;
-}
 
 sub findNovelRegions {
 	my ($self) = shift;
@@ -195,8 +132,8 @@ sub findNovelRegions {
 	#build hash of all comparisons
 	$self->buildHashOfAllComparisons($deltaFile);
 
-	#get the novel regions
-	return $self->getNovelRegions();
+	#get the novel regions and set the class variable 
+	$self->novelRegionsHashRef($self->getNovelRegions());
 }
 
 sub _getAllFastaHeadersFromNameHash {
@@ -212,7 +149,7 @@ sub _getAllFastaHeadersFromNameHash {
 			my $headerLength = length( $sr->extractRegion($header) );
 			$fastaNamesHash{$header} = $headerLength;
 
-			$self->logger->debug("DEBUG:\tPopulating fasta header hash $header:$headerLength");
+			$self->logger->debug("Populating fasta header hash $header:$headerLength");
 		}
 	}
 	return \%fastaNamesHash;
@@ -249,12 +186,14 @@ sub getUnique {
 
 	my %uniqueMatches;
 
-	foreach my $query ( keys %{ $self->comparisonHash } ) {
+	foreach my $query (sort keys %{ $self->comparisonHash } ) {
+		my $qName = SequenceName->new($query);
+		
 		foreach my $ref ( keys %{ $self->comparisonHash->{$query} } ) {
+			my $rName = SequenceName->new($ref);
+			$self->logger->debug("Get unique: Query: $query Ref: $ref");
 
-			$self->logger->debug( 'DEBUG:' . "\tGet unique: Query: $query Ref: $ref" );
-
-			next if $query eq $ref;
+			next if $qName->name eq $rName->name;
 			$uniqueMatches{$query} .= $self->comparisonHash->{$query}->{$ref};
 		}
 	}
@@ -278,29 +217,28 @@ sub getCommonToAll {
 	my @queryNames = keys %{ $self->queryNameObjectHash };
 	my $oneSeq     = SequenceName->new( $queryNames[0] );
 
-	$self->logger->debug( "DEBUG:\tCTA: oneSeq: " . $oneSeq->name );
+	$self->logger->debug( "CTA: oneSeq: " . $oneSeq->name );
 
-	foreach my $query ( keys %{ $self->comparisonHash } ) {
-		$self->logger->debug("DEBUG:\tCTA: query: $query");
+	foreach my $query (sort keys %{ $self->comparisonHash } ) {
+		$self->logger->debug("CTA: query: $query");
 
 		my $querySeqName = SequenceName->new($query);
 		next unless $querySeqName->name eq $oneSeq->name;
 
 		#get the "oneSeq" coords
 		foreach my $hit ( keys %{ $self->comparisonHash->{$query} } ) {
-			$self->logger->debug("DEBUG:\tCTA: hit: $hit");
+			$self->logger->debug("CTA: hit: $hit");
 
 			if ( defined $self->_queryFastaNamesHash->{$hit} ) {
 				next;
-
 				#we only want sequence matches in the reference, for the negative image
 			}
 			else {
-				$self->logger->debug("DEBUG:\t$hit not defined in queryFastaNamesHash");
+				$self->logger->debug("$hit not defined in queryFastaNamesHash");
 			}
 			$oneSeqHash{$query} .= $self->comparisonHash->{$query}->{$hit};
 
-			$self->logger->debug( "DEBUG:\tCTA: oneSeq: " . $oneSeq->name . " oneSeqHash{query}:" . $oneSeqHash{$query} );
+			$self->logger->debug( "CTA: oneSeq: " . $oneSeq->name . " oneSeqHash{query}:" . $oneSeqHash{$query} );
 		}
 	}
 
@@ -315,7 +253,7 @@ sub trimOneSeqToAllQuerySequences {
 		my $hashRef = shift;    #this is the hashRef of all reference regions not found in oneSeq
 		my %trimmedHash;
 
-		$self->logger->debug( "DEBUG:\tTrim: begin trim, number of hashRef keys is: " . scalar keys %{$hashRef} );
+		$self->logger->debug( "Trim: begin trim, number of hashRef keys is: " . scalar keys %{$hashRef} );
 
 		#should only be one sequence name, but possibly multiple keys due to the oneSeq selection in getCommonToAll
 		foreach my $oneSeqQueryName ( keys %{$hashRef} ) {
@@ -324,9 +262,9 @@ sub trimOneSeqToAllQuerySequences {
 			#the following loop stores only query hits in the %coords hash
 			my %coords;
 			foreach my $comparisonHit ( keys %{$comparisonHashRef} ) {
-				$self->logger->debug("DEBUG:\tTrim: comparisonHit: $comparisonHit");
+				$self->logger->debug("Trim: comparisonHit: $comparisonHit");
 				next unless defined $self->_queryFastaNamesHash->{$comparisonHit};
-				$self->logger->debug( "DEBUG:\tTrim: made the cut: $comparisonHit: " . $comparisonHashRef->{$comparisonHit} );
+				$self->logger->debug( "Trim: made the cut: $comparisonHit: " . $comparisonHashRef->{$comparisonHit} );
 				$coords{$comparisonHit} = $comparisonHashRef->{$comparisonHit};
 			}
 			$trimmedHash{$oneSeqQueryName} =
@@ -347,7 +285,7 @@ sub getCommonCoordsWRTinputCoords {
 		my $hashRef = shift;    #all the query seqs and their hits (no ref hits)
 		my $newString;
 
-		$self->logger->debug("DEBUG:\tWRT inputCoordString: $inputCoordString");
+		$self->logger->debug("WRT inputCoordString: $inputCoordString");
 
 		#algorithm
 		#get seqName list for each inputCoord (all query sequence matches for the given oneSeq are in the hashRef)
@@ -360,20 +298,20 @@ sub getCommonCoordsWRTinputCoords {
 		while ( $inputCoordString =~ /(\,\d+\.\.\d+)/gc ) {
 			my $currentCoords = $1;
 
-			$self->logger->debug("DEBUG:\tWRT currentCoords: $currentCoords");
+			$self->logger->debug("WRT currentCoords: $currentCoords");
 
 			my $returnedValue = $self->getTrimmedCoords( $currentCoords, $seqNameCoordsHashRef );
 
 			if ( defined $returnedValue ) {
-				$self->logger->debug("DEBUG:\tWRT afterTrim: $returnedValue");
+				$self->logger->debug("WRT afterTrim: $returnedValue");
 			}
 			else {
-				$self->logger->debug("DEBUG:\tWRT afterTrim: not common to all");
+				$self->logger->debug("WRT afterTrim: not common to all");
 				next;
 			}
 
 			$newString .= $returnedValue;
-			$self->logger->debug("DEBUG:\tWRT newString: $newString");
+			$self->logger->debug("WRT newString: $newString");
 		}
 		return $newString;
 	}
@@ -407,7 +345,7 @@ sub getTrimmedCoords {
 
 		my $offset = $start - 1;
 
-		$self->logger->debug("DEBUG:\tGTC coords: $coords start: $start end: $end offset:$offset");
+		$self->logger->debug("GTC coords: $coords start: $start end: $end offset:$offset");
 
 		my $sequence = '0' . ( '0' x ( $end - $start + 1 ) );    #to account for 1 offset
 
@@ -419,54 +357,54 @@ sub getTrimmedCoords {
 		foreach my $sName ( keys %{$hashRef} ) {
 			if ( $trigger == 1 ) {
 				$seqNameCounter++;
-				$self->logger->info("INFO:\tMatching $sName");
+				$self->logger->info("Matching $sName");
 			}
 			else {
-				$self->logger->warn("WARN:\tCommon sequence not present in getTrimmedCoords for $previousName");
+				$self->logger->warn("Common sequence not present in getTrimmedCoords for $previousName");
 				last;
 			}
 
 			$trigger      = 0;
 			$previousName = $sName;
 
-			$self->logger->debug("DEBUG:\tsName: $sName seqNameCounter: $seqNameCounter");
+			$self->logger->debug("sName: $sName seqNameCounter: $seqNameCounter");
 
 			foreach my $eachMatch ( keys %{ $hashRef->{$sName} } ) {
 				my $eachCoord = $hashRef->{$sName}->{$eachMatch};
 
-				$self->logger->debug("DEBUG:\teachMatch $eachMatch");
+				$self->logger->debug("eachMatch $eachMatch");
 
 				while ( $eachCoord =~ /\,(\d+)\.\.(\d+)/gc ) {
 
 					my $eachStart = $1;
 					my $eachEnd   = $2;
 
-					$self->logger->debug("DEBUG:\t$eachMatch $eachStart:$eachEnd");
+					$self->logger->debug("$eachMatch $eachStart:$eachEnd");
 
 					#check to make sure each start/end is within the range
 					if ( $eachStart > $end ) {
-						$self->logger->debug("DEBUG:\tNEXT eachStart greater than end");
+						$self->logger->debug("NEXT eachStart greater than end");
 						next;
 					}
 
 					if ( $eachEnd < $start ) {
-						$self->logger->debug("DEBUG:\tNEXT eachEnd less than start");
+						$self->logger->debug("NEXT eachEnd less than start");
 						next;
 					}
-					$self->logger->debug("DEBUG:\tMATCH eachStart: $eachStart eachEnd: $eachEnd");
+					$self->logger->debug("MATCH eachStart: $eachStart eachEnd: $eachEnd");
 					$eachStart = $start if $eachStart < $start;
 					$eachEnd   = $end   if $eachEnd > $end;
 
 					my $eachLength = $eachEnd - $eachStart + 1;
 
-					$self->logger->debug("DEBUG:\tBefore adjustment eachStart: $eachStart start:$start eachEnd: $eachEnd end:$end");
+					$self->logger->debug("Before adjustment eachStart: $eachStart start:$start eachEnd: $eachEnd end:$end");
 
 					#account for difference between absolute and relative locations
 					$eachStart = $eachStart - $offset;
 					$eachEnd   = $eachEnd - $offset;
 
 					#get substring, increase count by 1, replace in sequence string
-					$self->logger->debug("DEBUG:\tAfter adjustment eachStart: $eachStart eachEnd: $eachEnd");
+					$self->logger->debug("After adjustment eachStart: $eachStart eachEnd: $eachEnd");
 
 					my $substring = substr( $sequence, $eachStart, ( $eachEnd - $eachStart + 1 ) );
 					my $prevNum = $seqNameCounter - 1;
@@ -607,7 +545,7 @@ sub containsAllQueryNames {
 		foreach my $name ( keys %{$hashRef} ) {
 			my $seqName = SequenceName->new($name);
 
-			$self->logger->debug( "DEBUG:\tcontainsAllQueryNames: sentName: " . $seqName->name );
+			$self->logger->debug( "containsAllQueryNames: sentName: " . $seqName->name );
 
 			$sentHashNames{ $seqName->name } = 1;
 		}
@@ -645,10 +583,10 @@ sub getNumberOfSeqNamesFromHash {
 
 sub getNoDuplicates {
 	my ($self) = shift;
-
+	
 	my %nonDuplicatedCoords;
-
-	$self->logger->info("INFO:\tGetting no duplicates");
+	
+	$self->logger->info("Getting no duplicates");
 
 	#algorithm
 	#A vs refs
@@ -657,28 +595,34 @@ sub getNoDuplicates {
 	#...
 
 	my %checkedQuery;
-
-	foreach my $query ( keys %{ $self->comparisonHash } ) {
+	
+	$self->logger->debug("Number of keys in comparisonHash: " . (scalar keys %{$self->comparisonHash}) . "\n");
+	foreach my $query (sort keys %{ $self->comparisonHash } ) {
 		next unless defined $self->_queryFastaNamesHash->{$query};
-
-		$self->logger->debug("DEBUG:\tGET_NO_DUPLICATES: query: $query");
+		my $queryName = SequenceName->new($query);
+		my $addToCheck=0;
+			
+		$self->logger->debug("GET_NO_DUPLICATES: query: $query");
 		foreach my $ref ( keys %{ $self->comparisonHash->{$query} } ) {
-			next if $query eq $ref;
+			
+			my $referenceName = SequenceName->new($ref);
+			next if $queryName->name eq $referenceName->name;
 
 			#if a query name as a reference hit
 			if ( defined $self->_queryFastaNamesHash->{$ref} ) {
 				next unless ( ( defined $checkedQuery{$ref} ) );
 			}
-
+			$addToCheck=1 unless $ref eq '_initialize';
 			$nonDuplicatedCoords{$query} .= $self->comparisonHash->{$query}->{$ref};
-			$self->logger->debug("DEBUG:\tGET_NO_DUPLICATES: ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}");
+			$self->logger->debug("QUERY: ". $queryName->name . "adding " . $self->comparisonHash->{$query}->{$ref} . ' to '. "\n\t". $query . ' vs '. $ref);
+			$self->logger->debug("GET_NO_DUPLICATES: ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}\n");
 		}
-		$checkedQuery{$query} = 1;
+		$checkedQuery{$query} = 1 if $addToCheck==1;
 	}
-	$self->logger->info("INFO:\tSorting and compiling novel regions");
+	$self->logger->info("Sorting and compiling novel regions");
 	my $sortedHashRef = $self->sortAndCompileCoordsHash( \%nonDuplicatedCoords );
 
-	$self->logger->info("INFO:\tGetting negative image of coords");
+	$self->logger->info("Getting negative image of coords");
 	return $self->getNegativeImageCoords($sortedHashRef);
 }
 
@@ -690,18 +634,19 @@ sub getNegativeImageCoords {
 		my %negativeHash;
 
 		#hash of $hash{$query}=<coords in order>
-
 		foreach my $key ( keys %{$hashRef} ) {
 			my $missingCoords;
 			my $prevEnd = 0;
-
+			
 			#get the negative image coords
 			my $nextKey = $hashRef->{$key};
+			
+			
 			while ( $nextKey =~ /\,(\d+)\.\.(\d+)/gc ) {
 				my $start = $1;
 				my $end   = $2;
-
-				$self->logger->debug("DEBUG:\tNEG:\tMatch coords: start:$start end:$end");
+				
+				$self->logger->debug("NEG:\tMatch coords: start:$start end:$end");
 
 				if ( ( $start > ( $prevEnd + 1 ) ) && ( $start != 1 ) && ( ( $start + 1 ) < $end ) ) {
 
@@ -712,16 +657,16 @@ sub getNegativeImageCoords {
 					}
 					$missingCoords .= ',' . ( $prevEnd + $advancement ) . '..' . ( $start - 1 );
 
-					$self->logger->debug("DEBUG:\tNEG:\tpassed checks: missingCoords: $missingCoords prevEnd:$prevEnd start:$start");
+					$self->logger->debug("NEG:\tpassed checks: missingCoords: $missingCoords prevEnd:$prevEnd start:$start");
 				}
 				$prevEnd = $end;
 			}
 
 			#check the last end
-			$self->logger->debug("DEBUG:\tKey: $key");
-			if ( ( $self->_queryFastaNamesHash->{$key} > $prevEnd ) && ( $prevEnd != 0 ) ) {
+			$self->logger->debug("Key: $key");
+			if ( ( $self->_queryFastaNamesHash->{$key} > $prevEnd ) && ( $prevEnd != 0 )) {
 
-				$self->logger->debug("DEBUG:\tNEG: prevEnd: $prevEnd");
+				$self->logger->debug("NEG: prevEnd: $prevEnd");
 
 				#kludge for 1..1 init match
 				my $advancement = 1;
@@ -731,12 +676,12 @@ sub getNegativeImageCoords {
 				$missingCoords .= ',' . ( $prevEnd + $advancement ) . '..' . ( $self->_queryFastaNamesHash->{$key} );
 			}
 
-			$self->logger->debug("DEBUG:\tNEG: original of $key: $nextKey");
+			$self->logger->debug("NEG: original of $key: $nextKey");
 			if ( defined $missingCoords ) {
-				$self->logger->debug("DEBUG:\tNEG: negative: $missingCoords");
+				$self->logger->debug("NEG: negative: $missingCoords");
 			}
 			else {
-				$self->logger->debug("DEBUG:\tNEG: no missing coords");
+				$self->logger->debug("NEG: no missing coords");
 			}
 
 			$negativeHash{$key} = $missingCoords if defined $missingCoords;
@@ -756,7 +701,7 @@ sub sortAndCompileCoordsHash {
 
 		foreach my $query ( keys %{$hashRef} ) {
 
-			$self->logger->debug( 'DEBUG:' . "\tSorting and compiling $query" );
+			$self->logger->debug("Sorting and compiling $query" );
 
 			$hashRef->{$query} = $self->sortAndCompileCoordString( $hashRef->{$query} );
 		}
@@ -802,14 +747,14 @@ sub sortAndCompileCoordString {
 					$start     = $2;
 					$end       = $3;
 
-					$self->logger->debug( 'DEBUG:' . "\tSort and compile: Before update: Key: $key start: $start end: $end" );
+					$self->logger->debug("\tSort and compile: Before update: Key: $key start: $start end: $end" );
 
 				}
 				else {
 					confess $coordsHash{$key} . ' did not match!' . "\n";
 				}
 				$newString = $self->updateAlignmentCoords( $newString, $start, $end );
-				$self->logger->debug( 'DEBUG:' . "\tSort and compile: After update: Key: $key start: $start end: $end" );
+				$self->logger->debug("\tSort and compile: After update: Key: $key start: $start end: $end" );
 
 			}
 			else {
@@ -817,7 +762,7 @@ sub sortAndCompileCoordString {
 
 			}
 		}
-		$self->logger->debug( 'DEBUG:' . "\tSort and compile: New string: $newString" );
+		$self->logger->debug("Sort and compile: New string: $newString" );
 		return $newString;
 	}
 	else {
@@ -835,7 +780,7 @@ sub joinAdjacentNovelRegionsHash {
 
 		foreach my $seq ( keys %{$hashRef} ) {
 			unless ( defined $hashRef->{$seq} ) {
-				$self->logger->debug("DEBUG:\t$seq has no novel coords");
+				$self->logger->debug("$seq has no novel coords");
 				next;
 			}
 			$joinedHash{$seq} = $self->joinAdjacentNovelRegionsString( $hashRef->{$seq} );
@@ -853,7 +798,7 @@ sub joinAdjacentNovelRegionsString {
 	if ( scalar(@_) == 1 ) {
 		my $coordsString = shift // confess("UNDEF coordsString sent to joinAdjacentNovelRegionsString");
 
-		$self->logger->debug("DEBUG:\tcoordsString in joinAdjacentNovelRegionsString is: $coordsString");
+		$self->logger->debug("coordsString in joinAdjacentNovelRegionsString is: $coordsString");
 		return $coordsString if ( $self->_adjacentJoiningSize == '0' );
 
 		my $prevStart;
@@ -894,7 +839,7 @@ sub joinAdjacentNovelRegionsString {
 sub buildHashOfAllComparisons {
 	my ($self) = shift;
 
-	$self->logger->info("INFO:\tBuilding hash of all comparisons");
+	$self->logger->info("Building hash of all comparisons");
 
 	#create a self vs self entry to accomodate regions that are completely novel and have no hit
 	#unless($self->novelRegionFinderMode eq 'common_to_all'){
@@ -912,6 +857,7 @@ sub buildHashOfAllComparisons {
 
 		while ( my $block = $dbFactory->nextDeltaBlock(1) ) {    #turns on absolute start/end positions with the true value
 			$self->updateComparisonHash( $block, 'query' );
+			#$self->updateComparisonHash( $block, 'reference' );
 		}
 		$inputFH->close();
 	}
@@ -931,7 +877,7 @@ sub updateComparisonHash {
 		                      #also determines what length value is sent to comparisonLengthHash
 		my $alignmentCoords;
 
-		$self->logger->debug("DEBUG:\tUCH begin");
+		$self->logger->debug("UCH begin");
 
 		my $key1;
 		my $key2;
@@ -959,23 +905,23 @@ sub updateComparisonHash {
 		}
 
 		if ( $startCoord > $endCoord ) {
-			$self->logger->fatal("FATAL\tstartCoord:$startCoord bigger than endCoord:$endCoord");
+			$self->logger->fatal("startCoord:$startCoord bigger than endCoord:$endCoord");
 			exit(1);
 		}
 
 		if ( ( defined $self->comparisonHash ) && ( defined $self->comparisonHash->{$key1}->{$key2} ) ) {
-			$self->logger->debug("DEBUG:\tUCH: Alignment coords previously exist for $key1:$key2");
+			$self->logger->debug("UCH: Alignment coords previously exist for $key1:$key2");
 			$alignmentCoords = $self->comparisonHash->{$key1}->{$key2};
 		}
 
 		if ( defined $alignmentCoords ) {
-			$self->logger->debug("DEBUG:\tUCH:Before update: $key1:$key2 $alignmentCoords");
+			$self->logger->debug("UCH:Before update: $key1:$key2 $alignmentCoords");
 			$self->addToComparisonHash( $key1, $key2, $self->updateAlignmentCoords( $alignmentCoords, $startCoord, $endCoord ) );
 		}
 		else {
 			$alignmentCoords = ',' . $startCoord . '..' . $endCoord;
 
-			$self->logger->debug("DEBUG:\tUCH:New alignment: $key1:$key2 $alignmentCoords");
+			$self->logger->debug("UCH:New alignment: $key1:$key2 $alignmentCoords");
 
 			$self->addToComparisonHash( $key1, $key2, $alignmentCoords );
 		}
@@ -993,7 +939,7 @@ sub updateAlignmentCoords {
 		my $qStart          = shift;    #current values 'q', checking whether they can modify the start/end of any coords
 		my $qEnd            = shift;
 
-		$self->logger->debug( 'DEBUG:' . "\tUAC: qStart: $qStart qEnd: $qEnd" );
+		$self->logger->debug("\tUAC: qStart: $qStart qEnd: $qEnd" );
 
 		my $newStart;
 		my $newEnd;
@@ -1008,7 +954,7 @@ sub updateAlignmentCoords {
 			$prevStart = $1;
 			$prevEnd   = $2;
 
-			$self->logger->debug( 'DEBUG:' . "\tUAC: prevStart: $prevStart prevEnd: $prevEnd" );
+			$self->logger->debug("\tUAC: prevStart: $prevStart prevEnd: $prevEnd" );
 
 			#check for a q start that is less than or between the current values
 			if ( $qStart > $prevEnd ) {
@@ -1045,7 +991,7 @@ sub updateAlignmentCoords {
 
 		#double check something has changed, then update
 		if ( defined $oldString ) {
-			$self->logger->debug( 'DEBUG:' . "\tUAC: Old string found: newStart: $newStart newEnd: $newEnd" );
+			$self->logger->debug("UAC: Old string found: newStart: $newStart newEnd: $newEnd" );
 
 			$newString = ',' . $newStart . '..' . $newEnd;
 			$alignmentCoords =~ s/\Q$oldString\E/$newString/;
@@ -1054,14 +1000,14 @@ sub updateAlignmentCoords {
 
 			#this means nothing was modified, but the new values need to be added
 
-			$self->logger->debug( 'DEBUG:' . "\tUAC: New string found: qStart: $qStart qEnd: $qEnd" );
+			$self->logger->debug("UAC: New string found: qStart: $qStart qEnd: $qEnd" );
 
 			$newString = ',' . $qStart . '..' . $qEnd;
 			$alignmentCoords .= $newString;
 		}
 
 		#otherwise, duplicate value, nothing added
-		$self->logger->debug( 'DEBUG:' . "\tUAC: alignmentCoords: $alignmentCoords" );
+		$self->logger->debug("UAC: alignmentCoords: $alignmentCoords" );
 		return $alignmentCoords;
 	}
 	else {
@@ -1077,14 +1023,7 @@ sub addToComparisonHash {
 		my $r      = shift;
 		my $coords = shift;
 
-		if ( defined $self->comparisonHash ) {
-			$self->comparisonHash->{$q}->{$r} = $coords;
-		}
-		else {
-			my %tempHash;
-			$tempHash{$q}->{$r} = $coords;
-			$self->comparisonHash( \%tempHash );
-		}
+		$self->comparisonHash->{$q}->{$r} = $coords;
 	}
 	else {
 		confess "wrong number of arguments sent to addToComparisonHash\n";

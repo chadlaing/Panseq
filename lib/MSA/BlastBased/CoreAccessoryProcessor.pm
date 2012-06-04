@@ -44,6 +44,11 @@ sub _coreTempFile {
 	$self->{'_CoreAccessoryProcessor_coreTempFile'} = shift // return $self->{'_CoreAccessoryProcessor_coreTempFile'};
 }
 
+sub logger{
+	my $self=shift;
+	$self->{'_logger'} = shift // return $self->{'_logger'};
+}
+
 #methods
 sub _coreAccessoryProcessorInitialize {
 	my $self = shift;
@@ -63,6 +68,10 @@ sub _coreAccessoryProcessorInitialize {
 
 	#set up queryNameOrderHash
 	$self->_getQueryNameOrder();
+	
+	
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 }
 
 sub _getQueryNameOrder {
@@ -71,8 +80,8 @@ sub _getQueryNameOrder {
 	my %returnHash;
 	my $order = 1;
 
-	$self->logger->debug( "DEBUG:\tRef type of queryNameObjectHash" . ref( $self->queryNameObjectHash ) );
-	$self->logger->debug( "DEBUG:\tScalar of queryNameObjectHash" . scalar keys %{ $self->queryNameObjectHash } );
+	$self->logger->debug( "Ref type of queryNameObjectHash" . ref( $self->queryNameObjectHash ) );
+	$self->logger->debug( "Scalar of queryNameObjectHash" . scalar keys %{ $self->queryNameObjectHash } );
 
 	foreach my $name ( keys %{ $self->queryNameObjectHash } ) {
 		$returnHash{$name} = $order;
@@ -114,17 +123,12 @@ sub _combineTempFiles {
 			print $oFile "\n";
 
 			$fm->outputFilehandle($oFile);
-			$fm->combineFilesIntoSingleFile( \@filesToCombine );
+			$fm->vanillaCombineFiles( \@filesToCombine,1 ); #1 for destroy
 			$oFile->close();
-
-			#remove temp files
-			foreach (@filesToCombine) {
-				unlink;
-			}
 		}
 	}
 	else {
-		print STDERR "Wrong number of arguments to combineTempFiles!\n";
+		$self->logger->fatal("Wrong number of arguments to combineTempFiles!");
 		exit(1);
 	}
 }
@@ -137,7 +141,7 @@ sub processBlastXML {
 		my $numberOfCores   = shift;
 		my $resultArraySize = shift;
 
-		$self->logger->info("INFO:\tProcessing Blast XML file $blastXMLFile with $numberOfCores cores and resultArraySize of $resultArraySize");
+		$self->logger->info("Processing Blast XML file $blastXMLFile with $numberOfCores cores and resultArraySize of $resultArraySize");
 
 		my $forker        = Parallel::ForkManager->new($numberOfCores);
 		my $currentResult = 0;
@@ -151,7 +155,7 @@ sub processBlastXML {
 			push @resultArray, $result;
 
 			if ( scalar(@resultArray) == $resultArraySize ) {
-				$self->logger->debug("DEBUG:\tStarting fork. Result $currentResult");
+				$self->logger->debug("Starting fork. Result $currentResult");
 				$forker->start and next;
 				$self->_sendToProcessQueue( \@resultArray, $currentResult, $resultArraySize,$blastXMLFile );
 				$forker->finish;
@@ -160,7 +164,7 @@ sub processBlastXML {
 		continue {
 			$currentResult++;
 			if ( scalar(@resultArray) == $resultArraySize ) {
-				$self->logger->info("DEBUG:\tResult array emptied");
+				$self->logger->debug("Result array emptied");
 				@resultArray = ();
 			}
 		}
@@ -174,7 +178,7 @@ sub processBlastXML {
 
 	}    #end if
 	else {
-		print STDERR "please specify a BLAST xml output file for processing!\n";
+		$self->logger->fatal("please specify a BLAST xml output file for processing!");
 		exit(1);
 	}
 }
@@ -188,7 +192,7 @@ sub _getSequenceCoverage {
 		return ( ( $hit->hsp_align_len - ( $hit->hsp_align_len - $hit->hsp_identity ) ) / $queryLength * 100 );
 	}
 	else {
-		print STDERR "incorrect number of arguments sent to getSequenceCoverage!\n";
+		$self->logger->fatal("incorrect number of arguments sent to getSequenceCoverage!");
 		exit(1);
 	}
 }
@@ -219,10 +223,11 @@ sub _getCoreAccessoryType {
 				$returnType = 'accessory';
 			}
 		}
+		$self->logger->debug("TYPE: $returnType number over cutoff: $numberOverSequenceCutoff");
 		return $returnType;
 	}
 	else {
-		print STDERR "No item sent to getCoreAccessoryType!\n";
+		$self->logger->fatal("No item sent to getCoreAccessoryType!");
 		exit(1);
 	}
 }
@@ -257,7 +262,7 @@ sub _processAccessoryResult {
 				$resultHash{$hit} = $hitObj->hsp_hseq;
 			}
 			else {
-				print STDERR "incorrect accessoryType specified!\n";
+				$self->logger->fatal("incorrect accessoryType specified!");
 				exit(1);
 			}
 		}    #end of foreach
@@ -297,19 +302,25 @@ sub _sendToProcessQueue {
 			$purgeNumber++;
 			$resultNumber++;
 			my $type = $self->_getCoreAccessoryType($item);
-
+			
 			if ( $type eq 'core' ) {
 
 				#get a muscle alignment
 				#get tabbed SNPs
-				$self->logger->debug("DEGUG:\tProcessing core item $resultNumber");
-				push @coreOutputBuffer, $self->_processCoreResult( $item, $resultNumber );
+				$self->logger->debug("Processing core item $resultNumber"); 
+				my $resultArrayRef = $self->_processCoreResult( $item, $resultNumber );
+				if(scalar @{$resultArrayRef} > 0){
+					push @coreOutputBuffer, $resultArrayRef;
+				}
+				
 			}
 			elsif ( $type eq 'accessory' ) {
 
 				#get a tab delimited output in queryName order of either binary, %ID or sequence
-				$self->logger->debug("DEBUG:\tProcessing accessory item $resultNumber");
-				push @accessoryOutputBuffer, $self->_processAccessoryResult($item);
+				$self->logger->debug("Processing accessory item $resultNumber");
+				my $result = $self->_processAccessoryResult( $item);
+				push @accessoryOutputBuffer, $result;
+				
 			}
 
 			if ( $purgeNumber == $resultArraySize ) {
@@ -324,6 +335,7 @@ sub _sendToProcessQueue {
 
 sub _purgeBuffer {
 	my $self         = shift;
+	
 	my $cRef         = shift;
 	my $aRef         = shift;
 	my $resultNumber = shift;
@@ -332,17 +344,19 @@ sub _purgeBuffer {
 	#remove non-word chars from filename
 	$xmlFileName =~ s/\W//g;
 
-	if ( defined $cRef->[0] ) {
+	if ( defined $cRef->[0]) {
 		my $coreTempName = $self->_baseDirectory . $xmlFileName . '_coreTempFile_' . $resultNumber;
 		my $coreOutFile = IO::File->new( '>' . $coreTempName ) or die "$!";
 
 		foreach my $coreArrayRef ( @{$cRef} ) {
-			print $coreOutFile @{$coreArrayRef};
+			foreach my $coreLineArrayRef(@{$coreArrayRef}){
+				print $coreOutFile @{$coreLineArrayRef};
+			}
 		}
 		$coreOutFile->close();
 	}
 	else {
-		$self->logger->debug("DEBUG:\tcore ref is empty");
+		$self->logger->debug("core ref is empty at result $resultNumber");
 	}
 
 	if ( defined $aRef->[0] ) {
@@ -352,7 +366,7 @@ sub _purgeBuffer {
 		$accessoryOutFile->close();
 	}
 	else {
-		$self->logger->debug("DEBUG:\taccessory ref is empty");
+		$self->logger->debug("accessory ref is empty at result $resultNumber");
 	}
 }
 
@@ -388,8 +402,17 @@ sub _processCoreResult {
 
 	#add SNP information to the return
 	my $snpDetective = SNPFinder->new( $self->_snpType, $self->_queryNameOrderHash );
-
-	push @returnArray, ( $snpDetective->findSNPs( \@alignedFastaSeqs, $countNumber, \%startBpHash ) );
+	
+	my $snpDetectiveResultArrayRef = $snpDetective->findSNPs( \@alignedFastaSeqs, $countNumber, \%startBpHash );
+	
+	#check that there are actually SNPs, otherwise return undef
+	if(scalar(@{$snpDetectiveResultArrayRef})>0){ 
+		push @returnArray, $snpDetectiveResultArrayRef;
+		$self->logger->debug("Returning " . @{$snpDetectiveResultArrayRef} . ' lines');
+	}
+	else{
+		$self->logger->debug("SNPFinder empty");
+	}
 	return \@returnArray;
 }
 
@@ -421,7 +444,7 @@ sub _combineResultTempFiles {
 		$forker->wait_all_children;
 	}
 	else {
-		print STDERR "FALSE! The sub is a liar\n";
+		$self->logger->fatal("FALSE! The sub is a liar");
 		exit(1);
 	}
 }
