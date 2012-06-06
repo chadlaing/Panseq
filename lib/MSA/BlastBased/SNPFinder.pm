@@ -142,7 +142,7 @@ sub findSNPs{
 			}
 			$singleLine[0]=$infoLine;
 			
-			if(scalar(@singleLine) > 0){
+			if(defined $singleLine[0]){
 				push @returnArray, (join("\t",@singleLine) . "\n");
 			}
 			else{

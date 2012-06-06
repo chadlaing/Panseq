@@ -21,7 +21,6 @@ sub logger{
 	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
-
 #methods
 sub initialize{
 	my($self)=shift;
@@ -56,7 +55,7 @@ sub runMakeBlastDb{
 		$systemLine .= ' -out '. $runValues{'out'} if defined $runValues{'out'};
 		$systemLine .= ' -title ' . $runValues{'title'} if defined $runValues{'title'};
 		$systemLine .= ' -in ' . $runValues{'in'} if defined $runValues{'in'};
-		$systemLine .= ' -logfile STDERR';
+		$systemLine .= ' -logfile ' . $runValues{'logFile'} if defined $runValues{'logFile'};
 		
 		$self->logger->info("Running makeblastdb with the following: $systemLine");
 		system($systemLine); 

@@ -207,6 +207,7 @@ sub _getCoreAccessoryType {
 
 		#if there is no blast result hit, deal with it
 		if ( !defined $result->hitHash ) {
+			$self->logger->debug("No blast result hit for result");
 			$returnType = 'accessory';
 		}
 		else {

@@ -74,9 +74,11 @@ if($ca->_coreInputType eq 'panGenome'){
 elsif($ca->_coreInputType eq 'primers'){
 	#set $inputLociFile to fasta file of loci returned from primer search
 }
-elsif($ca->_coreInputType =~ /(^\/.+)/){
+elsif($ca->_coreInputType =~ /(^\/.+)/){	
 	$inputLociFile=$1;
 	$ca->logger->info("INFO:\tUsing " . $inputLociFile . ' as input for Core / Accessory analysis.');
+	
+	$ca->getQueryNamesAndCombineAllInputFiles();
 		
 	#clean input headers
 	my $cleaner = FileManipulation->new();
@@ -87,7 +89,7 @@ elsif($ca->_coreInputType =~ /(^\/.+)/){
 	$cleaner->combineFilesIntoSingleFile([$inputLociFile],1);
 	$cleanFH->close;
 	$inputLociFile = $cleanFileName;
-	$ca->queryNameObjectHash( $ca->getSequenceNamesAsHashRef( $cleaner->getFastaHeadersFromFile( $inputLociFile ) ) );
+#	$ca->queryNameObjectHash( $ca->getSequenceNamesAsHashRef( $cleaner->getFastaHeadersFromFile( $inputLociFile ) ) );
 }
 else{
 	$ca->logger->fatal("incorrect type specified in coreInputType");
@@ -212,3 +214,6 @@ sub muscle_cmd_file{
 	return ($BASE_DIR . 'logs/MuscleCmd.pm.log')
 }
 
+sub core_accessory_file{
+	return ($BASE_DIR . 'logs/CoreAccessory.pm.log')
+}

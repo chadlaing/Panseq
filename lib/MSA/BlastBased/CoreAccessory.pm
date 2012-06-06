@@ -279,7 +279,8 @@ sub _createBlastDB{
 		'dbtype'=>'nucl',
 		'in'=>$self->combinedQueryFile,		
 		'out'=>$blastDB,
-		'title'=>'blastdb'	
+		'title'=>'blastdb',
+		'logFile'=>'>>'.$self->_baseDirectory . '/logs/FormatBlastDB.pm.log'	
 	);
 	return $blastDB;
 }
