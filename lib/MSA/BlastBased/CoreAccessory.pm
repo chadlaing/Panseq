@@ -189,7 +189,7 @@ sub _runBlast{
 	#create blast db
 	my $blastDB = $self->_createBlastDB();		
 			
-	$self->logger->info("Running BLAST\+ in seuence");
+	$self->logger->info("Running BLAST\+ in sequence");
 	
 	#blast in parallel works for small datasets, but multi-GB files among multiple processors
 	#create an unacceptable memory requirement
@@ -280,7 +280,7 @@ sub _createBlastDB{
 		'in'=>$self->combinedQueryFile,		
 		'out'=>$blastDB,
 		'title'=>'blastdb',
-		'logFile'=>'>>'.$self->_baseDirectory . '/logs/FormatBlastDB.pm.log'	
+		'logFile'=>'>>'.$self->_baseDirectory . 'logs/FormatBlastDB.pm.log'	
 	);
 	return $blastDB;
 }
