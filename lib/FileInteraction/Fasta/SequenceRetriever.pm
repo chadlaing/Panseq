@@ -7,14 +7,10 @@ use Carp;
 use FindBin::libs;
 use IO::File;
 use Bio::DB::Fasta;
+use Bio::SeqIO;
+use Bio::Seq;
 use FileInteraction::FlexiblePrinter;
 our @ISA = qw/FlexiblePrinter/;
-
-#object creation
-use Object::Tiny::RW qw{
-	databaseName
-	formattedFileName
-};
 
 sub new{
 	my($class)  = shift;
@@ -24,6 +20,15 @@ sub new{
     return $self;
 }
 
+sub databaseName{
+	my $self=shift;
+	$self->{'_databaseName'} = shift // return $self->{'_databaseName'};	
+}
+
+sub formattedFileName{
+	my $self=shift;
+	$self->{'_formattedFileName'} = shift // return $self->{'_formattedFileName'};	
+}
 
 ##methods
 sub _sequenceRetrieverInitialize{
@@ -60,54 +65,17 @@ sub createProperlyFormattedFastaFile{
 	
 	if(@_){
 		my $file=shift;
-
-		open (my $originalfile,'<',$file) or die "$!";
+		
+		my $originalFH = Bio::SeqIO->new(-file=>'<'.$file, -format=>'fasta');
+		
 		my $formattedFileName = $file . '_dbTEMP';
-		#store
-		$self->formattedFileName($formattedFileName);
+		my $outputFH = Bio::SeqIO->new(-file=>'>'. $formattedFileName, -format=>'fasta');
+		$outputFH->width(80);
 		
-		my $oFile = IO::File->new('>' . $formattedFileName);
-		local $/='>';
-		
-		while(my $segment = <$originalfile>){
-			next if $segment eq '>';
-			
-			my $header;
-			my $sequence;
-			
-			if($segment =~ /(^.+)/){
-				$header=$1;
-				$segment =~ s/\Q$header//;
-				$segment =~ s/\W//g;
-				$sequence = $segment;
-				undef $segment;
-			}
-			else{
-				print STDERR "not a fasta fragment in createProperlyFormattedFastaFile!\n";
-				print STDERR "segment:\n$segment\n";
-				exit(1);
-			}
-			
-			print $oFile ('>' . $header . "\n");
-			my $maxChars=65534;
-			
-			for(my $i=0; $i<length($sequence); $i+=$maxChars){
-				my $charsLeft = length($sequence)-$i +1;
-				my $extractionLength;
-				
-				if($charsLeft >= $maxChars){
-					$extractionLength=$maxChars;
-				}
-				else{
-					$extractionLength = $charsLeft;
-				}
-				
-				my $subseq = substr($sequence,$i,$extractionLength);
-				print $oFile ($subseq . "\n");
-			}
+		while(my $seq = $originalFH->next_seq()){
+			$outputFH->write_seq($seq);
 		}
-		close $originalfile;
-		$oFile->close();
+
 		return $formattedFileName;
 	}
 	else{

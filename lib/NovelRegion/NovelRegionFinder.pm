@@ -28,6 +28,7 @@ sub new {
 }
 
 #variables
+
 sub novelRegionFinderMode {
 	my $self = shift;
 	$self->{'_NRF_novelRegionFinderMode'} = shift // return $self->{'_NRF_novelRegionFinderMode'};
@@ -103,7 +104,7 @@ sub validateNovelSettings {
 			$self->_novel_nucC( $validator->isAnInt($value) )                              if $setting eq 'novel_nucC';
 			$self->_novel_nucG( $validator->isAnInt($value) )                              if $setting eq 'novel_nucG';
 			$self->_novel_nucL( $validator->isAnInt($value) )                              if $setting eq 'novel_nucL';
-			$self->nucD( $validator->isBetween($value, 0 , 1 , 1) )                                   if $setting eq 'nucD';
+			$self->_novel_nucD( $validator->isBetween($value, 0 , 1 , 1) )                 if $setting eq 'nucD';
 			$self->_skipGatherFiles( $validator->isAnInt($value) )                         if $setting eq 'skipGatherFiles';
 			$self->novelRegionFinderMode( $validator->novelRegionFinderModeCheck($value) ) if $setting eq 'novelRegionFinderMode';
 			$self->combinedQueryFile( $validator->isAFilename($value) )                    if $setting eq 'combinedQueryFile';
@@ -1027,6 +1028,16 @@ sub addToComparisonHash {
 	}
 	else {
 		confess "wrong number of arguments sent to addToComparisonHash\n";
+	}
+}
+
+sub printComparisonHash{
+	my $self=shift;
+	
+	foreach my $key(keys %{$self->comparisonHash}){
+		foreach my $key2 (keys %{$self->comparisonHash->{$key}}){
+			print ($key . ' : ' . $key2 . ' : ' . $self->comparisonHash->{$key}->{$key2} . "\n");
+		}
 	}
 }
 1;

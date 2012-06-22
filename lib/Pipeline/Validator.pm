@@ -500,4 +500,26 @@ sub isAnIntBetween {
 		croak $self->_context . ": nothing sent to isAnIntBetween!\n";
 	}
 }
+
+sub isAValidWebpageType{
+	my $self=shift;
+	my $type = shift // 'empty';
+	
+	if(
+		($type eq 'home') ||
+		($type eq 'novel') ||
+		($type eq 'core') ||
+		($type eq 'loci') ||
+		($type eq 'tutorial') ||
+		($type eq 'contact') ||
+		($type eq 'submit')
+		
+	){
+		return $type
+	}
+	else{
+		croak $self->_context . ": incorrect web page type!\n";
+	}
+}
+
 1;
