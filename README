@@ -29,10 +29,7 @@ Setup
 In addition to the provided Perl modules, Panseq also relies on the following CPAN packages:
 
 Parallel::ForkManager
-Object::Tiny::RW
 Bio::DB::Fasta
-Log::Log4perl
-FindBin::libs
 Log::Log4perl
 
 And the following free, external programs must also be installed:

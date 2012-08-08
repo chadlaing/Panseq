@@ -1,30 +1,24 @@
 #!/usr/bin/perl
 
-#TODO: Remove this comment: To accomodate integeration into validator.pm percentIdentityCutoff
-#is now in decimal (0 to 1) from percentage (1 to 100) however validator will tolerate percentage values
-
-package CoreAccessoryProcessor;
+package MSA::BlastBased::CoreAccessoryProcessor;
 
 use strict;
 use warnings;
 use diagnostics;
 use Carp;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use MSA::BlastBased::BlastResultFactory;
-use MSA::BlastBased::BlastResultObject;
-use MSA::BlastBased::BlastHitObject;
 use MSA::BlastBased::SNPFinder;
 use Muscle::MuscleCmd;
-use MSA::BlastBased::CoreAccessory;
+use FileInteraction::FileManipulation;
 use File::Temp;
 
-our @ISA = qw/CoreAccessory/;
+use parent 'MSA::BlastBased::CoreAccessory';
 
-sub new {
-	my ($class) = shift;
-	my $self = {};
-	bless( $self, $class );
-	$self->_coreAccessoryProcessorInitialize(@_);
+sub new{
+	my $class = shift;
+	my $self= $class->SUPER::new(@_); #this calls CoreAccessoryProcessor::_initialize, so need to call the SUPER::_initialize
 	return $self;
 }
 
@@ -44,14 +38,16 @@ sub _coreTempFile {
 	$self->{'_CoreAccessoryProcessor_coreTempFile'} = shift // return $self->{'_CoreAccessoryProcessor_coreTempFile'};
 }
 
-sub logger{
-	my $self=shift;
-	$self->{'_logger'} = shift // return $self->{'_logger'};
-}
 
 #methods
-sub _coreAccessoryProcessorInitialize {
+sub _initialize {
 	my $self = shift;
+
+	#inheritance
+	$self->SUPER::_initialize(@_);
+
+	#logging
+	$self->logger(Log::Log4perl->get_logger());
 
 	#set values
 	my $paramsRef = shift;
@@ -63,15 +59,10 @@ sub _coreAccessoryProcessorInitialize {
 	$self->_snpType( $paramsRef->{'snpType'} )                             // confess('snpType required in coreAccessoryProcessor');
 	$self->_muscleExecutable( $paramsRef->{'muscleExecutable'} )           // confess('muscleExecutable required in coreAccessoryProcessor');
 
-	#inheritance
-	$self->_coreAccessoryInitialize(@_);
-
 	#set up queryNameOrderHash
 	$self->_getQueryNameOrder();
-	
-	
-	#logging
-	$self->logger(Log::Log4perl->get_logger());
+
+
 }
 
 sub _getQueryNameOrder {
@@ -99,7 +90,7 @@ sub _combineTempFiles {
 		my $outputFileName = shift;
 
 		my @filesToCombine;
-		my $fm       = FileManipulation->new();
+		my $fm       = FileInteraction::FileManipulation->new();
 		my $namesRef = $fm->getFileNamesFromDirectory( $self->_baseDirectory );
 
 		foreach my $name ( @{$namesRef} ) {
@@ -122,7 +113,7 @@ sub _combineTempFiles {
 			}
 			print $oFile "\n";
 
-			$fm->outputFilehandle($oFile);
+			$fm->outputFH($oFile);
 			$fm->vanillaCombineFiles( \@filesToCombine,1 ); #1 for destroy
 			$oFile->close();
 		}
@@ -149,7 +140,7 @@ sub processBlastXML {
 
 		#create filehandle
 		my $xmlFH = IO::File->new( '<' . $blastXMLFile ) or die "$!";
-		my $xmler = BlastResultFactory->new($xmlFH);
+		my $xmler = MSA::BlastBased::BlastResultFactory->new($xmlFH);
 
 		while ( my $result = $xmler->nextResult ) {
 			push @resultArray, $result;
@@ -394,7 +385,7 @@ sub _processCoreResult {
 
 	print $tempInFH @fastaArray;
 
-	my $muscleCommand = MuscleCmd->new( $self->_muscleExecutable );
+	my $muscleCommand = Muscle::MuscleCmd->new( $self->_muscleExecutable );
 	$muscleCommand->setIn( $tempInFH->filename );
 	$muscleCommand->setOut( $tempOutFH->filename );
 	$muscleCommand->run();
@@ -402,7 +393,7 @@ sub _processCoreResult {
 	my @alignedFastaSeqs = $tempOutFH->getlines();
 
 	#add SNP information to the return
-	my $snpDetective = SNPFinder->new( $self->_snpType, $self->_queryNameOrderHash );
+	my $snpDetective = MSA::BlastBased::SNPFinder->new( $self->_snpType, $self->_queryNameOrderHash );
 	
 	my $snpDetectiveResultArrayRef = $snpDetective->findSNPs( \@alignedFastaSeqs, $countNumber, \%startBpHash );
 	

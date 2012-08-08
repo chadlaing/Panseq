@@ -1,19 +1,96 @@
 #!/usr/bin/perl
 
-package SegmentMaker;
+=pod
 
-use FindBin::libs;
-use IO::File;
-use FileInteraction::FlexiblePrinter;
+=head1 NAME
+
+FileInteraction::Fasta::SegmentMaker
+
+=head1 SYNOPSIS
+
+	use FindBin::libs;
+	use FileInteraction::Fasta::SegmentMaker;
+	
+	my $segmenter = SegmentMaker->new(
+		'outputFile' => '/my/outputfile.txt',
+		'inputFile'  => '/my/inputfile.txt',
+		'segmentSize' => 500
+	);
+	
+	$segmenter->segmentTheSequence();
+
+=head1 DESCRIPTION
+
+This module takes a fasta file, fragments it into user-defined segments and outputs these as a single 
+multi-fasta file. In cases where the size of a fasta sequence is not evenly divisible by the segment
+size, then the remainder is added to the last fragment, such that all segments will be of N size, with
+the last segment being between N and 2N-1.
+
+This module uses Bio::SeqIO and Bio::Seq to manipulate the fasta files and sequences.
+
+=head2 Methods
+
+=head3 inputFile
+
+The absolute location of the fasta file being segmented.
+
+=head3 outputFile
+
+The absolute location of the segmented fasta file.
+
+=head3 logger
+
+Stores the logger instance.
+
+=head3 segmentSize
+
+Sets the size that inputFile will be segmented into.
+
+=head3 segmentTheSequence
+
+The function that actually does the work.
+
+=head3 _initialize
+
+Called upon object construction.
+Initializes inputFile, outputFile, segmentSize and creates a logger instance.
+
+=head1 ACKNOWLEDGEMENTS
+
+Thanks.
+
+=head1 COPYRIGHT
+
+This work is released under the GNU General Public License v3  http://www.gnu.org/licenses/gpl.html
+
+=head1 AVAILABILITY
+
+The most recent version of the code may be found at: https://github.com/chadlaing/Panseq
+
+=head1 AUTHOR
+
+Chad Laing (chadlaing gmail com)
+
+=cut
+
+
+package FileInteraction::Fasta::SegmentMaker;
+
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
+use Bio::SeqIO;
+use Bio::Seq;
 use Log::Log4perl;
-
-our @ISA = qw{FlexiblePrinter}; #includes outputFilehandle and printOut
+use Pipeline::Validator;
+use Carp;
 
 sub new{
 	my($class)  = shift;
     my $self= {};
     bless ($self, $class);
-    $self->initialize(@_);
+    $self->_initialize(@_);
     return $self;
 }
 
@@ -23,14 +100,35 @@ sub logger{
 	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
+sub inputFile{
+	my $self=shift;
+	$self->{'__inputFH'} = shift // return $self->{'__inputFH'};	
+}
+
+sub outputFile{
+	my $self=shift;
+	$self->{'__outputFile'} = shift // return $self->{'__outputFile'};	
+}
+
+sub segmentSize{
+	my $self=shift;
+	$self->{'__segmentSize'} = shift // return $self->{'__segmentSize'};	
+}
+
+
 ##methods
-sub initialize{
+sub _initialize{
 	my($self)=shift;
+	my %init=@_;
 	
-	if(@_){
-		my $fh=shift;
-		$self->outputFilehandle($fh);
-	}	
+	my $validator = Pipeline::Validator->new();
+	#set the input FH that SegmentMaker will read from
+	$self->inputFile($init{'inputFile'}) // confess('Segment maker requires an input file');
+	
+	$self->outputFile($init{'outputFile'}) // confess('Segment maker requires an output file');
+	
+	#set the fragment sizes
+	$self->segmentSize($validator->isAnIntGreaterThan($init{'segmentSize'},0)) // confess('Segment maker requires segmentSize to be defined');
 	
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
@@ -38,73 +136,36 @@ sub initialize{
 
 sub segmentTheSequence{
 	my($self)=shift;
-	
-	if(scalar(@_)==2){
-		my $inputFile=shift;
-		my $fragmentSize = shift; 
 		
-		$self->logger->info("Segmenting $inputFile into $fragmentSize bp fragments");
+	$self->logger->info('Segmenting ' . $self->inputFile . ' into ' . $self->segmentSize . 'bp segments');
+	my $inFH =Bio::SeqIO->new(-file=>'<'. $self->inputFile, -format=>'fasta');
+	my $outputFH = Bio::SeqIO->new(-file=>'>'. $self->outputFile, -format=>'fasta');
+	$outputFH->width(80);
 		
-		open(INPUTSEG, "<", $inputFile) or die "no input file $!";		
+	while(my $seq = $inFH->next_seq()){
+		my $segmentCounter=1;
+		#if twice fragmentation size, print fragmentation size, else print whole thing
+		for(my $i=1; $i<=$seq->length; $i+=$self->segmentSize){
+			my $endCalc = ($i + (2 * $self->segmentSize) -1);
+			my $end =  ($endCalc > $seq->length) ? $seq->length : ($endCalc - $self->segmentSize);
+			
+			my $newId = $seq->id() . $seq->desc();
+			$newId =~ s/\s//g;
+			$newId .= ('|Segment=' . $segmentCounter . '|SegmentLength=' . ($end -$i +1) . '|Start=' . $i . '|End=' . $end);
 
-		local $/=">";
-		my $fastaHeader;
-		my $fastaSequence;
-		
-		while(my $fastaSegment=<INPUTSEG>){
-			
-			next if $fastaSegment eq '>';
-			
-			#get header and sequence
-			if($fastaSegment =~ m/^(.*)\n/){
-				$fastaHeader=$1;
-				#$fastaHeader =~ s/\s/_/g;
-				$fastaSegment =~ s/^.+\n//;
-				$fastaSegment =~ s/[\W>]//g;
-				$fastaSequence = $fastaSegment;
-				$fastaSegment='';
-			}
-			else{
-				print STDERR "not a fasta segment in segmentSequence!\n";
-				exit(1);
-			}
-			
-			#segment the sequence
-			my $endPosition=0;
-			my $startPosition=0;
-			my $segmentCounter=0;
-			my $currentStart=0;
-			my $sequenceLength = length($fastaSequence);
-			while($sequenceLength > $currentStart){
-				$segmentCounter++;
-				my $sequenceToPrint;
-				#if twice fragmentation size, print fragmentation size, else print whole thing
-				if($sequenceLength >= (2*$fragmentSize) + $currentStart){				
-					$sequenceToPrint = substr($fastaSequence, $currentStart, $fragmentSize);	
-					$currentStart = $currentStart + $fragmentSize;			
-				}
-				else{
-					$sequenceToPrint = substr($fastaSequence, $currentStart);
-					$currentStart = $sequenceLength +1;
-				}
-				
-				#update start/end values
-				$startPosition=$endPosition+1;
-				$endPosition= $endPosition + length($sequenceToPrint);
-				
-				#print em out
-				$self->printOut('>' . $fastaHeader . '|Segment=' . $segmentCounter . '|SegmentLength=' . length($sequenceToPrint) . '|Start=' . $startPosition . '|End=' . $endPosition . "\n");
-				$self->printOut($sequenceToPrint . "\n");
-				my $sequenceLength = length($fastaSequence);
-		}
+			my $tempSeq = Bio::Seq->new(
+				-seq => $seq->subseq($i,$end),
+				-id => $newId,
+				-accession_number => $seq->accession_number,
+				#-desc => $newDesc
+			);
+			$outputFH->write_seq($tempSeq);
+			$segmentCounter++;
+			last if $end == $seq->length; #this avoids duplicating the last segment of sequence
+		}			
 	}
-	
-	close INPUTSEG;
-	}
-	else{
-		print STDERR "segmentation parameters not defined!";
-		exit(1);
-	}
+	$inFH->close();
+	$outputFH->close();
 }
 
 1;

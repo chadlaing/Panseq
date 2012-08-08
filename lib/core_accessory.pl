@@ -3,13 +3,18 @@
 use strict;
 use warnings;
 use diagnostics;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use MSA::BlastBased::CoreAccessory;
+use MSA::BlastBased::CoreAccessoryProcessor;
+use FileInteraction::Fasta::SegmentMaker;
+use FileInteraction::FileManipulation;
 use Log::Log4perl;
 use Tie::Log4perl;
 use File::Basename;
-use File::Slurp;
 use File::Path qw{make_path remove_tree};
+use Visual::Bacteria;
+use Blast::Annotator;
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
@@ -26,7 +31,7 @@ unless(-e $configFile){
 }
 
 #run
-my $ca = CoreAccessory->new();
+my $ca = MSA::BlastBased::CoreAccessory->new();
 
 #initialization		
 $ca->_validateCoreSettings($ca->getSettingsFromConfigurationFile($configFile));
@@ -44,15 +49,15 @@ if ( defined $ca->_baseDirectory ) {
 
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
-close STDERR;
-tie *STDERR, "Tie::Log4perl";
+#close STDERR;
+#tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/core_accessory_log4p.conf");
+$ca->logger->info("CoreAccessory begin");
 my $logger = Log::Log4perl->get_logger();
 		
 my $inputLociFile;
 if($ca->_coreInputType eq 'panGenome'){
 	$ca->getQueryNamesAndCombineAllInputFiles();
-		
 	$ca->logger->debug("After combining all input files there are: " . (scalar keys %{$ca->queryNameObjectHash}));
 	$ca->logger->info('Determining non-redundant pan-genome');
 	$ca->_createSeedAndNotSeedFiles();				
@@ -64,10 +69,10 @@ if($ca->_coreInputType eq 'panGenome'){
 	my $novelRegionFile = $ca->_baseDirectory . 'novelRegions.fasta';
 			
 	#combine the novel regions with the seed file for a complete pan-genome
-	my $combiner = FileManipulation->new();
+	my $combiner = FileInteraction::FileManipulation->new();
 	$inputLociFile = $ca->_baseDirectory . 'panGenome.fasta';
 	my $combinedFH = IO::File->new('>' . $inputLociFile);
-	$combiner->outputFilehandle($combinedFH);
+	$combiner->outputFH($combinedFH);
 	$combiner->vanillaCombineFiles([($ca->_seedFileName,$novelRegionFile)]);	
 	$combinedFH->close();
 }
@@ -81,7 +86,7 @@ elsif($ca->_coreInputType =~ /(^\/.+)/){
 	$ca->getQueryNamesAndCombineAllInputFiles();
 		
 	#clean input headers
-	my $cleaner = FileManipulation->new();
+	my $cleaner = FileInteraction::FileManipulation->new();
 			
 	my $cleanFileName = $ca->_baseDirectory . 'cleanedUserProvidedFile.fasta';
 	my $cleanFH = IO::File->new('>' . $cleanFileName) or die "Cannot open $cleanFileName $!";
@@ -100,21 +105,19 @@ else{
 if($ca->_segmentCoreInput eq 'yes'){
 	$ca->logger->info("Segmenting the input sequences");
 	#create outputFH
-	my $segmentedFile = $ca->_baseDirectory. 'inputLoci_segments.fasta';
-	my $segmentedPanFH = IO::File->new('>' . $segmentedFile) or die "$!";
-		
-	my $segmenter = SegmentMaker->new($segmentedPanFH);
-	$segmenter->segmentTheSequence(
-		$inputLociFile,
-		$ca->_fragmentationSize
+	
+	my $segmenter = FileInteraction::Fasta::SegmentMaker->new(
+		'inputFile'=>$inputLociFile,
+		'outputFile'=>$ca->_baseDirectory. 'inputLoci_segments.fasta',
+		'segmentSize'=>$ca->_fragmentationSize
 	);
-	$segmentedPanFH->close();
-	$inputLociFile = $segmentedFile;	
+	$segmenter->segmentTheSequence();
+	$inputLociFile = $segmenter->outputFile;
 }
 		
 #run the comparisons
 my $xmlFiles = $ca->_runBlast($inputLociFile,$ca->_numberOfCores);
-my $cap = CoreAccessoryProcessor->new({
+my $cap = MSA::BlastBased::CoreAccessoryProcessor->new({
 	'baseDirectory'=>$ca->_baseDirectory,
 	'percentIdentityCutoff'=>$ca->_percentIdentityCutoff,
 	'queryNameObjectHash'=>$ca->queryNameObjectHash,
@@ -160,7 +163,27 @@ for(1..2){
 	}			
 	$forker->finish;
 }
-$forker->wait_all_children;				
+$forker->wait_all_children;	
+
+
+# #add visualization 
+# if($ca->createGraphic eq 'yes'){
+# 		my $visFH = IO::File->new('>' . $ca->_baseDirectory . 'panGenome.svg') or die "$!";
+# 		my $vis = Visual::Bacteria->new();
+# 		$visFH->print($vis->run($ca->_baseDirectory . 'accessory_regions_table.txt'));
+# 		$visFH->close;	
+# }
+
+# #add annotation
+# my $annotator = Blast::Annotator->new(
+# 	'inputFile'=>$inputLociFile,
+# 	'outputFile'=>$ca->_baseDirectory . '/panGenome_annotation.txt',
+# 	'blastDirectory'=>'/home/phac/ncbi-blast-2.2.26+/bin/',
+# 	'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
+# 	'numberOfCores'=>'20'
+# );
+$annotator->annotate();
+
 $ca->logger->info("Finished CoreAccessory Analysis");		
 
 

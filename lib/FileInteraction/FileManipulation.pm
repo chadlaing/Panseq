@@ -1,21 +1,21 @@
 #!/usr/bin/perl
 
-package FileManipulation;
+package FileInteraction::FileManipulation;
 
 use strict;
 use warnings;
-use FindBin::libs;
+use diagnostics;
+use FindBin;
+use lib "$FindBin::Bin";
 use IO::File;
 use Carp;
-use FileInteraction::FlexiblePrinter;
 use Log::Log4perl;
-our @ISA = qw/FlexiblePrinter/;
+
+use parent 'FileInteraction::FlexiblePrinter';
 
 sub new {
 	my ($class) = shift;
-	my $self = {};
-	bless( $self, $class );
-	$self->_fileManipulationInitialize(@_);
+	my $self = $class->SUPER::new(@_);
 	return $self;
 }
 
@@ -36,12 +36,11 @@ sub fastaHeaders{
 }
 
 #methods
-sub _fileManipulationInitialize {
+sub _initialize {
 	my $self = shift;
-
-	#inheritance
-	$self->_flexiblePrinterInitialize(@_);
 	
+	#inheritance
+	$self->SUPER::_initialize(@_);
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
 
@@ -59,7 +58,7 @@ sub getFileNamesFromDirectory {
 		opendir( DIRECTORY, $directory ) or die "cannot open directory $directory $!\n";
 		my @dir = readdir DIRECTORY;
 		closedir DIRECTORY;
-
+	
 		$self->logger->info("Getting file names from $directory");
 
 		foreach my $fileName (@dir) {
@@ -71,6 +70,7 @@ sub getFileNamesFromDirectory {
 			#$self->logger->debug
 			push @fileNames, ( $directory . $fileName );
 		}
+		$self->logger->debug("Returning from getFileNamesFromDirectory");
 		return \@fileNames;
 	}
 	else {
@@ -123,7 +123,7 @@ sub combineFilesIntoSingleFile {
 		foreach my $file ( @{$arrayRef} ) {
 
 			#$self->logger->debug
-			$self->logger->debug( "Adding $file to combined file: " . $self->outputFilehandle );
+			$self->logger->debug( "Adding $file to combined file: " . $self->outputFH);
 
 			#$self->logger->debug
 
@@ -132,9 +132,9 @@ sub combineFilesIntoSingleFile {
 				if ($toClean) {
 					$line = $self->cleanLine($line) if ( $line =~ /^>/ );
 				}
-				$self->printOut($line);
+				$self->print($line);
 			}
-			$self->printOut("\n");
+			$self->print("\n");
 			$inFile->close();
 		}
 	}
@@ -187,7 +187,7 @@ sub vanillaCombineFiles {
 		$self->logger->debug("combining $file");
 
 		while ( my $line = $inFile->getline ) {
-			$self->printOut($line);
+			$self->print($line);
 		}
 		$inFile->close();
 		unlink $file if $destroy;
@@ -205,7 +205,7 @@ sub combineDeltaFiles {
 	my $header = $referenceName . ' ' . $queryName . "\n" . 'NUCMER' . "\n";
 
 	$self->logger->debug("In combineDeltaFiles");
-	$self->printOut($header);
+	$self->print($header);
 
 	foreach my $file ( @{$arrayRef} ) {
 		my $inFile = IO::File->new( '<' . $file ) or die "$! \n Cannot open $file \n";
@@ -218,7 +218,7 @@ sub combineDeltaFiles {
 		
 
 		while ( my $line = $inFile->getline ) {
-			$self->printOut($line);
+			$self->print($line);
 		}
 		$inFile->close();
 		unlink $file if $destroy;

@@ -1,23 +1,42 @@
 #!/usr/bin/perl
 
-package SequenceName;
+package FileInteraction::Fasta::SequenceName;
 
-#object creation
-use Object::Tiny::RW qw{
-	name
-	arrayOfHeaders
-};
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
 
 
 sub new{
 	my($class)  = shift;
     my $self= {};
     bless ($self, $class);
-    $self->getName(@_) if @_;
+    $self->_initialize(@_);
     return $self;
 }
 
+sub arrayOfHeaders{
+	my $self=shift;
+	$self->{'_arrayOfHeaders'}=shift // return $self->{'_arrayOfHeaders'};
+}
+
+sub name{
+	my $self=shift;
+	$self->{'_name'}=shift // return $self->{'_name'};
+}
+
+
 ##methods
+sub _initialize{
+	my $self=shift;
+
+	if(@_){
+		$self->getName(@_);
+	}
+}
+
+
 sub getName{
 	my($self)=shift;
 	

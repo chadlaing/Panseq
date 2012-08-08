@@ -5,36 +5,56 @@
 #Use reverseComplement Flag to determine if start and end values need to be reversed
 #Added funtionality to allow for reading of protein alignements as well as DNA (Robustness)
 
-package DeltaBlockFactory;
+package Mummer::DeltaBlockFactory;
 
-use FindBin::libs;
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
 use IO::File;
 use Mummer::DeltaBlockObject;
 use Carp;
-use strict;
-use warnings;
-use diagnostics;
-
-#object creation
-use Object::Tiny::RW qw{
-  fileHandle
-  header
-  _refName
-  _queryName
-  _refLength
-  _queryLength
-};
 
 sub new {
 	my ($class) = shift;
 	my $self = {};
 	bless( $self, $class );
-	$self->initialize(@_);
+	$self->_initialize(@_);
 	return $self;
 }
 
+#class variables
+sub _queryLength{
+	my $self=shift;
+	$self->{'__queryLength'}=shift // return $self->{'__queryLength'};
+}
+
+sub _refLength{
+	my $self=shift;
+	$self->{'__refLength'}=shift // return $self->{'__refLength'};
+}
+
+sub _queryName{
+	my $self=shift;
+	$self->{'__queryName'}=shift // return $self->{'__queryName'};
+}
+
+sub _refName{
+	my $self=shift;
+	$self->{'__refName'}=shift // return $self->{'__refName'};
+}
+
+sub header{
+	my $self=shift;
+	$self->{'_header'}=shift // return $self->{'_header'};
+}
+
+sub fileHandle{
+	my $self=shift;
+	$self->{'_fileHandle'}=shift // return $self->{'_fileHandle'};
+}
 #methods
-sub initialize {
+sub _initialize {
 	my ($self) = shift;
 
 	if (@_) {
@@ -90,7 +110,7 @@ sub nextDeltaBlock {
 			push( @gapArray, $line );
 		}
 		else {
-			$deltaBlock = DeltaBlockObject->new();
+			$deltaBlock = Mummer::DeltaBlockObject->new();
 
 			$deltaBlock->refName( $self->_refName );
 			$deltaBlock->queryName( $self->_queryName );

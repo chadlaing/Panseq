@@ -1,21 +1,19 @@
 #!/usr/bin/perl
 
-package PhylogenyFileCreator;
+package TreeBuilding::PhylogenyFileCreator;
 
-use FindBin::libs;
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
 use IO::File;
-use FileInteraction::LinePackage;
-use FileInteraction::FlexiblePrinter;
 use Log::Log4perl;
+use parent 'FileInteraction::FlexiblePrinter';
 
-our @ISA = qw{FlexiblePrinter}; #includes outputFilehandle and printOut
-
-sub new{
-	my($class)  = shift;
-    my $self= {};
-    bless ($self, $class);
-    $self->initialize(@_);
-    return $self;
+sub new {
+	my $class = shift;
+	my $self= $class->SUPER::new(@_); #this calls FileInteraction::FlexiblePrinter::_initialize, so need to call the SUPER::_initialize
+	return $self;
 }
 
 sub nameOrderArray{
@@ -44,11 +42,14 @@ sub logger{
 }
 
 #methods
-sub initialize{
+sub _initialize{
 	my $self=shift;
 	
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
+
+	#inheritance
+	$self->SUPER::_initialize(@_);
 }
 
 sub createFile{
@@ -89,7 +90,7 @@ sub printPhylipFormat{
 	
 	my @names;	
 	
-	$self->printOut(
+	$self->print(
 		scalar(keys %{$self->tableHash}),
 		' ',
 		length($self->tableHash->{'1'}),
@@ -97,12 +98,13 @@ sub printPhylipFormat{
 	);
 	
 	for(my $i=1; $i<=scalar(keys %{$self->tableHash});$i++){
-		$self->printOut(
+		$self->print(
 			$i,
 			' 'x(10-length($i)),
 			$self->tableHash->{$i} . "\n"
 		);
 		
+		my $name;
 		if(defined $self->nameOrderArray && defined $self->nameOrderArray->[$i-1]){
 			$name = $self->nameOrderArray->[$i-1];
 		}
@@ -114,14 +116,14 @@ sub printPhylipFormat{
 	
 	
 	#print out the info conversion
-	$self->outputFilehandle($self->phylipInfoFH); #if phylipInfoFH is undefined, defualts to STDOUT (see FlexiblePrinter.pm)
-	$self->printOut(
+	$self->outputFH($self->phylipInfoFH); #if phylipInfoFH is undefined, defaults to STDOUT (see FileInteraction::FlexiblePrinter.pm)
+	$self->print(
 		'#Name Conversion Information',
 		"\n"
 	);
 	
 	for(my $i=1; $i<=scalar(keys %{$self->tableHash});$i++){
-		$self->printOut(
+		$self->print(
 			$i,
 			"\t",
 			$names[$i-1],
@@ -135,7 +137,7 @@ sub printNexusFormat{
 	
 	my @names;
 	
-	$self->printOut(
+	$self->print(
 		'#NEXUS' . "\n",
 		'BEGIN Taxa;' . "\n",
 		'DIMENSIONS ntax=' . scalar(keys %{$self->tableHash}) . ";\n",
@@ -159,7 +161,7 @@ sub printNexusFormat{
 		);
 	}
 	
-	$self->printOut(
+	$self->print(
 		'BEGIN data;' . "\n",
 		'DIMENSIONS ntax=',
 		scalar(keys %{$self->tableHash}),
@@ -170,14 +172,14 @@ sub printNexusFormat{
 	);
 	
 	for(my $i=1; $i<=scalar(keys %{$self->tableHash});$i++){
-		$self->printOut(
+		$self->print(
 			$names[$i-1],
 			"\t",
 			$self->tableHash->{$i} . "\n"
 		);
 	}
 	
-	$self->printOut(
+	$self->print(
 		';' . "\n" . 'End;'
 	)
 }
@@ -196,7 +198,8 @@ sub gatherTableInHash{
 				$self->createNameOrderArray($line);
 				next;
 			}
-			my $la = LinePackage->new($line);
+			$line =~ s/\R//g;
+			my $la = [split('\t',$line)];
 			$self->addToTableHash($la);
 		}		
 		$inFile->close();
@@ -212,11 +215,12 @@ sub createNameOrderArray{
 	
 	if(@_){
 		my $line=shift;
-		my $la = LinePackage->new($line);
+		$line =~ s/\R//g;
+		my $la = [split('\t',$line)];
 		
 		my @orderedArray;
-		for(my $i=1; $i<scalar(@{$la->lineArray}); $i++){
-			push @orderedArray, $la->lineArray->[$i];
+		for(my $i=1; $i<scalar(@{$la}); $i++){
+			push @orderedArray, $la->[$i];
 		}
 		$self->nameOrderArray(\@orderedArray);
 	}
@@ -235,14 +239,14 @@ sub addToTableHash{
 		
 		unless(defined $self->tableHash){
 			my %tempHash;
-			for(my $i=1; $i<scalar(@{$la->lineArray}); $i++){
+			for(my $i=1; $i<scalar(@{$la}); $i++){
 					$tempHash{$i}='';		
 			}
 			$self->tableHash(\%tempHash);
 		}
 		
-		for(my $i=1; $i<scalar(@{$la->lineArray}); $i++){
-			$self->tableHash->{$i} .= $la->lineArray->[$i];			
+		for(my $i=1; $i<scalar(@{$la}); $i++){
+			$self->tableHash->{$i} .= $la->[$i];			
 		}
 	}
 	else{

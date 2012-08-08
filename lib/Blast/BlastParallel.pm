@@ -1,22 +1,22 @@
 #!/usr/bin/perl
 
-package BlastParallel;
+package Blast::BlastParallel;
 
 use strict;
 use warnings;
 use Carp;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use IO::File;
 use Parallel::ForkManager;
 use FileInteraction::Fasta::FastaFileSplitter;
-use Blast::BlastIO;
 use Log::Log4perl;
 
 sub new{
 	my($class)  = shift;
     my $self= {};
     bless ($self, $class);
-    $self->_blastParallelInitialize(@_);
+    $self->_initialize(@_);
     return $self;
 }
 
@@ -36,7 +36,7 @@ sub logger{
 	$self->{'_logger'} = shift // return $self->{'_logger'};
 }
 
-sub _blastParallelInitialize{
+sub _initialize{
 	my($self)=shift;
 	
 	#logging

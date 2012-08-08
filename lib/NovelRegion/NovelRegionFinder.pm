@@ -1,29 +1,25 @@
 #!/usr/bin/perl
 
-package NovelRegionFinder;
+package NovelRegion::NovelRegionFinder;
 
 #includes
 use strict;
 use warnings;
 use diagnostics;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use Carp;
 use Mummer::DeltaBlockFactory;
 use FileInteraction::Fasta::SequenceName;
-use FileInteraction::FileManipulation;
 use FileInteraction::Fasta::SequenceRetriever;
-use Mummer::MummerGPU;
-use Pipeline::PanseqShared;
 use Log::Log4perl;
 
-our @ISA = qw/PanseqShared/;
+use parent 'Pipeline::PanseqShared';
 
 #object creation
 sub new {
 	my $class = shift;
-	my $self  = {};
-	bless( $self, $class );
-	$self->_novelRegionFinderInitialize(@_);
+	my $self= $class->SUPER::new(@_); #this calls PanseqShared::_initialize, so need to call the SUPER::_initialize
 	return $self;
 }
 
@@ -59,11 +55,6 @@ sub _adjacentJoiningSize {
 	$self->{'_NRF_adjacentJoiningSize'} = shift // return $self->{'_NRF_adjacentJoiningSize'};
 }
 
-sub combinedReferenceFile {
-	my $self = shift;
-	$self->{'_NRF_combinedReferenceFile'} = shift // return $self->{'_NRF_combinedReferenceFile'};
-}
-
 sub novelRegionsHashRef {
 	my $self = shift;
 	$self->{'_NRF_novelRegionsHashRef'} = shift // return $self->{'_NRF_novelRegionsHashRef'};
@@ -75,15 +66,15 @@ sub logger {
 }
 
 #methods
-sub _novelRegionFinderInitialize {
+sub _initialize {
 	my $self = shift;
-
-	#inheritance
-	$self->_panseqSharedInitialize(@_);
 	
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
 	
+	#inheritance
+	$self->SUPER::_initialize(@_);
+		
 	#anonymous
 	$self->_queryFastaNamesHash( {} );
 	$self->comparisonHash({});
@@ -142,7 +133,10 @@ sub _getAllFastaHeadersFromNameHash {
 
 	#get hash of query fasta headers for novelRegionFinder
 	my %fastaNamesHash;
-	my $sr = SequenceRetriever->new( $self->combinedQueryFile );
+	my $sr = FileInteraction::Fasta::SequenceRetriever->new(
+		'inputFile'=>$self->combinedQueryFile,
+		'outputFile'=>$self->_baseDirectory .'temp_getFastaHeaders'
+	);
 
 	foreach my $seqName ( keys %{ $self->queryNameObjectHash } ) {
 		my $headersRef = $self->queryNameObjectHash->{$seqName}->arrayOfHeaders;
@@ -188,10 +182,10 @@ sub getUnique {
 	my %uniqueMatches;
 
 	foreach my $query (sort keys %{ $self->comparisonHash } ) {
-		my $qName = SequenceName->new($query);
+		my $qName = FileInteraction::Fasta::SequenceName->new($query);
 		
 		foreach my $ref ( keys %{ $self->comparisonHash->{$query} } ) {
-			my $rName = SequenceName->new($ref);
+			my $rName = FileInteraction::Fasta::SequenceName->new($ref);
 			$self->logger->debug("Get unique: Query: $query Ref: $ref");
 
 			next if $qName->name eq $rName->name;
@@ -216,14 +210,14 @@ sub getCommonToAll {
 	my %oneSeqHash;    #this is a hash so that it can be fed into sortAndCompileCoordsHash
 
 	my @queryNames = keys %{ $self->queryNameObjectHash };
-	my $oneSeq     = SequenceName->new( $queryNames[0] );
+	my $oneSeq     = FileInteraction::Fasta::SequenceName->new( $queryNames[0] );
 
 	$self->logger->debug( "CTA: oneSeq: " . $oneSeq->name );
 
 	foreach my $query (sort keys %{ $self->comparisonHash } ) {
 		$self->logger->debug("CTA: query: $query");
 
-		my $querySeqName = SequenceName->new($query);
+		my $querySeqName = FileInteraction::Fasta::SequenceName->new($query);
 		next unless $querySeqName->name eq $oneSeq->name;
 
 		#get the "oneSeq" coords
@@ -475,7 +469,7 @@ sub getSeqNameCoordList {
 
 		my %uniqueNames;
 		foreach my $query ( keys %{$hashRef} ) {
-			my $qSeqName = SequenceName->new($query);
+			my $qSeqName = FileInteraction::Fasta::SequenceName->new($query);
 			$uniqueNames{ $qSeqName->name }->{$query} = $hashRef->{$query};
 		}
 		return \%uniqueNames;
@@ -544,7 +538,7 @@ sub containsAllQueryNames {
 
 		#get sequence names from hashRef
 		foreach my $name ( keys %{$hashRef} ) {
-			my $seqName = SequenceName->new($name);
+			my $seqName = FileInteraction::Fasta::SequenceName->new($name);
 
 			$self->logger->debug( "containsAllQueryNames: sentName: " . $seqName->name );
 
@@ -572,7 +566,7 @@ sub getNumberOfSeqNamesFromHash {
 		my %seqNameHash;
 
 		foreach my $key ( keys %{$hashRef} ) {
-			my $seqName = SequenceName->new($key);
+			my $seqName = FileInteraction::Fasta::SequenceName->new($key);
 			$seqNameHash{ $seqName->name } = 1 unless defined $seqNameHash{ $seqName->name };
 		}
 		return scalar( keys %seqNameHash );
@@ -600,13 +594,13 @@ sub getNoDuplicates {
 	$self->logger->debug("Number of keys in comparisonHash: " . (scalar keys %{$self->comparisonHash}) . "\n");
 	foreach my $query (sort keys %{ $self->comparisonHash } ) {
 		next unless defined $self->_queryFastaNamesHash->{$query};
-		my $queryName = SequenceName->new($query);
+		my $queryName = FileInteraction::Fasta::SequenceName->new($query);
 		my $addToCheck=0;
 			
 		$self->logger->debug("GET_NO_DUPLICATES: query: $query");
 		foreach my $ref ( keys %{ $self->comparisonHash->{$query} } ) {
 			
-			my $referenceName = SequenceName->new($ref);
+			my $referenceName = FileInteraction::Fasta::SequenceName->new($ref);
 			next if $queryName->name eq $referenceName->name;
 
 			#if a query name as a reference hit
@@ -854,7 +848,7 @@ sub buildHashOfAllComparisons {
 		my $inputFileName = shift;
 
 		my $inputFH = IO::File->new( '<' . $inputFileName ) or die $inputFileName . " $!";
-		my $dbFactory = DeltaBlockFactory->new($inputFH);
+		my $dbFactory = Mummer::DeltaBlockFactory->new($inputFH);
 
 		while ( my $block = $dbFactory->nextDeltaBlock(1) ) {    #turns on absolute start/end positions with the true value
 			$self->updateComparisonHash( $block, 'query' );

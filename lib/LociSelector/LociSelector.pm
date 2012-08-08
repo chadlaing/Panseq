@@ -7,18 +7,16 @@
 #BMC Bioinformatics 2010, 11:461
 #http://www.biomedcentral.com/1471-2105/11/461
 
-package LociSelector;
+package LociSelector::LociSelector;
 
 #usage
 # my $obj = $LociSelector->new();
-# $obj->getBestLoci(<file name (mandatory)>,<loci number or 'best (mandatory)>,<output filehandle (optional, STDOUT defualt)>);
+# $obj->getBestLoci(<file name (mandatory)>,<loci number or 'best' (mandatory)>,<output filehandle (optional, STDOUT defualt)>);
 
 use FindBin::libs;
 use IO::File;
 use FileInteraction::LinePackage;
-use FileInteraction::FlexiblePrinter;
-
-our @ISA = qw{FlexiblePrinter}; #includes outputFilehandle and printOut
+use parent 'FileInteraction::FlexiblePrinter';
 
 #object creation
 use Object::Tiny::RW qw{

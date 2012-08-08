@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 
 use LociSelector::LociSelector;
 
@@ -15,7 +16,7 @@ unless(scalar(@ARGV)>=2){
 my $fileName=shift;
 my $lociNumber=shift;
 
-my $finder = LociSelector->new();
+my $finder = LociSelector::LociSelector->new();
 $finder->getBestLoci(
 	$fileName,
 	$lociNumber

@@ -1,30 +1,35 @@
 #!/usr/bin/perl
 
-package CoreAccessory;
+package MSA::BlastBased::CoreAccessory;
 
 #includes
 use strict;
 use warnings;
 use diagnostics;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use IO::File;
 use FileInteraction::Fasta::SequenceName;
-use FileInteraction::Fasta::SegmentMaker;
 use Parallel::ForkManager;
 use File::Path qw{make_path remove_tree};
 use Blast::FormatBlastDB;
 use Blast::BlastIO;
 use Blast::BlastParallel;
 use Carp;
+use FileInteraction::Fasta::FastaFileSplitter;
 use FileInteraction::FileManipulation;
 use NovelRegion::NovelRegionFinder;
-use Pipeline::PanseqShared;
-use FileInteraction::FlexiblePrinter;
 use MSA::BlastBased::CoreAccessoryProcessor;
 use TreeBuilding::PhylogenyFileCreator;
-use Data::Dumper;
+use FileInteraction::Fasta::SequenceRetriever;
 
-our @ISA = qw/PanseqShared FlexiblePrinter/;
+use parent 'Pipeline::PanseqShared';
+
+sub new{
+	my $class = shift;
+	my $self= $class->SUPER::new(@_); #this calls PanseqShared::_initialize, so need to call the SUPER::_initialize
+	return $self;
+}
 
 sub _percentIdentityCutoff{
 	my $self=shift;
@@ -107,20 +112,13 @@ sub logger{
 	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
-sub new{
-	my($class)  = shift;
-    my $self= {};
-    bless ($self, $class);
-    $self->_coreAccessoryInitialize(@_);
-    return $self;
-}
+
 
 #methods
-sub _coreAccessoryInitialize{
+sub _initialize{
 	my($self)=shift;
 	#inheritance
-	$self->_panseqSharedInitialize(@_);
-	$self->_flexiblePrinterInitialize(@_);
+	$self->SUPER::_initialize(@_);
 	
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
@@ -156,7 +154,10 @@ sub _createSeedAndNotSeedFiles{
 	my $seed = $self->_getSeedFromQueryNameHash();
 	
 	#create database from queryFiles
-	my $retriever = SequenceRetriever->new($self->combinedQueryFile);
+	my $retriever = FileInteraction::Fasta::SequenceRetriever->new(
+		'inputFile'=>$self->combinedQueryFile,
+		'outputFile'=>$self->combinedQueryFile .'db'
+	);
 	$self->_seedFileName($self->_baseDirectory . 'seedFile_' . $seed->name . '.fasta');
 	$self->_notSeedFileName($self->_baseDirectory . 'notSeedFile' . '.fasta');
 	
@@ -193,7 +194,7 @@ sub _runBlast{
 	
 	#blast in parallel works for small datasets, but multi-GB files among multiple processors
 	#create an unacceptable memory requirement
-	my $splitter = FastaFileSplitter->new();
+	my $splitter = FileInteraction::Fasta::FastaFileSplitter->new();
 	$splitter->splitFastaFile($inputFile,$numberOfSplits);
 	my $forker = Parallel::ForkManager->new($numberOfSplits);
 	my $counter=0;
@@ -202,9 +203,9 @@ sub _runBlast{
 		#run blast / set params 
 		my $blastFileName = $self->_baseDirectory . $counter . '_blastoutput.xml';
 		
-		my $blaster = BlastIO->new({
+		my $blaster = Blast::BlastIO->new({
 			'blastDirectory'=>$self->_blastDirectory,
-			'type'=>$self->_blastType,
+			'type'=>$self->_blastType // 'blastn', #default to blastn
 			'db'=>$blastDB,
 			'outfmt'=>'5',
 			'evalue'=>'0.00001',
@@ -243,11 +244,11 @@ sub _createPhylogenyFiles{
 		if(-s $tabFile){
 		
 			#create core phylogeny file based on snps
-			my $phyllo= PhylogenyFileCreator->new();
+			my $phyllo= TreeBuilding::PhylogenyFileCreator->new();
 			my $phylogenyFH = IO::File->new('>' . $phylogenyOutputName) or die "$!";
 			my $phylogenyInfoFH = IO::File->new('>' . $phylogenyOutputInfoName) or die "$!";
 			
-			$phyllo->outputFilehandle($phylogenyFH);
+			$phyllo->outputFH($phylogenyFH);
 			$phyllo->phylipInfoFH($phylogenyInfoFH); #defaults to STDOUT
 			
 			#requires <type>,<input file>, <header flag 0/1> (optional. default=0)
@@ -269,7 +270,7 @@ sub _createPhylogenyFiles{
 sub _createBlastDB{
 	my($self)=shift;	
 	
-	my $dbMaker = FormatBlastDB->new($self->_blastDirectory);
+	my $dbMaker = Blast::FormatBlastDB->new($self->_blastDirectory);
 	
 	my $blastDB = $self->_baseDirectory . 'blastdb';	
 	
@@ -324,95 +325,6 @@ sub _validateCoreSettings {
 	}
 }
 
-sub _coreGenomeThresholdCheck{
-	my($self)=shift;
-	
-	if(@_){
-		my $thresh=shift;
-		
-		if(($thresh eq 'all') || ($self->isAnInt($thresh))){
-			return $thresh;
-		}
-		else{
-			print STDERR "$thresh is not a valid coreGenomeTheshold value!\n",
-				"Value needs to be 'all' or a positive integer.\n";
-			exit(1);
-		}
-	}
-	else{
-		print STDERR "nothing sent to coreGenomeThresholdCheck\n";
-		exit(1);
-	}
-}
-
-sub _accessoryTypeCheck{
-	my($self)=shift;
-	
-	if(@_){
-		my $type=shift;
-		
-		if(($type eq 'binary') || ($type eq 'percent') || ($type eq 'sequence')){
-			return $type;
-		}
-		else{
-			print STDERR "$type is not a valid accessoryType!\n",
-				"Valid options are binary, percent and sequence!\n";
-			exit(1);
-		}
-	}
-	else{
-		print STDERR "nothing sent to accessoryTypeCheck!\n";
-		exit(1);
-	}
-}
-
-sub _coreComparisonTypeCheck{
-	my($self)=shift;
-	
-	if(@_){
-		my $type=shift;
-		
-		if(($type eq 'blast') || ($type eq 'nucmer')){
-			return $type;
-		}
-		else{
-			print STDERR "$type is not a valid coreComparisonType!\n",
-				"Valid options are blast and nucmer!\n";
-			exit(1);
-		}
-	}
-	else{
-		print STDERR "nothing sent to accessoryTypeCheck!\n";
-		exit(1);
-	}
-}
-
-
-sub _blastTypeCheck{
-	my($self)=shift;
-	
-	if(@_){
-		my $type=shift;
-		
-		if($type eq 'blastn'){
-			$self->_snpType('nucleotide');
-			return $type;
-		}
-		elsif($type eq 'tblastn'){
-			$self->_snpType('protein');
-			return $type;
-		}
-		else{
-			$self->logger->fatal("$type is an invalid entry for blastType in the configuration file!\n
-				Currently supported values are blastn and tblastn");
-			exit(1);
-		}
-	}
-	else{
-		print STDERR "Nothing sent to blastTypeCheck!\n";
-		exit(1);
-	}
-}
 
 sub _getSeedFromQueryNameHash{
 	my($self)=shift;

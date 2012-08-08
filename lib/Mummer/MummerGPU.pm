@@ -4,11 +4,12 @@
 #and the referenceFile (all reference files in one file)
 #mummer needs the single query file with all seqs vs each ref sequence in a separate file
 
-package MummerGPU;
+package Mummer::MummerGPU;
 
 use strict;
 use warnings;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use Carp;
 use IO::File;
 use File::Temp;
@@ -121,20 +122,20 @@ sub _mummerGPUInitialize{
 sub run{
 	my $self=shift;
 	
-	my $settingsHashRef = shift;
-	$self->_queryFile($settingsHashRef->{'queryFile'}) // confess("queryFile required in MummerGPU");
-	$self->_referenceFile($settingsHashRef->{'referenceFile'}) // confess("referenceFile required in MummerGPU");
-	$self->_mummerDirectory($settingsHashRef->{'mummerDirectory'}) // confess("mummerDirectory required in MummerGPU");
-	$self->_baseDirectory($settingsHashRef->{'baseDirectory'}) // confess("baseDirectory required in MummerGPU");
-	$self->_refFileSizeLimit($settingsHashRef->{'refFileSizeLimit'}) // $self->_refFileSizeLimit(100000000);
-	$self->_numberOfCores($settingsHashRef->{'numberOfCores'}) // $self->_numberOfCores(1);
-	$self->_gpu($settingsHashRef->{'gpu'}) // $self->_gpu(0);
-	$self->_b($settingsHashRef->{'b'}) // $self->_b(200);
-	$self->_c($settingsHashRef->{'c'}) // $self->_c(50);
-	$self->_d($settingsHashRef->{'d'}) // $self->_d(0.12);
-	$self->_l($settingsHashRef->{'l'}) // $self->_l(20);
-	$self->_g($settingsHashRef->{'g'}) // $self->_g(100);
-	$self->_p($settingsHashRef->{'p'}) // $self->_p('out');
+	my %settings = @_;
+	$self->_queryFile($settings{'queryFile'}) // confess("queryFile required in MummerGPU");
+	$self->_referenceFile($settings{'referenceFile'}) // confess("referenceFile required in MummerGPU");
+	$self->_mummerDirectory($settings{'mummerDirectory'}) // confess("mummerDirectory required in MummerGPU");
+	$self->_baseDirectory($settings{'baseDirectory'}) // confess("baseDirectory required in MummerGPU");
+	$self->_refFileSizeLimit($settings{'refFileSizeLimit'}) // $self->_refFileSizeLimit(100000000);
+	$self->_numberOfCores($settings{'numberOfCores'}) // $self->_numberOfCores(1);
+	$self->_gpu($settings{'gpu'}) // $self->_gpu(0);
+	$self->_b($settings{'b'}) // $self->_b(200);
+	$self->_c($settings{'c'}) // $self->_c(50);
+	$self->_d($settings{'d'}) // $self->_d(0.12);
+	$self->_l($settings{'l'}) // $self->_l(20);
+	$self->_g($settings{'g'}) // $self->_g(100);
+	$self->_p($settings{'p'}) // $self->_p('out');
 	
 	$self->_systemLineBase($self->_mummerDirectory);
 	if($self->_gpu == 1){
@@ -241,8 +242,8 @@ sub _combineDeltaFiles{
 	my $deltaFH=IO::File->new('>'.$self->deltaFile) or die "$!";
 	$self->logger->info("Combining the delta files");		
 	
-	my $manny = FileManipulation->new();
-	$manny->outputFilehandle($deltaFH);
+	my $manny = FileInteraction::FileManipulation->new();
+	$manny->outputFH($deltaFH);
 	my $fileNamesRef = $manny->getFileNamesFromDirectory($self->_baseDirectory);
 	
 	foreach my $file(@{$fileNamesRef}){ 

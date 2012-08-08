@@ -1,6 +1,11 @@
 #!/usr/bin/perl
 
-package FormatBlastDB;
+package Blast::FormatBlastDB;
+
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
 
 sub new {
 	my ($class) = shift;

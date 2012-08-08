@@ -11,28 +11,34 @@
 #Constantly added to when new validation situation arise. Also should update
 #autocorrection often to make valiation to make processes more robust
 
-package Validator;
+package Pipeline::Validator;
 
 use strict;
 use diagnostics;
 use warnings;
+use FindBin;
+use lib $FindBin::Bin;
 use Carp;
-use Object::Tiny::RW ('_context');
 use Scalar::Util qw/ looks_like_number /;
 
-#constuctor: invoke with string with context in denoting process or module
-#eg. Validation->new('Mummer Core Accessory Analysis');
 sub new {
 	my $class = shift;
 	my $self  = {};
 	bless $self, $class;
-	$self->_context(shift);
-	unless ( $self->_context ) {
-		$self->_context('Generic Validation');
-	}
+	$self->_initialize(@_);
 	return $self;
 }
 
+sub _context{
+	my $self=shift;
+	$self->{'__context'}=shift // return $self->{'__context'};
+}
+
+sub _initialize{
+	my $self=shift;
+	my $caller = caller();
+	$self->_context($caller);
+}
 #setters
 sub setContext {
 	my $self = shift;
@@ -43,6 +49,19 @@ sub setContext {
 }
 
 #validation methods
+sub isDirectoryEmpty {
+	my $self=shift;
+    my $dir = shift;
+
+    opendir my $FH, $dir or die "Cannot open $dir$!\n";
+
+    while ( defined (my $entry = readdir $FH) ) {
+        return unless $entry =~ /^[.][.]?\z/;
+    }
+    return 1;
+}
+
+
 sub isADirectory {
 	my ($self) = shift;
 

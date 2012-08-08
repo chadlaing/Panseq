@@ -1,7 +1,8 @@
 #!/usr/bin/perl
-package SNPFinder;
+package MSA::BlastBased::SNPFinder;
 
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use FileInteraction::Fasta::SequenceName;
 use Log::Log4perl;
 
@@ -9,7 +10,7 @@ sub new{
 	my($class)  = shift;
     my $self= {};
     bless ($self, $class);
-    $self->initialize(@_);
+    $self->_initialize(@_);
     return $self;
 }
 
@@ -45,7 +46,7 @@ sub firstSwitch{
 }
 #methods
 
-sub initialize{
+sub _initialize{
 	my($self)=shift;
 	
 	if(scalar(@_)==2){
@@ -167,7 +168,7 @@ sub getHashRefOfSNP{
 	my $allowableChars=$self->allowableChars;
 	
 	foreach my $seq(keys %{$self->sequenceHash}){
-		my $seqName = SequenceName->new($seq);
+		my $seqName = FileInteraction::Fasta::SequenceName->new($seq);
 		my $currChar = substr($self->sequenceHash->{$seq},$position,1);
 		
 		my $header; 

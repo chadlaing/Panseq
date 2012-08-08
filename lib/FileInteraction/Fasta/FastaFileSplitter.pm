@@ -1,21 +1,58 @@
 #!/usr/bin/perl
-package FastaFileSplitter;
+package FileInteraction::Fasta::FastaFileSplitter;
+
+
+=pod
+
+=head1 NAME
+
+FileInteraction::Fasta::FastaFileSplitter - Splits a single fasta file into a given number of ~equal sized output fasta files.
+
+=head1 SYNOPSIS
+
+
+
+=head1 DESCRIPTION
+
+
+
+=head2 Methods
+
+
+=head1 ACKNOWLEDGEMENTS
+
+Thanks.
+
+=head1 COPYRIGHT
+
+This work is released under the GNU General Public License v3  http://www.gnu.org/licenses/gpl.html
+
+=head1 AVAILABILITY
+
+The most recent version of the code may be found at: https://github.com/chadlaing/Panseq
+
+=head1 AUTHOR
+
+Chad Laing (chadlaing gmail com)
+
+=cut
 
 use strict;
 use warnings;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use Carp;
 use IO::File;
 use FileInteraction::Fasta::SequenceRetriever;
-use FileInteraction::FileManipulation;
 use Log::Log4perl;
+use parent 'FileInteraction::FlexiblePrinter';
 
 #object creation
 sub new {
 	my ($class) = shift;
 	my $self = {};
 	bless( $self, $class );
-	$self->_fastaFileSplitterInitialize(@_);
+	$self->_initialize(@_);
 	return $self;
 }
 
@@ -36,8 +73,11 @@ sub logger{
 }
 
 #methods
-sub _fastaFileSplitterInitialize {
+sub _initialize {
 	my $self = shift;
+
+	#inheritance
+	$self->SUPER::_initialize(@_);
 
 	$self->arrayOfSplitFiles( [] );    #init as an anonymous array
 
@@ -85,7 +125,9 @@ sub splitFastaFile {
 
 	#package into approximately equal temp files
 	#use the Bio::DB in SequenceRetriever
-	my $queryDB = SequenceRetriever->new($fileName);
+	my $queryDB = FileInteraction::Fasta::SequenceRetriever->new(	
+		'inputFile'=>$fileName
+	);
 
 	my $tempNum    = 0;
 	my $count      = 0;
@@ -93,16 +135,12 @@ sub splitFastaFile {
 	for ( my $start = 0 ; $start < $self->_numberOfTempFiles ; $start++ ) {
 		my $tempFileName = $fileName . $start . '.FastaTemp';
 		push @{ $self->arrayOfSplitFiles }, $tempFileName;
-		my $tempFH = IO::File->new( '>' . $tempFileName ) or die "Cannot open $tempFileName\n $!";
+		$self->outputFH(IO::File->new('>' . $tempFileName or die "Cannot open $tempFileName"));
+		
 		for(my $seqNum=$start;$seqNum < scalar(@sortedKeys); $seqNum+=$self->_numberOfTempFiles){
-			$self->logger->debug("DEBUG:\tseqNum: $seqNum");
 			my $seq = $sortedKeys[$seqNum];
-			$self->logger->debug("DEBUG:\tseq: $seq");
-			print $tempFH ( '>' . $seq . "\n" . $queryDB->extractRegion($seq) . "\n" );
-			
-			$self->logger->debug("DEBUG: Adding $seq to $tempFileName");
+			$self->print( '>' . $seq . "\n" . $queryDB->extractRegion($seq) . "\n" );
 		}
-		$tempFH->close();
 	}
 }
 

@@ -1,25 +1,89 @@
 #!/usr/bin/perl
 
-package DeltaBlockObject;
+package Mummer::DeltaBlockObject;
+use strict;
+use warnings;
 use Carp;
+use FindBin;
+use lib "$FindBin::Bin";
 
-use Object::Tiny::RW qw{
-  refName
-  queryName
-  refLength
-  queryLength
-  refStart
-  refEnd
-  queryStart
-  queryEnd
-  gapArray
-  errors
-  similarityErrors
-  stopCodons
-};
+sub new {
+	my ($class) = shift;
+	my $self = {};
+	bless( $self, $class );
+	$self->_initialize(@_);
+	return $self;
+}
+
+sub stopCodons{
+	my $self=shift;
+	$self->{'_stopCodons'}=shift // return $self->{'_stopCodons'};
+}
+
+sub similarityErrors{
+	my $self=shift;
+	$self->{'_similarityErrors'}=shift // return $self->{'_similarityErrors'};
+}
+
+sub errors{
+	my $self=shift;
+	$self->{'_errors'}=shift // return $self->{'_errors'};
+}
+
+sub gapArray{
+	my $self=shift;
+	$self->{'_gapArray'}=shift // return $self->{'_gapArray'};
+}
+
+sub queryEnd{
+	my $self=shift;
+	$self->{'_queryEnd'}=shift // return $self->{'_queryEnd'};
+}
+
+sub queryStart{
+	my $self=shift;
+	$self->{'_queryStart'}=shift // return $self->{'_queryStart'};
+}
+
+sub refEnd{
+	my $self=shift;
+	$self->{'_refEnd'}=shift // return $self->{'_refEnd'};
+}
+
+sub refStart{
+	my $self=shift;
+	$self->{'_refStart'}=shift // return $self->{'_refStart'};
+}
+
+sub queryLength{
+	my $self=shift;
+	$self->{'_queryLength'}=shift // return $self->{'_queryLength'};
+}
+
+sub refLength{
+	my $self=shift;
+	$self->{'_refLength'}=shift // return $self->{'_refLength'};
+}
+
+sub queryName{
+	my $self=shift;
+	$self->{'_queryName'}=shift // return $self->{'_queryName'};
+}
+
+sub refName{
+	my $self=shift;
+	$self->{'_refName'}=shift // return $self->{'_refName'};
+}
+
 
 #methods
 #given a block returns its approximate percent ID corresponding to the length of query sequence
+
+sub _initialize{
+	my $self=shift;
+}
+
+
 sub getPercentID {
 	my $self = shift;
 

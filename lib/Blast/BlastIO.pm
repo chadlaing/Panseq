@@ -1,38 +1,103 @@
 #!/usr/bin/perl
 
-package BlastIO;
+package Blast::BlastIO;
 use strict;
 use warnings;
 use Carp;
-
-#commenting for the comment lovers
-use Object::Tiny::RW qw{
-	programDirectory
-	type
-	task
-	dust
-	query
-	db
-	out
-	evalue
-	word_size
-	outfmt
-	num_descriptions
-	num_alignments
-	max_target_seqs
-	num_threads	
-};
+use FindBin;
+use lib "$FindBin::Bin";
 
 sub new {
 	my ($class) = shift;
 	my $self = {};
 	bless( $self, $class );
-	$self->_blastIOInitialize(@_);
+	$self->_initialize(@_);
 	return $self;
 }
 
+
+sub programDirectory{
+	my $self=shift;
+	$self->{'_programDirectory'}=shift // return $self->{'_programDirectory'};
+}
+
+sub type{
+	my $self=shift;
+	$self->{'_type'}=shift // return $self->{'_type'};
+}
+
+sub task{
+	my $self=shift;
+	$self->{'_task'}=shift // return $self->{'_task'};
+}
+
+sub dust{
+	my $self=shift;
+	$self->{'_dust'}=shift // return $self->{'_dust'};
+}
+
+sub query{
+	my $self=shift;
+	$self->{'_query'}=shift // return $self->{'_query'};
+}
+
+sub db{
+	my $self=shift;
+	$self->{'_db'}=shift // return $self->{'_db'};
+}
+
+sub out{
+	my $self=shift;
+	$self->{'_out'}=shift // return $self->{'_out'};
+}
+
+sub evalue{
+	my $self=shift;
+	$self->{'_evalue'}=shift // return $self->{'_evalue'};
+}
+
+sub word_size{
+	my $self=shift;
+	$self->{'_word_size'}=shift // return $self->{'_word_size'};
+}
+
+sub outfmt{
+	my $self=shift;
+	$self->{'_outfmt'}=shift // return $self->{'_outfmt'};
+}
+
+sub num_descriptions{
+	my $self=shift;
+	$self->{'_num_descriptions'}=shift // return $self->{'_num_descriptions'};
+}
+
+sub num_alignments{
+	my $self=shift;
+	$self->{'_num_alignments'}=shift // return $self->{'_num_alignments'};
+}
+
+sub max_target_seqs{
+	my $self=shift;
+	$self->{'_max_target_seqs'}=shift // return $self->{'_max_target_seqs'};
+}
+
+sub num_threads{
+	my $self=shift;
+	$self->{'_num_threads'}=shift // return $self->{'_num_threads'};
+}
+
+sub best_hit_score_edge{
+	my $self=shift;
+	$self->{'_best_hit_score_edge'}=shift // return $self->{'_best_hit_score_edge'};
+}
+
+sub best_hit_overhang{
+	my $self=shift;
+	$self->{'_best_hit_overhang'}=shift // return $self->{'_best_hit_overhang'};
+}
+
 #methods
-sub _blastIOInitialize{
+sub _initialize{
 	my($self)=shift;
 	
 	my $paramsRef=shift;	
@@ -43,7 +108,7 @@ sub _blastIOInitialize{
 sub runBlastn{
 	my($self)=shift;
 	
-	if(@_){
+	if(1){
 		my %settingsHash=@_;
 		
 		$self->setValuesFromHash(\%settingsHash);
@@ -69,6 +134,9 @@ sub runBlastn{
 		$systemLine .= ' -num_alignments ' . $self->num_alignments if (defined $self->num_alignments);
 		$systemLine .= ' -max_target_seqs ' . $self->max_target_seqs if (defined $self->max_target_seqs);
 		$systemLine .= ' -num_threads ' . $self->num_threads if (defined $self->num_threads);
+		$systemLine .= ' -best_hit_score_edge ' . $self->best_hit_score_edge if (defined $self->best_hit_score_edge);
+		$systemLine .= ' -best_hit_overhang ' . $self->best_hit_overhang if (defined $self->best_hit_overhang);
+
 		
 		system($systemLine);
 		return;
@@ -82,7 +150,7 @@ sub runBlastn{
 sub setValuesFromHash{
 	my($self)=shift;
 	
-	if(@_){
+	if(1){
 		my $hashRef=shift;
 		
 		$self->programDirectory($hashRef->{'blastDirectory'}) if defined $hashRef->{'blastDirectory'};
@@ -99,6 +167,8 @@ sub setValuesFromHash{
 		$self->num_alignments($hashRef->{'num_alignments'}) if defined $hashRef->{'num_alignments'};
 		$self->max_target_seqs($hashRef->{'max_target_seqs'}) if defined $hashRef->{'max_target_seqs'};
 		$self->num_threads($hashRef->{'num_threads'}) if defined $hashRef->{'num_threads'};
+		$self->best_hit_score_edge($hashRef->{'best_hit_score_edge'}) if defined $hashRef->{'best_hit_score_edge'};
+		$self->best_hit_overhang($hashRef->{'best_hit_overhang'}) if defined $hashRef->{'best_hit_overhang'};
 		
 		return;
 	}

@@ -1,23 +1,24 @@
 #!/usr/bin/perl
 
-package PanseqShared;
+package Pipeline::PanseqShared;
 
 use strict;
 use warnings;
 use diagnostics;
-use FindBin::libs;
+use FindBin;
+use lib "$FindBin::Bin";
 use Carp;
 use File::Copy;
-use FileInteraction::LinePackage;
 use Pipeline::Validator;
-our @ISA = qw/Validator/;
+use FileInteraction::FileManipulation;
+use FileInteraction::Fasta::SequenceName;
 
 #object creation
 sub new {
 	my ($class) = shift;
 	my $self = {};
 	bless( $self, $class );
-	$self->_panseqSharedInitialize(@_);
+	$self->_initialize(@_);
 	return $self;
 }
 
@@ -62,6 +63,11 @@ sub combinedQueryFile {
 	$self->{'_PanseqShared_combinedQueryFile'} = shift // return $self->{'_PanseqShared_combinedQueryFile'};
 }
 
+sub combinedReferenceFile{
+	my $self=shift;
+	$self->{'_combinedReferenceFile'}=shift // return $self->{'_combinedReferenceFile'};
+}
+
 sub queryNameObjectHash {
 	my $self = shift;
 	$self->{'_PanseqShared_queryNameObjectHash'} = shift // return $self->{'_PanseqShared_queryNameObjectHash'};
@@ -98,9 +104,10 @@ sub _validator {
 }
 
 #methods
-sub _panseqSharedInitialize {
+sub _initialize {
 	my $self = shift;
-	$self->_validator(Validator->new() );
+
+	$self->_validator(Pipeline::Validator->new() );
 }
 
 sub getSettingsFromConfigurationFile {
@@ -113,10 +120,12 @@ sub getSettingsFromConfigurationFile {
 
 		while ( my $line = $inFile->getline ) {
 			next unless $line =~ m/\t/;
-			my $la = LinePackage->new($line);
+			
+			$line =~ s/\R//g;
+			my $la = [split(/\t/,$line)];
 
-			my $setting = $la->lineArray->[0] // 'no_value';
-			my $value   = $la->lineArray->[1] // 'no_value';
+			my $setting = $la->[0] // 'no_value';
+			my $value   = $la->[1] // 'no_value';
 			$settingsHash{$setting} = $value;
 		}
 		$inFile->close();
@@ -173,43 +182,50 @@ sub getQueryNamesAndCombineAllInputFiles {
 	my ($self) = shift;
 
 	if (1) {
-
+		$self->logger->debug("In getQueryNamesAndCombineAllInputFiles");
 		#get list of the query files
 		#we need to create a queryFiles and referenceFiles file
-		my $fileManipulator = FileManipulation->new();
+		my $fileManipulator = FileInteraction::FileManipulation->new();
 		my $queryFileName   = $self->_baseDirectory . 'queryFilesCombined.fasta';
 		my $queryOutputFH   = IO::File->new( '>' . $queryFileName ) or die "$!";
-		$fileManipulator->outputFilehandle($queryOutputFH);    #set filehandle
+		$fileManipulator->outputFH($queryOutputFH);    #set filehandle
 
 		#store for posterity
 		$self->combinedQueryFile($queryFileName);
 		$fileManipulator->combineFilesIntoSingleFile( $fileManipulator->getFileNamesFromDirectory( $self->queryDirectory ), 1 );                                                    #second argument cleans file
 		$queryOutputFH->close();
-
-		if ( $self->can('novelRegionFinderMode') ) {
+		$self->logger->debug("Query files combined in getQueryNamesAndCombineAllInputFiles");
+		#check if reference directory is empty.
+		#this would be an error in novelRegions mode, but would indicate
+		#a panGenomic analyses of the query sequences in core mode
+		unless (!defined $self->referenceDirectory || $self->_validator->isDirectoryEmpty($self->referenceDirectory) ) {
+			$self->logger->debug("referenceDirectory is empty");
 			my $referenceFileName = $self->_baseDirectory . 'referenceFilesCombined.fasta';
 
 			$self->combinedReferenceFile($referenceFileName);    #save for posterity
 			my $refFH = IO::File->new( '>' . $referenceFileName ) or die "$!";
-			$fileManipulator->outputFilehandle($refFH);
+			$fileManipulator->outputFH($refFH);
 			$fileManipulator->combineFilesIntoSingleFile( $fileManipulator->getFileNamesFromDirectory( $self->referenceDirectory ), 1 );
 			$refFH->close();
 
-			#for a unique novelRegionFinder run, need an all vs. all comparison
-			my $outRefFH = IO::File->new( '>>' . $self->combinedReferenceFile ) or die "$!";
-			$fileManipulator->outputFilehandle($outRefFH);
-			$fileManipulator->vanillaCombineFiles( [ $self->combinedQueryFile ] );
-			$outRefFH->close();
+			if($self->can('novelRegionFinderMode')){
+				#for a unique novelRegionFinder run, need an all vs. all comparison
+				my $outRefFH = IO::File->new( '>>' . $self->combinedReferenceFile ) or die "$!";
+				$fileManipulator->outputFH($outRefFH);
+				$fileManipulator->vanillaCombineFiles( [ $self->combinedQueryFile ] );
+				$outRefFH->close();
 
-			#unique requires that all vs. all be performed
-			if ( $self->novelRegionFinderMode eq 'unique' ) {
+				#unique requires that all vs. all be performed
+				if ( $self->novelRegionFinderMode eq 'unique' ) {
 
-				#with File::Copy
-				copy( $self->combinedReferenceFile, $self->combinedQueryFile ) or die "Could not complete File::Copy $!";
+					#with File::Copy
+					copy( $self->combinedReferenceFile, $self->combinedQueryFile ) or die "Could not complete File::Copy $!";
+				}
 			}
 		}
-
+		$self->logger->debug("Finished creating files; about to start getFastaHeadersFromFile");
 		$self->queryNameObjectHash( $self->getSequenceNamesAsHashRef( $fileManipulator->getFastaHeadersFromFile( $self->combinedQueryFile ) ) );
+		$self->logger->debug("Finished getQueryNamesAndCombineAllInputFiles");
 	}
 	else {
 		print STDERR "The universe has reversed polarity\n";
@@ -226,7 +242,7 @@ sub getSequenceNamesAsHashRef {
 		#get query names
 		my %seqNames;
 		foreach my $header ( @{$fastaHeadersArrayRef} ) {
-			my $seqName = SequenceName->new($header);
+			my $seqName = FileInteraction::Fasta::SequenceName->new($header);
 
 			if ( defined $seqNames{ $seqName->name } ) {
 				my $tempSeq = $seqNames{ $seqName->name };

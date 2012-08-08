@@ -11,37 +11,76 @@
 #-diags
 #-refine
 
-package MuscleCmd;
+package Muscle::MuscleCmd;
+
 use warnings;
 use strict;
 use diagnostics;
-use Object::Tiny::RW qw{
-  _in
-  _out
-  _stable
-  _inPipe
-  _outPipe
-  _maxiters
-  _diagsNum
-  _refine
-  _muscleExecutable
-};
-
 use Carp;
+use FindBin;
+use lib "$FindBin::Bin";
 
 #constructor
 sub new {
-	my ($class) = shift;
-	my $executable=shift;
-	
+	my ($class) = shift;	
 	my $self = {};
 	bless $self, $class;
+	$self->_initialize(@_);
+	return $self;
+}
 
+sub _initialize{
+	my $self=shift;
+	my $executable=shift;
+	$self->_muscleExecutable($executable) // confess("The location of the muscle executable must be specified");
 	$self->_stable(0);
 	$self->_diagsNum(0);
 	$self->_refine(0);
-	$self->_muscleExecutable($executable) // confess("The location of the muscle executable must be specified");
-	return $self;
+}
+
+sub _muscleExecutable{
+	my $self=shift;
+	$self->{'__muscleExecutable'}=shift // return $self->{'__muscleExecutable'};
+}
+
+sub _refine{
+	my $self=shift;
+	$self->{'__refine'}=shift // return $self->{'__refine'};
+}
+
+sub _diagsNum{
+	my $self=shift;
+	$self->{'__diagsNum'}=shift // return $self->{'__diagsNum'};
+}
+
+sub _maxiters{
+	my $self=shift;
+	$self->{'__maxiters'}=shift // return $self->{'__maxiters'};
+}
+
+sub _outPipe{
+	my $self=shift;
+	$self->{'__outPipe'}=shift // return $self->{'__outPipe'};
+}
+
+sub _inPipe{
+	my $self=shift;
+	$self->{'__inPipe'}=shift // return $self->{'__inPipe'};
+}
+
+sub _stable{
+	my $self=shift;
+	$self->{'__stable'}=shift // return $self->{'__stable'};
+}
+
+sub _out{
+	my $self=shift;
+	$self->{'__out'}=shift // return $self->{'__out'};
+}
+
+sub _in{
+	my $self=shift;
+	$self->{'__in'}=shift // return $self->{'__in'};
 }
 
 #set functions

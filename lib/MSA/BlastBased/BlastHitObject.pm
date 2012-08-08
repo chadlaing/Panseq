@@ -1,23 +1,91 @@
 #!/usr/bin/perl
-package BlastHitObject;
+package MSA::BlastBased::BlastHitObject;
 
-use FindBin::libs;
-use FileInteraction::Fasta::SequenceName;
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
 
-use Object::Tiny::RW qw{
-  hit_def
-  hit_len
-  hsp_query_from
-  hsp_query_to
-  hsp_hit_from
-  hsp_hit_to
-  hsp_identity
-  hsp_align_len
-  hsp_qseq
-  hsp_hseq
-  hsp_query_frame
-  hsp_hit_frame
-};
+sub new {
+	my ($class) = shift;
+	my $self = {};
+	bless( $self, $class );
+	return $self;
+}
+
+sub hit_def{
+	my $self=shift;
+	$self->{'_hit_def'}=shift // return $self->{'_hit_def'};
+}
+
+sub hit_accession{
+	my $self=shift;
+	$self->{'_hit_accession'}=shift // return $self->{'_hit_accession'};
+}
+
+sub hit_len{
+	my $self=shift;
+	$self->{'_hit_len'}=shift // return $self->{'_hit_len'};
+}
+
+sub hsp_query_from{
+	my $self=shift;
+	$self->{'_hsp_query_from'}=shift // return $self->{'_hsp_query_from'};
+}
+
+sub hsp_query_to{
+	my $self=shift;
+	$self->{'_hsp_query_to'}=shift // return $self->{'_hsp_query_to'};
+}
+
+sub hsp_hit_from{
+	my $self=shift;
+	$self->{'_hsp_hit_from'}=shift // return $self->{'_hsp_hit_from'};
+}
+
+sub hsp_hit_to{
+	my $self=shift;
+	$self->{'_hsp_hit_to'}=shift // return $self->{'_hsp_hit_to'};
+}
+
+sub hsp_identity{
+	my $self=shift;
+	$self->{'_hsp_identity'}=shift // return $self->{'_hsp_identity'};
+}
+
+sub hsp_align_len{
+	my $self=shift;
+	$self->{'_hsp_align_len'}=shift // return $self->{'_hsp_align_len'};
+}
+
+sub hsp_qseq{
+	my $self=shift;
+	$self->{'_hsp_qseq'}=shift // return $self->{'_hsp_qseq'};
+}
+sub hsp_hseq{
+	my $self=shift;
+	$self->{'_hsp_hseq'}=shift // return $self->{'_hsp_hseq'};
+}
+
+sub hsp_query_frame{
+	my $self=shift;
+	$self->{'_hsp_query_frame'}=shift // return $self->{'_hsp_query_frame'};
+}
+
+sub hsp_hit_frame{
+	my $self=shift;
+	$self->{'_hsp_hit_frame'}=shift // return $self->{'_hsp_hit_frame'};
+}
+
+sub hsp_score{
+	my $self=shift;
+	$self->{'_hsp_score'}=shift // return $self->{'_hsp_score'};
+}
+
+sub hsp_evalue{
+	my $self=shift;
+	$self->{'_hsp_evalue'}=shift // return $self->{'_hsp_evalue'};
+}
 
 #methods
 sub addParam {

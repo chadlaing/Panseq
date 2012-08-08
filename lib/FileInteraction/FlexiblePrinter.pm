@@ -1,29 +1,31 @@
 #!/usr/bin/perl
 
-package FlexiblePrinter;
+package FileInteraction::FlexiblePrinter;
 #allows a unified, flexible printing strategy
+use strict;
+use warnings;
+use diagnostics;
+use FindBin;
+use lib "$FindBin::Bin";
 
 sub new{
 	my($class)  = shift;
     my $self= {};
     bless ($self, $class);
-    $self->_flexiblePrinterInitialize(@_);  
+    $self->_initialize(@_);
     return $self;
 }
 
 
 #get/set
-sub _flexiblePrinterInitialize{
+sub _initialize{
 	my $self=shift;
 	
-	if(@_){
-    	my $handle=shift;
-    	$self->outputFilehandle($handle);
-    } 
+	my %init = @_;	
+	$self->outputFH($init{'outputFH'}) if defined $init{'outputFH'};
 }
-
  
-sub outputFilehandle{
+sub outputFH{
 	my($self)=shift;
 	
 	if(@_){
@@ -35,10 +37,10 @@ sub outputFilehandle{
 }
 
 #methods
-sub printOut{
+sub print{
 	my($self)=shift;
 	
-	my $outFile = $self->outputFilehandle;
+	my $outFile = $self->outputFH;
 	print $outFile @_;
 }
 
