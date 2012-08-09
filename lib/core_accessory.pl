@@ -13,8 +13,8 @@ use Log::Log4perl;
 use Tie::Log4perl;
 use File::Basename;
 use File::Path qw{make_path remove_tree};
-use Visual::Bacteria;
-use Blast::Annotator;
+#use Visual::Bacteria;
+#use Blast::Annotator;
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
@@ -49,8 +49,8 @@ if ( defined $ca->_baseDirectory ) {
 
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
-#close STDERR;
-#tie *STDERR, "Tie::Log4perl";
+close STDERR;
+tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/core_accessory_log4p.conf");
 $ca->logger->info("CoreAccessory begin");
 my $logger = Log::Log4perl->get_logger();
