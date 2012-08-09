@@ -182,7 +182,7 @@ $forker->wait_all_children;
 # 	'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
 # 	'numberOfCores'=>'20'
 # );
-$annotator->annotate();
+#$annotator->annotate();
 
 $ca->logger->info("Finished CoreAccessory Analysis");		
 
