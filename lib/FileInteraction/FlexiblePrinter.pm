@@ -32,7 +32,7 @@ sub outputFH{
 		$self->{'_outputFilehandle'}=shift;
 	}
 	else{
-		return $self->{'_outputFilehandle'} || *STDOUT{IO};
+		return $self->{'_outputFilehandle'} // *STDOUT{IO};
 	}
 }
 

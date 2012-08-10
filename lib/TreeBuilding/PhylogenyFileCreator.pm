@@ -50,6 +50,7 @@ sub _initialize{
 
 	#inheritance
 	$self->SUPER::_initialize(@_);
+
 }
 
 sub createFile{
@@ -155,7 +156,7 @@ sub printNexusFormat{
 		}
 		push @names, $name;
 		
-		$self->printOut(
+		$self->print(
 			$name,
 			"\n"
 		);
@@ -237,13 +238,13 @@ sub addToTableHash{
 	if(@_){
 		my $la=shift;
 		
-		unless(defined $self->tableHash){
-			my %tempHash;
-			for(my $i=1; $i<scalar(@{$la}); $i++){
-					$tempHash{$i}='';		
-			}
-			$self->tableHash(\%tempHash);
-		}
+		 unless(defined $self->tableHash){
+		 	my %tempHash;
+		 	for(my $i=1; $i<scalar(@{$la}); $i++){
+		 			$tempHash{$i}='';		
+		 	}
+		 	$self->tableHash(\%tempHash);
+		 }
 		
 		for(my $i=1; $i<scalar(@{$la}); $i++){
 			$self->tableHash->{$i} .= $la->[$i];			

@@ -14,7 +14,7 @@ use Tie::Log4perl;
 use File::Basename;
 use File::Path qw{make_path remove_tree};
 use Visual::Bacteria;
-use Blast::Annotator;
+#use Blast::Annotator;
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
@@ -49,8 +49,8 @@ if ( defined $ca->_baseDirectory ) {
 
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
-#close STDERR;
-#tie *STDERR, "Tie::Log4perl";
+close STDERR;
+tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/core_accessory_log4p.conf");
 $ca->logger->info("CoreAccessory begin");
 my $logger = Log::Log4perl->get_logger();
@@ -166,13 +166,13 @@ for(1..2){
 $forker->wait_all_children;	
 
 
-# #add visualization 
-# if($ca->createGraphic eq 'yes'){
-# 		my $visFH = IO::File->new('>' . $ca->_baseDirectory . 'panGenome.svg') or die "$!";
-# 		my $vis = Visual::Bacteria->new();
-# 		$visFH->print($vis->run($ca->_baseDirectory . 'accessory_regions_table.txt'));
-# 		$visFH->close;	
-# }
+#add visualization 
+if($ca->createGraphic eq 'yes'){
+		my $visFH = IO::File->new('>' . $ca->_baseDirectory . 'panGenome.svg') or die "$!";
+		my $vis = Visual::Bacteria->new();
+		$visFH->print($vis->run($ca->_baseDirectory . 'accessory_regions_table.txt','large'));
+		$visFH->close;	
+}
 
 # #add annotation
 # my $annotator = Blast::Annotator->new(
@@ -182,7 +182,7 @@ $forker->wait_all_children;
 # 	'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
 # 	'numberOfCores'=>'20'
 # );
-$annotator->annotate();
+#$annotator->annotate();
 
 $ca->logger->info("Finished CoreAccessory Analysis");		
 

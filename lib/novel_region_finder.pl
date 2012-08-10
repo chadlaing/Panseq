@@ -12,8 +12,8 @@ use FileInteraction::Fasta::SequenceRetriever;
 use Mummer::MummerGPU;
 use FileInteraction::FileManipulation;
 use IO::File;
-use Visual::Visualization;
-use Blast::Annotator;
+#use Visual::Visualization;
+#use Blast::Annotator;
 use Log::Log4perl qw/get_logger/;
 use Tie::Log4perl;
 
@@ -54,8 +54,8 @@ unless(defined $nrf->_skipGatherFiles) {
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
 
-#close STDERR;
-#tie *STDERR, "Tie::Log4perl";
+close STDERR;
+tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/log4p.conf");
 my $logger = Log::Log4perl->get_logger();
 
@@ -105,25 +105,25 @@ $logger->info("Novel regions extracted.");
 
 #create visualization if run as novel_region_finder
 #check for _skipGatherFiles to indicate a call from core_accessory.pl
-if(!defined $nrf->_skipGatherFiles){
-	if($nrf->createGraphic eq 'yes'){
-		my $visFH = IO::File->new('>' . $nrf->_baseDirectory . 'novelRegions.svg') or die "$!";
-		my $vis = Visual::Visualization->new();
-		$visFH->print($vis->run($mummer->deltaFile));
-		$visFH->close;	
-	}
+# if(!defined $nrf->_skipGatherFiles){
+# 	if($nrf->createGraphic eq 'yes'){
+# 		my $visFH = IO::File->new('>' . $nrf->_baseDirectory . 'novelRegions.svg') or die "$!";
+# 		my $vis = Visual::Visualization->new();
+# 		$visFH->print($vis->run($mummer->deltaFile));
+# 		$visFH->close;	
+# 	}
 
-	#provide a table of novel region annotations, as well as a newly formatted and annotated novel regions file
-	my $annotator = Blast::Annotator->new(
-		'inputFile'=>$nrf->outputFileName ,
-		'outputFile'=>$nrf->_baseDirectory . '/novel_regions_annotation.txt',
-		'blastDirectory'=>'/home/phac/ncbi-blast-2.2.26+/bin/',
-		'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
-		'numberOfCores'=>'20',
-		'annotatedFastaFile'=>$nrf->_baseDirectory . 'novelRegions_annotated.fasta'
-	);
-	$annotator->annotate();
-}
+# 	#provide a table of novel region annotations, as well as a newly formatted and annotated novel regions file
+# 	my $annotator = Blast::Annotator->new(
+# 		'inputFile'=>$nrf->outputFileName ,
+# 		'outputFile'=>$nrf->_baseDirectory . '/novel_regions_annotation.txt',
+# 		'blastDirectory'=>'/home/phac/ncbi-blast-2.2.26+/bin/',
+# 		'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
+# 		'numberOfCores'=>'20',
+# 		'annotatedFastaFile'=>$nrf->_baseDirectory . 'novelRegions_annotated.fasta'
+# 	);
+# 	$annotator->annotate();
+# }
 
 
 
