@@ -198,31 +198,33 @@ sub getQueryNamesAndCombineAllInputFiles {
 		#check if reference directory is empty.
 		#this would be an error in novelRegions mode, but would indicate
 		#a panGenomic analyses of the query sequences in core mode
-		unless (!defined $self->referenceDirectory || $self->_validator->isDirectoryEmpty($self->referenceDirectory) ) {
-			$self->logger->debug("referenceDirectory is empty");
-			my $referenceFileName = $self->_baseDirectory . 'referenceFilesCombined.fasta';
+		
+		$self->logger->debug("referenceDirectory is empty");
+		my $referenceFileName = $self->_baseDirectory . 'referenceFilesCombined.fasta';
 
-			$self->combinedReferenceFile($referenceFileName);    #save for posterity
+		$self->combinedReferenceFile($referenceFileName);    #save for posterity
+			
+		unless (!defined $self->referenceDirectory || $self->_validator->isDirectoryEmpty($self->referenceDirectory) ) {
 			my $refFH = IO::File->new( '>' . $referenceFileName ) or die "$!";
 			$fileManipulator->outputFH($refFH);
 			$fileManipulator->combineFilesIntoSingleFile( $fileManipulator->getFileNamesFromDirectory( $self->referenceDirectory ), 1 );
 			$refFH->close();
+		}
 
-			if($self->can('novelRegionFinderMode')){
-				#for a unique novelRegionFinder run, need an all vs. all comparison
-				my $outRefFH = IO::File->new( '>>' . $self->combinedReferenceFile ) or die "$!";
-				$fileManipulator->outputFH($outRefFH);
-				$fileManipulator->vanillaCombineFiles( [ $self->combinedQueryFile ] );
-				$outRefFH->close();
+		if($self->can('novelRegionFinderMode')){
+			#for a unique novelRegionFinder run, need an all vs. all comparison
+			my $outRefFH = IO::File->new( '>>' . $self->combinedReferenceFile ) or die "$!";
+			$fileManipulator->outputFH($outRefFH);
+			$fileManipulator->vanillaCombineFiles( [ $self->combinedQueryFile ] );
+			$outRefFH->close();
 
-				#unique requires that all vs. all be performed
-				if ( $self->novelRegionFinderMode eq 'unique' ) {
-
-					#with File::Copy
-					copy( $self->combinedReferenceFile, $self->combinedQueryFile ) or die "Could not complete File::Copy $!";
-				}
+			#unique requires that all vs. all be performed
+			if ( $self->novelRegionFinderMode eq 'unique' ) {
+				#with File::Copy
+				copy( $self->combinedReferenceFile, $self->combinedQueryFile ) or die "Could not complete File::Copy $!";
 			}
 		}
+		#}
 		$self->logger->debug("Finished creating files; about to start getFastaHeadersFromFile");
 		$self->queryNameObjectHash( $self->getSequenceNamesAsHashRef( $fileManipulator->getFastaHeadersFromFile( $self->combinedQueryFile ) ) );
 		$self->logger->debug("Finished getQueryNamesAndCombineAllInputFiles");

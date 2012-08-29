@@ -54,8 +54,8 @@ unless(defined $nrf->_skipGatherFiles) {
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
 
-close STDERR;
-tie *STDERR, "Tie::Log4perl";
+#close STDERR;
+#tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/log4p.conf");
 my $logger = Log::Log4perl->get_logger();
 

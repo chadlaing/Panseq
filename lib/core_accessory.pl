@@ -49,8 +49,8 @@ if ( defined $ca->_baseDirectory ) {
 
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
-close STDERR;
-tie *STDERR, "Tie::Log4perl";
+#close STDERR;
+#tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/core_accessory_log4p.conf");
 $ca->logger->info("CoreAccessory begin");
 my $logger = Log::Log4perl->get_logger();
@@ -90,7 +90,7 @@ elsif($ca->_coreInputType =~ /(^\/.+)/){
 			
 	my $cleanFileName = $ca->_baseDirectory . 'cleanedUserProvidedFile.fasta';
 	my $cleanFH = IO::File->new('>' . $cleanFileName) or die "Cannot open $cleanFileName $!";
-	$cleaner->outputFilehandle($cleanFH);
+	$cleaner->outputFH($cleanFH);
 	$cleaner->combineFilesIntoSingleFile([$inputLociFile],1);
 	$cleanFH->close;
 	$inputLociFile = $cleanFileName;
