@@ -173,6 +173,8 @@ if(!defined $nrf->_skipGatherFiles){
 $nrf->cleanUp();
 $nrf->logger->info("Novel regions extracted");
 
+#end
+
 
 
 #HOOKS for log4p.conf
