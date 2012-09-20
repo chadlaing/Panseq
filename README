@@ -170,3 +170,5 @@ would run a lociSelector analysis on the data present in <input file name>, sele
 
 The approach of the loci selector module in Panseq is to iteratively build the final loci set, including only the loci that produce the most unique fingerprints, and offer the most variability among input sequences at each step. This allows it to efficiently examine datasets that would be computationally prohibitive if all possible combinations were considered. To return a specific number of hgihest-scoring loci, set 'lociNumber' to a non-zero integer value. Setting 'lociNumber' to 'best' automatically determines the fewest loci that will maximize discrimination based on the tabular data provided.
 
+END
+
