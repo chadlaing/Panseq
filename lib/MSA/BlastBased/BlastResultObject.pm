@@ -4,7 +4,7 @@ package MSA::BlastBased::BlastResultObject;
 use strict;
 use warnings;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use MSA::BlastBased::BlastHitObject;
 use FileInteraction::Fasta::SequenceName;
 

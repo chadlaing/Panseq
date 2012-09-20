@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use diagnostics;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use Carp;
 use File::Copy;
 use Pipeline::Validator;
@@ -23,6 +23,16 @@ sub new {
 }
 
 #class variables
+sub toAnnotate{
+	my $self=shift;
+	$self->{'_toAnnotate'}=shift // return $self->{'_toAnnotate'};
+}
+
+sub mummerNumberOfInstances{
+	my $self=shift;
+	$self->{'_mummerNumberOfInstances'}=shift // return $self->{'_mummerNumberOfInstances'};
+}
+
 sub queryDirectory {
 	my $self = shift;
 	$self->{'_PanseqShared_queryDirectory'} = shift // return $self->{'_PanseqShared_queryDirectory'};
@@ -103,6 +113,21 @@ sub _validator {
 	$self->{'_panseqShared_validator'} = shift // return $self->{'_panseqShared_validator'};
 }
 
+sub _blastDirectory{
+	my $self=shift;
+	$self->{'_CoreAccessory_blastDirectory'}=shift // return $self->{'_CoreAccessory_blastDirectory'};
+}
+
+sub mummerNumberOfSplitFiles{
+	my $self=shift;
+	$self->{'_mummerNumberOfSplitFiles'}=shift // return $self->{'_mummerNumberOfSplitFiles'};
+}
+
+sub mummerBpPerSplitFile{
+	my $self=shift;
+	$self->{'_mummerBpPerSplitFile'}=shift // return $self->{'_mummerBpPerSplitFile'};
+}
+
 #methods
 sub _initialize {
 	my $self = shift;
@@ -159,22 +184,30 @@ sub validateUniversalSettings {
 			$self->_baseDirectory( $self->_validator->isADirectory($value) )     if $setting eq 'baseDirectory';
 			$self->mummerDirectory( $self->_validator->isADirectory($value) )    if $setting eq 'mummerDirectory';
 			$self->referenceDirectory( $self->_validator->isADirectory($value) ) if $setting eq 'referenceDirectory';
+			$self->_blastDirectory( $self->_validator->isADirectory($value) )    if $setting eq 'blastDirectory';
 
 			#integers
 			$self->_numberOfCores( $self->_validator->isAnInt($value) )         if $setting eq 'numberOfCores';
 			$self->minimumNovelRegionSize( $self->_validator->isAnInt($value) ) if $setting eq 'minimumNovelRegionSize';
+			$self->mummerNumberOfSplitFiles($self->_validator->isAnInt($value)) if $setting eq 'mummerNumberOfSplitFiles';
+			$self->mummerBpPerSplitFile($self->_validator->isAnInt($value))	    if $setting eq 'mummerBpPerSplitFile';
+			$self->mummerNumberOfInstances($self->_validator->isAnInt($value))  if $setting eq 'mummerNumberOfInstances';
 
 			#yes or no
 			$self->createGraphic( $self->_validator->yesOrNo($value) ) if $setting eq 'createGraphic';
+			$self->toAnnotate( $self->_validator->yesOrNo($value) ) if $setting eq 'toAnnotate';
 		}
 
 		#defaults and requirements
 		$self->missingParam('queryDirectory')         unless ( defined $self->queryDirectory );
 		$self->missingParam('baseDirectory')          unless defined $self->_baseDirectory;
 		$self->missingParam('mummerDirectory')        unless defined $self->mummerDirectory;
+		$self->missingParam('blastDirectory')		  unless defined $self->_blastDirectory;
 		$self->_numberOfCores(1)                      unless defined $self->_numberOfCores;
 		$self->missingParam('minimumNovelRegionSize') unless defined $self->minimumNovelRegionSize;
 		$self->createGraphic('no')                    unless defined $self->createGraphic;
+		$self->toAnnotate('no')						  unless defined $self->toAnnotate;
+		$self->mummerNumberOfSplitFiles($self->_numberOfCores) unless defined $self->mummerNumberOfSplitFiles;
 	}
 }
 
@@ -260,6 +293,33 @@ sub getSequenceNamesAsHashRef {
 	else {
 		print STDERR "nothing sent to getQuerySequenceNamesAsHashRef\n";
 		exit(1);
+	}
+}
+
+sub cleanUp{
+	my $self=shift;
+
+	my $fileOp = FileInteraction::FileManipulation->new();
+	my $fileNamesRef = $fileOp->getFileNamesFromDirectory($self->_baseDirectory);
+	my @filesToDelete=(
+			'queryFilesCombined',
+			'notSeedFile',
+			'seedFile',
+			'temp_novel_config',
+			'.delta',
+			'_dbtemp',
+			'.FastaTemp',
+			'.xml',
+			'.coords',
+			'blastdb'
+		);
+	foreach my $file(@{$fileNamesRef}){
+		foreach my $match(@filesToDelete){
+			if($file =~ m/\Q$match\E/){
+				unlink $file;
+				last;
+			}
+		}
 	}
 }
 

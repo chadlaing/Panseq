@@ -9,12 +9,13 @@ package Mummer::MummerGPU;
 use strict;
 use warnings;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use Carp;
 use IO::File;
 use File::Temp;
 use Parallel::ForkManager;
 use FileInteraction::FileManipulation;
+use FileInteraction::Fasta::SequenceRetriever;
 use Log::Log4perl;
 use Bio::SeqIO;
 use File::Copy;
@@ -24,7 +25,7 @@ sub new{
 	my $class=shift;
     my $self = {};
     bless ($self, $class);
-    $self->_mummerGPUInitialize(@_);   
+    $self->_initialize(@_);   
     return $self;
 }
 
@@ -60,7 +61,7 @@ sub _baseDirectory{
 	$self->{'_baseDirectory'}=shift // return $self->{'_baseDirectory'};
 }
 
-sub _referenceFile{
+sub _referenceFileArray{
 	my $self=shift;
 	$self->{'_referenceFile'}=shift // return $self->{'_referenceFile'};
 }
@@ -111,12 +112,29 @@ sub _p{
 	$self->{'_p'}=shift // return $self->{'_p'};
 }
 
-
-sub _mummerGPUInitialize{
+sub coordsFile{
 	my $self=shift;
+	$self->{'_coordsFile'}=shift // return $self->{'_coordsFile'};
+}
+
+sub _tempFiles{
+	my $self=shift;
+	$self->{'__tempFiles'}=shift // return $self->{'__tempFiles'};
+}
+
+sub _initialize{
+	my $self=shift;
+
+	#init values
+	my %params = @_;
+
+	$self->_baseDirectory($params{'baseDirectory'}) if defined $params{'baseDirectory'};
 	
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
+
+	#set anonymous values
+	$self->_tempFiles([]);
 }
 
 sub run{
@@ -124,7 +142,7 @@ sub run{
 	
 	my %settings = @_;
 	$self->_queryFile($settings{'queryFile'}) // confess("queryFile required in MummerGPU");
-	$self->_referenceFile($settings{'referenceFile'}) // confess("referenceFile required in MummerGPU");
+	$self->_referenceFileArray([$settings{'referenceFile'}]) if defined $settings{'referenceFile'};
 	$self->_mummerDirectory($settings{'mummerDirectory'}) // confess("mummerDirectory required in MummerGPU");
 	$self->_baseDirectory($settings{'baseDirectory'}) // confess("baseDirectory required in MummerGPU");
 	$self->_refFileSizeLimit($settings{'refFileSizeLimit'}) // $self->_refFileSizeLimit(100000000);
@@ -135,8 +153,15 @@ sub run{
 	$self->_d($settings{'d'}) // $self->_d(0.12);
 	$self->_l($settings{'l'}) // $self->_l(20);
 	$self->_g($settings{'g'}) // $self->_g(100);
-	$self->_p($settings{'p'}) // $self->_p('out');
+	$self->_p($settings{'p'}) // $self->_p($self->_baseDirectory . 'out');
 	
+	#check for defined reference files
+	unless(defined $self->_referenceFileArray->[0]){
+		$self->logger->fatal("MummerGPU required at least one reference file.\n Either run MummerGPU::mummersLittleHelper 
+			or specify a reference file");
+		exit(1);
+	}
+
 	$self->_systemLineBase($self->_mummerDirectory);
 	if($self->_gpu == 1){
 		$self->_systemLineBase($self->_systemLineBase . 'mummergpu');
@@ -147,76 +172,42 @@ sub run{
 	$self->_systemLineBase($self->_systemLineBase . ' --maxmatch -b '. $self->_b . ' -c ' . $self->_c . ' -d ' . $self->_d . ' -g ' . $self->_g . ' -l ' . $self->_l);
 	
 	my $forkManager = Parallel::ForkManager->new($self->_numberOfCores);
-	my $tempNum=0;
-	my $tempRefString='';
-	my $refFileSize=0;		
-	my $clearFlag=0;	
-
-	my $refFastaFH = Bio::SeqIO->new(
-                            -file   => $self->_referenceFile,
-                            -format => 'fasta'
-                    );   			
 	
-	while(my $fasta = $refFastaFH->next_seq()){			
-			$clearFlag=0;
-			
-			$tempRefString .='>' . $fasta->id . $fasta->desc . "\n" . $fasta->seq . "\n";
-			$refFileSize += $fasta->length;				
-			
-			if($refFileSize < $self->_refFileSizeLimit){
-				next;
-			}
-			else{
-				$self->logger->info("Temp ref file size (bp): $refFileSize");
-				$refFileSize=0;
-			}
-						
-			$forkManager->start and next();
-				#print out the currentfile as temp
-				my $tempRefFH = File::Temp->new();
-				#my $tempQueryFH=File::Temp->new();
-				#copy($self->_queryFile, $tempQueryFH->filename());
-				
-				$self->logger->debug("Temp ref file name: " . $tempRefFH->filename);
-				#create ref temp
-				print $tempRefFH $tempRefString;
-		
-				$self->_launchMummer(
-					$self->_baseDirectory . $tempNum . '_temp',
-					$tempRefFH->filename,
-					#$tempQueryFH->filename()
-					$self->_queryFile
-				);				
-			$forkManager->finish;			
-			
-		}
-		continue{ 
-			$tempNum++;
-			if($clearFlag==1){
-				$tempRefString='';
-			}
-		}
-	$refFastaFH->close();		
+	my $tempNum=0;	
+	foreach my $refFile(@{$self->_referenceFileArray}){
+		$tempNum++;	
+		my $tempFileName = $self->_p . '_temp'.$tempNum;
+		push @{$self->_tempFiles}, $tempFileName;
 
-	#run mummer on any stored values
-	if($refFileSize > 0){
-		my $tempRefFH = File::Temp->new();
-		print $tempRefFH $tempRefString;
-		$self->logger->info("Temp ref file size (bp): $refFileSize");
-		
-		$self->_launchMummer(
-			$self->_baseDirectory . $tempNum . '_temp',
-			$tempRefFH->filename,
-			$self->_queryFile
-		);	
-		$tempRefFH->close();
+		$forkManager->start and next();				
+			$self->_launchMummer(
+				$tempFileName,
+				$refFile,
+				$self->_queryFile
+			);				
+		$forkManager->finish;			
 	}	
+
 	$forkManager->wait_all_children();
-	$self->deltaFile($self->_baseDirectory . $self->_p . '.delta');
+	$self->deltaFile($self->_p . '.delta');
 	$self->logger->info("Delta file: " . $self->deltaFile);
 	
 	$self->_combineDeltaFiles();
+
+	#remove the temp files
+	if(defined $self->_referenceFileArray->[0]){
+		$self->_removeSplitFiles();
+	}
 }
+
+sub _removeSplitFiles{
+	my $self=shift;
+
+	foreach my $splitFile(@{$self->_referenceFileArray}){
+		unlink $splitFile;
+	}
+}
+
 
 sub _launchMummer{
 	my $self=shift;
@@ -237,29 +228,98 @@ sub _launchMummer{
 
 sub _combineDeltaFiles{
 	my $self=shift;
-	
+
 	#combine the deltaFiles
 	my $deltaFH=IO::File->new('>'.$self->deltaFile) or die "$!";
 	$self->logger->info("Combining the delta files");		
 	
 	my $manny = FileInteraction::FileManipulation->new();
 	$manny->outputFH($deltaFH);
-	my $fileNamesRef = $manny->getFileNamesFromDirectory($self->_baseDirectory);
 	
-	foreach my $file(@{$fileNamesRef}){ 
-
-		unless($file =~ m/_temp\.delta/){
-			next;
-		}
-		
-		my $dFH = IO::File->new('<'.$file) or die "$!";
+	foreach my $file(@{$self->_tempFiles}){ 
+		my $deltaFile = $file . '.delta';
+		my $dFH = IO::File->new('<'. $deltaFile) or die "cannot open $deltaFile $!";
 		while(my $line=$dFH->getline){
-			print $deltaFH $line;
+			$deltaFH->print($line);
 		}
 		$dFH->close();
-		unlink $file;
+		unlink $deltaFile;
 	}	
 	$deltaFH->close();
+}
+
+sub showCoords{
+	my $self=shift;
+
+	my %params = @_;
+	my $systemLine = $self->_mummerDirectory . 'show-coords ' . $params{'deltaFile'} . ' -l -q -T > ' . $params{'coordsFile'};
+
+	$self->logger->info("Launching show-coords with $systemLine");
+
+	system($systemLine);
+	$self->coordsFile($params{'coordsFile'});
+}
+
+sub mummersLittleHelper{
+	my $self=shift;
+
+	my %params = @_;
+
+	if(defined $params{'bpPerFile'} && defined $params{'numberOfFiles'}){
+		$self->logger->fatal("Only one of bpPerFile or numberOfFiles can be defined in mummersLittleHelper");
+		exit(1);
+	}
+
+	#check that at least one is set by the user, or complain
+	unless(defined $params{'bpPerFile'} || defined $params{'numberOfFiles'}){
+		$self->logger->fatal("mummersLittleHelper requires either bpPerFile or numberOfFiles to be set");
+		exit(1);
+	}
+	#if bpPerFile is set, create unlimited number of files at the threshold
+	#if numberOfFiles is set, create fixed number of files with bp/file variable
+
+	my $bpPerFile;
+	if(defined $params{'bpPerFile'}){
+		$bpPerFile = $params{'bpPerFile'};
+	}
+	else{
+		my $multiFastaFileSize = (-s $params{'multiFastaFile'});
+		$bpPerFile = int($multiFastaFileSize / $params{'numberOfFiles'})+1;
+	}
+
+	my $multiFastaFH = Bio::SeqIO->new(-file=>'<'.$params{'multiFastaFile'}, -format=>'fasta') or die "$!";
+
+	my $toCreateNewFile=1;
+	my $tempCounter=0;
+	my $outputFH;
+	my $bpSize=0;
+	my @tempFastaFiles;
+
+	while(my $seq = $multiFastaFH->next_seq()){
+		if($toCreateNewFile == 1){
+			unless($tempCounter ==0){
+				$outputFH->close();
+			}
+
+			my $fileName = $self->_baseDirectory . 'multiFastaTemp_' . $tempCounter;
+			$outputFH = Bio::SeqIO->new(-file=>'>'.$fileName , -format=>'fasta') or die "$!";
+			$tempCounter++;
+			$toCreateNewFile=0;
+			$bpSize=0;
+			push @tempFastaFiles,$fileName;
+		}
+
+		$bpSize +=$seq->length();
+		$outputFH->write_seq($seq);
+
+		if($bpSize >= $bpPerFile){
+			$toCreateNewFile=1;
+		}
+	}
+
+	$outputFH->close();
+	$multiFastaFH->close();
+	$self->_referenceFileArray(\@tempFastaFiles);
 }
 
 1;

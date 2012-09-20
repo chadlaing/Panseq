@@ -79,7 +79,7 @@ package FileInteraction::Fasta::SegmentMaker;
 use strict;
 use warnings;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use Bio::SeqIO;
 use Bio::Seq;
 use Log::Log4perl;

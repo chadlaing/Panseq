@@ -108,7 +108,7 @@ use strict;
 use warnings;
 use Carp;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use IO::File;
 use File::Temp;
 use Bio::DB::Fasta;
@@ -160,7 +160,7 @@ sub _initialize{
     	$self->outputFile('');
     	#allows STDOUT to be an option, rather than requiring an outputFile name
     }
-    $self->logger->debug('outputFile: ' . $self->outputFile);
+    $self->logger->info('outputFile: ' . $self->outputFile);
     $self->_setInputFile($init{'inputFile'}) // confess("Input file required in Sequence Retriever");
     
     #init database

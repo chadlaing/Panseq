@@ -100,6 +100,19 @@ $writer = the XML::Writer object
 RETURNS:
 nothing
 
+=item C<_legend>
+
+This subroutine draws the legend if necessary.
+
+INPUT:
+$colours = a reference to an array of colours
+$size = the size of the shapes
+$shape = the shape chosen by the user
+$types = the hash list of all the different types of symbols in the file
+$writer = the XML::Writer object 
+RETURNS:
+Nothing
+
 =head1 AUTHOR
 
 M. Benediktson
@@ -260,15 +273,20 @@ sub run {
 	$writer->doctype('svg', '-//W3C//DTD SVG 20001102//EN','http://www.w3.org/TR/2000/CR-SVG-20001102/DTD/svg-20001102.dtd');
 	$writer->startTag('svg',
 		           height => ($size * (@genome_keys + 2)) + CHART_MARGIN,
-		           width  => $width,
+		           width  => $width + CHART_MARGIN/2,
 			   xmlns  => 'http://www.w3.org/2000/svg');
 
-	# Print the grid to the screen.
-	$self->_grid(scalar(keys %genome), scalar(@sorted_names), $size, $writer);
+	$writer->startTag('g','transform'=>'translate(' . CHART_MARGIN/2 . ',0)');	# Translate the entire page to the right. (To make room for the legend.)
+
+	$self->_grid(scalar(keys %genome), scalar(@sorted_names), $size, $writer);	# Print the grid to the screen.
 
 	$self->_header(\@sorted_names, $size, $writer);	# Draw the header text
-	$self->_shapes(\%genome, \@genome_keys, \@ordering, $width, $size, \@colours, $shape, $writer);	# Draw the shapes on the chart
+	my $types = $self->_shapes(\%genome, \@genome_keys, \@ordering, $width, $size, \@colours, $shape, $writer);	# Draw the shapes on the chart
 	$self->_header_mouseover(\@sorted_names, $width, $size, $writer);	# Draw the header text mouseover
+
+	$writer->endTag('g');	# End of right translation
+
+	$self->_legend(\@colours, $size, $shape, $types, $writer);	# draw the legend to the screen if necessary
 
 	$writer->endTag('svg');
 	$writer->end();
@@ -369,18 +387,33 @@ sub _grid {
 # $shape = the currently selected shape
 # $writer = the XML::Writer object 
 # RETURNS:
+# a hash list of all the different types of symbols in the file
 # nothing
 sub _shapes {
 	my $self=shift;
+	my %types_av = ();
+	my $counter = 1;
 	my ($hash, $keys, $order, $width, $size, $colours, $shape, $writer) = @_;	# Get the arguments
 
 	# Draw the shapes.
 	for (my $i = 0, my $height = $size; $i < @$keys; $i++, $height += $size) {
 		my $str = $hash->{$keys->[$i]};
 		for (my $j = 0; $j < length($str); $j++) {
-			# Check if the value is a one. If it is, draw the square.
+			# Catch any errors that may arise from longer than normal sequences
+			if ($j >= scalar @$order) {
+				next;
+			}
+			# Check if the value is not a zero. Then draw the square.
 			my $type = substr($str, $order->[$j], 1);
-			if ($type) {
+			if ($type and ord($type) != ord("\-")) {
+
+				if (exists($types_av{$type})) {
+					$type = $types_av{$type};
+				}
+				else {
+					$types_av{$type} = $counter++;
+					$type = $types_av{$type};
+				}
 
 				# Set the shape of the objects
 				my $radius = 0;
@@ -469,6 +502,8 @@ sub _shapes {
 			}
 		}
 	}
+
+	return \%types_av;
 }
 
 # This subroutine draws the header text.
@@ -564,6 +599,58 @@ sub _header_mouseover {
 
 			$writer->endTag('foreignObject');
 		} 		
+	}
+}
+
+# This subroutine draws the legend if necessary.
+#
+# INPUT:
+# $colours = a reference to an array of colours
+# $size = the size of the shapes
+# $shape = the shape chosen by the user
+# $types = the hash list of all the different types of symbols in the file
+# $writer = the XML::Writer object 
+# RETURNS:
+# Array of Colours
+sub _legend {
+
+	my $self = shift;
+	my ($colours, $size, $shape, $types, $writer) = @_;
+
+	if (keys %$types < 2) {return;}	# Don't bother printing a legend if there's only one symbol.
+
+	for (my $j = 0; $j < (keys %$types); $j++) {
+		my $radius = 0;
+		if ($shape eq 'circle') {
+			$radius = $size;
+		}
+
+		my $type = $types->{(keys %$types)[$j]};
+
+		my $colour1 = $colours->[$type-1][0];
+		my $colour2 = $colours->[$type-1][1];			
+
+		# Print the coloured circle
+		$writer->startTag('rect',
+				  'x'=> 10,
+				  'y'=>$j * $size + 1,
+				  'width'=>$size-1,
+				  'height'=>$size-1,
+				  'fill'=>$colour1,
+				  'rx'=>$radius,
+				  'ry'=>$radius,
+				  'opacity'=>0.9,
+				  'stroke'=>$colour2,
+				  'stroke-width'=>2);
+		$writer->endTag('rect');
+		
+		# Print the name for the colour
+		$writer->startTag('text',
+				  'font-size'=>16,
+				  'x'=>$size + 11,
+				  'y'=>$j * $size + $size*0.7);
+		$writer->characters("  = " . (keys %$types)[$j]);
+		$writer->endTag('text');	
 	}
 }
 1;

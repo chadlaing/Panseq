@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use diagnostics;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use IO::File;
 use FileInteraction::Fasta::SequenceName;
 use Parallel::ForkManager;
@@ -76,11 +76,6 @@ sub _blastType{
 	$self->{'_CoreAccessory_blastType'}=shift // return $self->{'_CoreAccessory_blastType'};
 }
 
-sub _blastDirectory{
-	my $self=shift;
-	$self->{'_CoreAccessory_blastDirectory'}=shift // return $self->{'_CoreAccessory_blastDirectory'};
-}
-
 sub _muscleExecutable{
 	my $self=shift;
 	$self->{'_CoreAccessory_muscleDirectory'}=shift // return $self->{'_CoreAccessory_muscleDirectory'};
@@ -112,6 +107,11 @@ sub logger{
 	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
+sub panGenomeFile{
+	my $self=shift;
+	$self->{'_panGenomeFile'}=shift // return $self->{'_panGenomeFile'};
+}
+
 
 
 #methods
@@ -141,7 +141,8 @@ sub _createNovelConfigFile{
 		'createGraphic' . "\t" . 'no' . "\n",
 		'skipGatherFiles' . "\t" . '1' . "\n",
 		'combinedReferenceFile' . "\t" . $self->combinedQueryFile . "\n",
-		'combinedQueryFile' . "\t" . $self->_notSeedFileName . "\n"	
+		'combinedQueryFile' . "\t" . $self->_notSeedFileName . "\n",
+		'blastDirectory' . "\t" . $self->_blastDirectory . "\n"
 	);
 		
 	$outFH->close();
@@ -300,7 +301,7 @@ sub _validateCoreSettings {
 			my $value = $settingsHashRef->{$setting};
 
 			$self->_segmentCoreInput( $validator->yesOrNo($value) )       if $setting eq 'segmentCoreInput';
-			$self->_blastDirectory( $validator->isADirectory($value) )    if $setting eq 'blastDirectory';
+			
 			$self->_muscleExecutable( $validator->doesFileExist($value) ) if $setting eq 'muscleExecutable';
 
 			#unique checks
@@ -322,6 +323,10 @@ sub _validateCoreSettings {
 			}
 			$self->_fragmentationSize( $validator->isAnInt($value) ) if $setting eq 'fragmentationSize';
 		}
+	}
+	#default setting for segmentCoreInput needs to be 'yes', if panGenome is selected as coreInputType
+	if($self->_coreInputType eq 'panGenome'){
+		$self->_segmentCoreInput('yes');
 	}
 }
 

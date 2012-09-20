@@ -17,7 +17,7 @@ use strict;
 use diagnostics;
 use warnings;
 use FindBin;
-use lib $FindBin::Bin;
+use lib "$FindBin::Bin/../";
 use Carp;
 use Scalar::Util qw/ looks_like_number /;
 

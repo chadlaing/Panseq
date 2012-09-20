@@ -40,7 +40,7 @@ Chad Laing (chadlaing gmail com)
 use strict;
 use warnings;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use Carp;
 use IO::File;
 use FileInteraction::Fasta::SequenceRetriever;
@@ -89,8 +89,8 @@ sub splitFastaFile {
 	my $self           = shift;
 	my $fileName       = shift;
 	my $numberOfSplits = shift;
-
-	$self->logger->info("INFO:\tSplitting $fileName into $numberOfSplits files");
+	
+	$self->logger->info("Splitting $fileName into $numberOfSplits files");
 
 	my $fileHandle = IO::File->new( '<' . $fileName ) or die "cannot open $fileName" . $!;
 	my %fastaSizes;
@@ -121,12 +121,13 @@ sub splitFastaFile {
 		$self->_numberOfTempFiles($numberOfSeqs);
 	}
 
-	$self->logger->info( "INFO:\tNumber of temp query files to create: " . $self->_numberOfTempFiles );
+	$self->logger->info( "Number of temp query files to create: " . $self->_numberOfTempFiles );
 
 	#package into approximately equal temp files
 	#use the Bio::DB in SequenceRetriever
 	my $queryDB = FileInteraction::Fasta::SequenceRetriever->new(	
-		'inputFile'=>$fileName
+		'inputFile'=>$fileName,
+		'outputFile'=>$fileName . '_sequenceSplitterDB'
 	);
 
 	my $tempNum    = 0;

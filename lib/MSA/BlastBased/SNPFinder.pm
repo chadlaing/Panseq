@@ -2,7 +2,7 @@
 package MSA::BlastBased::SNPFinder;
 
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use FileInteraction::Fasta::SequenceName;
 use Log::Log4perl;
 

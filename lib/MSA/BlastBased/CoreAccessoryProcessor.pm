@@ -7,7 +7,7 @@ use warnings;
 use diagnostics;
 use Carp;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../../";
 use MSA::BlastBased::BlastResultFactory;
 use MSA::BlastBased::SNPFinder;
 use Muscle::MuscleCmd;
@@ -380,17 +380,32 @@ sub _processCoreResult {
 	}
 
 	#create temp files for muscle
-	my $tempInFH  = File::Temp->new();
-	my $tempOutFH = File::Temp->new();
+	my $tempInFile = $self->_baseDirectory . 'muscleTemp_in' . $countNumber;
+	my $tempInFH  = IO::File->new('>'. $tempInFile) or die "$!";
+	my $tempOutFile = $self->_baseDirectory . 'muscleTemp_out' . $countNumber;
+	my $tempOutFH = IO::File->new('>' . $tempOutFile) or die "$!";
+	
+	$tempInFH->print(@fastaArray);
 
-	print $tempInFH @fastaArray;
-
-	my $muscleCommand = Muscle::MuscleCmd->new( $self->_muscleExecutable );
-	$muscleCommand->setIn( $tempInFH->filename );
-	$muscleCommand->setOut( $tempOutFH->filename );
-	$muscleCommand->run();
-
-	my @alignedFastaSeqs = $tempOutFH->getlines();
+#	my $muscleCommand = Muscle::MuscleCmd->new( $self->_muscleExecutable );
+#	$muscleCommand->setIn( $tempInFH->filename );
+#	$muscleCommand->setOut( $tempOutFH->filename );
+#	$muscleCommand->run();
+	
+	$self->_runMuscle($tempInFile, $tempOutFile);
+	
+	#close the open FH
+	$tempInFH->close();
+	$tempOutFH->close();
+	
+	#open the output for reading
+	my $resultInFH = IO::File->new('<'. $tempOutFile) or die "$!";	
+	my @alignedFastaSeqs = $resultInFH->getlines();
+	$resultInFH->close();
+	
+	#delete temp files
+	unlink $tempInFile;
+	unlink $tempOutFile;
 
 	#add SNP information to the return
 	my $snpDetective = MSA::BlastBased::SNPFinder->new( $self->_snpType, $self->_queryNameOrderHash );
@@ -406,6 +421,15 @@ sub _processCoreResult {
 		$self->logger->debug("SNPFinder empty");
 	}
 	return \@returnArray;
+}
+
+sub _runMuscle{
+	my $self=shift;
+	my $inFile = shift;
+	my $outFile = shift;
+	
+	my $systemLine = $self->_muscleExecutable . ' -in ' . $inFile . ' -out ' . $outFile . ' -maxiters 3 -quiet';
+	system($systemLine);
 }
 
 sub _combineResultTempFiles {

@@ -78,11 +78,6 @@ Private variable storing a FileManipulation::SequenceRetriever object used for g
 Generated a database of the original fasta file for fast extraction during the annotation process.
 
 
-
-
-
-
-
 =head1 ACKNOWLEDGEMENTS
 
 Thanks.
@@ -106,7 +101,7 @@ use warnings;
 use diagnostics; 
 use Carp;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use Blast::BlastIO;
 use MSA::BlastBased::BlastResultFactory;
 use IO::File;
@@ -191,7 +186,8 @@ sub _initialize{
 		$self->annotatedFastaFile($init{'annotatedFastaFile'}) // $self->_initError('annotatedFastaFile');
 		$self->_retriever(
 			FileInteraction::Fasta::SequenceRetriever->new(
-				'inputFile'=>$self->inputFile
+				'inputFile'=>$self->inputFile,
+				'outputFile'=>$self->outputFile . '_db'
 			)
 		);
 		$self->_annotatedFastaFH(Bio::SeqIO->new(-file=>'>'. $self->annotatedFastaFile, -format=>'fasta')) or die "Cannot create annotatedFastaFH";

@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use Carp;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use IO::File;
 use Parallel::ForkManager;
 use FileInteraction::Fasta::FastaFileSplitter;

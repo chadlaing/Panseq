@@ -6,10 +6,12 @@ use strict;
 use warnings;
 use diagnostics;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use IO::File;
 use Carp;
 use Log::Log4perl;
+use FileInteraction::Fasta::SequenceRetriever;
+use Bio::SeqIO;
 
 use parent 'FileInteraction::FlexiblePrinter';
 
@@ -224,4 +226,41 @@ sub combineDeltaFiles {
 		unlink $file if $destroy;
 	}
 }
+
+sub multiFastaToSingleFasta{
+	my $self=shift;
+
+	my $multiFastaFile = shift;
+
+	$self->logger->info("Converting $multiFastaFile to a single fasta sequence");
+
+	#create database of fasta file and sort based on descending size of contigs
+	#create the single contig based on the descending size
+	my $retriever = FileInteraction::Fasta::SequenceRetriever->new(
+		'inputFile'=>$multiFastaFile,
+		'outputFile'=>$multiFastaFile . 'mulit_DB'
+	);
+
+
+	my %sizeHash;
+	my $inFH = Bio::SeqIO->new(-file=>'<'.$multiFastaFile, -format=>'fasta') or die "$!";
+	while(my $seq = $inFH->next_seq()){
+			my $combinedName = $seq->desc() . $seq->id();
+			$sizeHash{$combinedName}=$seq->length();
+	}
+	$inFH->close();
+
+
+	#sort and print the new file in descending size
+	my @sortedBySize =reverse(sort{$sizeHash{$a} <=> $sizeHash{$b}} keys %sizeHash);
+
+	#add the '>panGenome' header to the file
+	$self->print('>panGenome' . "\n");
+
+	foreach my $fastaSegment(@sortedBySize){
+		$self->print($retriever->extractRegion($fastaSegment));
+	}	
+	$self->print("\n");
+}
+
 1;

@@ -12,8 +12,7 @@ use FileInteraction::Fasta::SequenceRetriever;
 use Mummer::MummerGPU;
 use FileInteraction::FileManipulation;
 use IO::File;
-#use Visual::Visualization;
-#use Blast::Annotator;
+use Blast::Annotator;
 use Log::Log4perl qw/get_logger/;
 use Tie::Log4perl;
 
@@ -53,9 +52,8 @@ unless(defined $nrf->_skipGatherFiles) {
 #we want them logged
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
-
-#close STDERR;
-#tie *STDERR, "Tie::Log4perl";
+close STDERR;
+tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/log4p.conf");
 my $logger = Log::Log4perl->get_logger();
 
@@ -76,19 +74,28 @@ else {
 }
 
 #set up the mummer run
-my $mummer = Mummer::MummerGPU->new();
+my $mummer = Mummer::MummerGPU->new(
+		'baseDirectory'   => $nrf->_baseDirectory
+);
+
+#create sub-files for mummer based on the settings in the config file
+$mummer->mummersLittleHelper(
+	'multiFastaFile'=>$nrf->combinedReferenceFile,
+	'bpPerFile'=>$nrf->mummerBpPerSplitFile // undef,
+	'numberOfFiles'=>$nrf->mummerNumberOfSplitFiles // undef
+);
+
+#allow user specification of number of mummer instances, or default to the number of cores
+#allows a fine grain control of memory usage
 $mummer->run(
 		'queryFile'       => $nrf->combinedQueryFile,
-		'referenceFile'   => $nrf->combinedReferenceFile,
 		'mummerDirectory' => $nrf->mummerDirectory,
-		'baseDirectory'   => $nrf->_baseDirectory,
-		'numberOfCores'   => $nrf->_numberOfCores
+		'numberOfCores'   => $nrf->mummerNumberOfInstances // $nrf->_numberOfCores
 );
 $logger->info("Nucmer finished. Gathering novel regions.");
 
 $nrf->findNovelRegions( { 'deltaFile' => $mummer->deltaFile, } );
 $logger->info("Novel regions gathered. Extracting.");
-
 
 #open output filehandle
 $nrf->outputFileName($nrf->_baseDirectory . 'novelRegions.fasta');
@@ -105,27 +112,66 @@ $logger->info("Novel regions extracted.");
 
 #create visualization if run as novel_region_finder
 #check for _skipGatherFiles to indicate a call from core_accessory.pl
-# if(!defined $nrf->_skipGatherFiles){
-# 	if($nrf->createGraphic eq 'yes'){
-# 		my $visFH = IO::File->new('>' . $nrf->_baseDirectory . 'novelRegions.svg') or die "$!";
-# 		my $vis = Visual::Visualization->new();
-# 		$visFH->print($vis->run($mummer->deltaFile));
-# 		$visFH->close;	
-# 	}
+if(!defined $nrf->_skipGatherFiles){
+	if($nrf->createGraphic eq 'yes'){
 
-# 	#provide a table of novel region annotations, as well as a newly formatted and annotated novel regions file
-# 	my $annotator = Blast::Annotator->new(
-# 		'inputFile'=>$nrf->outputFileName ,
-# 		'outputFile'=>$nrf->_baseDirectory . '/novel_regions_annotation.txt',
-# 		'blastDirectory'=>'/home/phac/ncbi-blast-2.2.26+/bin/',
-# 		'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
-# 		'numberOfCores'=>'20',
-# 		'annotatedFastaFile'=>$nrf->_baseDirectory . 'novelRegions_annotated.fasta'
-# 	);
-# 	$annotator->annotate();
-# }
+			#combine novel regions into single file for proper functioning of SvgDrawer
+			my $manipulator = FileInteraction::FileManipulation->new();
+			my $singleFile = $nrf->_baseDirectory . 'novelRegions_single.fasta';
+			$manipulator->outputFH(IO::File->new('>' . $singleFile)) or die "$!";
+			$manipulator->multiFastaToSingleFasta($nrf->outputFileName);
 
+			#run mummer
+			#include the base dir in _p
+			$logger->info("MUMmer for graphics initiated");
+			my $mum = Mummer::MummerGPU->new(
+				'baseDirectory'   => $nrf->_baseDirectory
+			);
 
+			$mum->run(
+					'queryFile'       => $nrf->combinedQueryFile,
+					'referenceFile'   => $singleFile,
+					'mummerDirectory' => $nrf->mummerDirectory,					
+					'numberOfCores'   => $nrf->_numberOfCores,
+					'p'=>$nrf->_baseDirectory . 'svg'
+			);
+			$logger->info("MUMmer for graphics finished");
+
+			#create coords file for svg
+			$mum->showCoords(
+				'deltaFile'=>$mum->deltaFile,
+				'coordsFile'=>$nrf->_baseDirectory . 'graphics.coords'
+			);
+
+			#create the visualization
+			my $systemLine = "perl $SCRIPT_LOCATION/Visual/svgDrawer.pl " . $mum->coordsFile . ' ' . ' ' . $nrf->outputFileName . ' ' . '1'
+				. ' > ' . $nrf->_baseDirectory . 'novelRegionsGraphic.svg';
+			$logger->info("Creating graphic with $systemLine");
+			system($systemLine);
+			$logger->info("Graphic created");
+	}
+
+	if($nrf->toAnnotate eq 'yes'){
+		$logger->info("Annotation beginning");
+		#provide a table of novel region annotations, as well as a newly formatted and annotated novel regions file
+		my $annotator = Blast::Annotator->new(
+			'inputFile'=>$nrf->outputFileName ,
+			'outputFile'=>$nrf->_baseDirectory . '/novel_regions_annotation.txt',
+			'blastDirectory'=>$nrf->_blastDirectory,
+			'blastDatabase'=>'/home/phac/NCBI/nr',
+			'numberOfCores'=>$nrf->_numberOfCores,
+			'annotatedFastaFile'=>$nrf->_baseDirectory . 'novelRegions_annotated.fasta'
+		);
+		$annotator->annotate();
+		$logger->info("Annotation complete");
+	}
+	else{
+		$logger->info("No Annotation performed");
+	}#end of else
+}#end of check for _skipGatherFiles
+
+$nrf->cleanUp();
+$nrf->logger->info("Novel regions extracted");
 
 
 

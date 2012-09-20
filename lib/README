@@ -1,0 +1,172 @@
+Panseq README 
+=============
+
+What's new (v 3.264)
+==========
+-all temp-files now removed from the base directory
+-annotation of novel regions and pan-genome with 'toAnnotate' in configuration file
+-fine-grained control over Nucmer reference file size and number of cores
+	:setting one of the following (but not both) in a configuration file will determine either the number of reference files to be created for Nucmer to process, or the size of each file
+		mummerNumberOfSplitFiles	5
+		mummerBpPerSplitFile	5000000
+		
+	:setting the following will override the default numberOfCores if you would like to specify a different number of processors for the Nucmer processing (to save memory for example)
+		mummerNumberOfInstances	3
+			
+
+OVERVIEW
+========
+Panseq determines the core and accessory regions among a collection of genomic sequences based on user-defined parameters. It readily extracts regions unique to a genome or group of genomes, identifies SNPs within shared core genomic regions, constructs files for use in phylogeny programs based on both the presence/absence of accessory regions and SNPs within core regions and produces a graphical overview of the output. Panseq also includes a loci selector that calculates the most variable and discriminatory loci among sets of accessory loci or core gene SNPs.
+
+If you find Panseq useful please cite:
+Pan-genome sequence analysis using Panseq: an online tool for the rapid analysis of core and accessory genomic regions.
+Laing C, Buchanan C, Taboada EN, Zhang Y, Kropinski A, Villegas A, Thomas JE, Gannon VP.
+BMC Bioinformatics. 2010 Sep 15;11:461.
+
+Identification of Salmonella enterica species- and subgroup-specific genomic regions using Panseq 2.0.
+Laing C, Villegas A, Taboada EN, Kropinski A, Thomas JE, Gannon VP.
+Infect Genet Evol. 2011 Dec;11(8):2151-61.
+
+
+USAGE
+=====
+The Panseq standalone scripts consist of three modules.
+
+1. lib/novel_region_finder.pl
+2. lib/core_accessory.pl
+3. lib/loci_selector.pl 
+
+
+Setup
+=====
+Panseq requires Perl 5.10 or greater, the provided Perl modules, and the following CPAN packages:
+
+Parallel::ForkManager
+Bio::DB::Fasta
+Log::Log4perl
+
+And the following free, external programs must also be installed:
+
+MUMmer: mummer.sourceforge.net 
+BLAST+: blast.ncbi.nlm.nih.gov/Blast.cgi
+Muscle: www.drive5.com/muscle
+
+
+Running Panseq
+==============
+All the adjustments to the novel_region_finder and core_accessory modes of Panseq are made by adjusting options to a tab-delimited configuration file, which is specified as the only argument to the script.
+
+Novel Region Finder
+-------------------
+
+  perl novel_region_finder.pl novel_settings.txt
+
+would run the novelRegionFinder given the settings specified in novel_settings.txt.
+
+Below is an example configuration file:
+
+queryDirectory	/home/phac/panseq/queryLarge/
+referenceDirectory	/home/phac/panseq/referenceLarge/
+baseDirectory	/home/phac/panseq/output/panseq2test/
+numberOfCores	22
+mummerDirectory	/home/phac/MUMmer3.23/
+blastDirectory	/home/phac/ncbi-blast-2.2.25+/bin/
+minimumNovelRegionSize	50
+novelRegionFinderMode	common_to_all
+createGraphic	no
+toAnnotate	no
+#optional arguments (also applies to core/accessory runs)
+mummerNumberOfSplitFiles	5
+mummerBpPerSplitFile	5000000
+mummerNumberOfInstances	3
+
+‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
+
+‘referenceDirectory’ should contain the full directory path of the folder where all of the reference sequences you are interested in comparing reside. Panseq only uses this folder for Novel Region Comparisons of type 'common_to_all' and 'no_duplicates'. All other analyses use the contents of the Query folder only.
+
+‘baseDirectory’ is the directory where all the output from Panseq is placed, and should be the full directory path. WARNING: This directory is automatically cleared of all contents at the beginning of each run.
+
+'numberOfCores' sets the number of processors available to Panseq. Increasing this can reduce run times.
+
+'mummerDirectory' specifies the full path to the folder containing the nucmer program.
+
+'blastDirectory' specifies the full path to the BLAST+ bin directory.
+
+'minimumNovelRegionSize' sets the size in bp of the smallest region that will be kept by the Novel Region Finder; all regions found below this value will not be kept.
+
+'novelRegionFinderMode'  sets the type of novel region analysis that will be performed. ‘no_duplicates’ finds the novel regions among one or more query strains with respect to the reference strains selected. ‘unique’ finds sequence regions that are unique to each sequence among all of the strains selected; only strains in the 'queryDirectory' will be considered for analysis. ‘common_to_all’ finds sequence regions that are shared among all query strains but absent among all reference strains.
+
+'createGraphic' determines whether a scalar vector graphic of the analysis is output. For a novel regions analysis, this shows the location of the novel regions among all query sequences. For a core / accessory analysis, the graphic displays the non-redundant pan-genome, and the contribution of each input sequence to it.
+
+'toAnnotate' determines whether to find the putative function of the novel regions, or pan-genome using a BlastX query
+
+'mummerNumberOfSplitFiles' determines the number of reference files to create for the Nucmer comparisons. Can be adjusted for memory concerns.
+
+'mummerBpPerSplitFile' is an alternative to mummerNumberOfSplitFiles and
+
+Uses
+-----
+1. Use when you want to know all of the unique regions of sequence in one or more query sequences that are not present in a reference group of sequences. To do this, place all of the “query” sequences into the query directory, and all of the “reference” sequences into the reference directory. Set 'novelRegionFinderMode' to ‘no_duplicates’. Adjust the minimumNovelRegionSize to whatever value you like. 
+
+2. Use when you want to know the regions unique to each sequence among a group of sequences. For example in a group of sequences A, B and C, you would like to know regions present in A but not B & C; present in B but not A & C; present in C but not A & B. To do this, place your sequences in the query directory. Set 'novelRegionFinderMode' to ‘unique’. All other setting are the same as for (1.).
+
+3. Use when you want to know what sequence regions are present in all query sequences and absent from all reference sequences. Place the query and reference sequences into their appropriate directories. Set 'novelRegionFinderMode' to ‘common_to_all’. All other settings are the same as for (1.).
+
+
+Core Accessory Analysis
+-----------------------
+
+  perl core_accessory.pl core_settings.txt
+
+would run a coreAccessory analysis given the settings specified in core_settings.txt.
+
+Below is an example configuration file:
+
+queryDirectory	/home/phac/panseq/query/
+referenceDirectory	/home/phac/panseq/reference/
+baseDirectory	/home/phac/panseq/output/panseq2test/
+numberOfCores	22
+mummerDirectory	/home/phac/MUMmer3.23/
+blastDirectory	/home/phac/ncbi-blast-2.2.25+/bin/
+muscleExecutable	/usr/bin/muscle3.8.31_i86linux64
+minimumNovelRegionSize	500
+fragmentationSize	500
+percentIdentityCutoff	85
+coreGenomeThreshold	2
+accessoryType	binary
+createGraphic	no
+toAnnotate	no
+coreInputType	panGenome
+segmentCoreInput	yes
+blastType	blastn
+
+
+'muscleExecutable' specifies the full path to the muscle executable file.
+
+'fragmentationSize' when running a ‘core’ analysis with 'coreInputType' set to 'panGenome', it determines the size of the fragments that the genomic sequences are segmented into.
+
+'percentIdentityCutoff' when running a ‘core’ analysis sets the threshold of sequence identity for determining whether a fragment is part of the ‘core’ or ‘accessory’ genome.
+
+'coreGenomeThreshold' defines the number of the initial sequences that a segment must be found in to be considered part of the 'core' genome; multi-fasta files of a single sequence are treated as a single sequence.
+
+'accessoryType' determines the output type for 'accessory' genomic regions. The available options are 'binary', 'percent' and 'sequence'. Regardless of the type, all the accessory regions will be output as a tab-delimited table. If 'binary' is selected, the output will be either '0' or '1' depending upon whether the fragment is >= to the percentIdentityCutoff value for each sequence. If 'percent' is selected, the actual percent identity will be output in the table. If 'sequence' is selected, the sequence the accessory region will be placed in the table instead.
+
+'coreInputType' specifies what to use as input for a core / accessory search. Options are 'panGenome' and '</custom/loci/file.fasta>'. The 'panGenome' option uses the novel region finder to create a non-redundant pan-genome from the sequences in the 'queryFolder', which is subsequently segmented into fragments of a user-defined size. These fragments are then queried against the sequences in the 'queryFolder'. By specifying an absolute path to a file containing fasta sequences, the sequences in the file will be queried against all sequences found in the 'queryDirectory'. This is useful for running an in-silico MLST, or testing a panel of genes against a set of genomes and having the presence/absence reported. Eg. For AMR testing, virulence profiling … . Amino acid sequences are allowable as the '</custom/loci/file.fasta>', but be sure to set 'blastType' to 'tblastn' if using an input fasta file of amino acid sequences.
+
+'segmentCoreInput' specifies whether or not to segment the coreInputType file (either the 'panGenome' or 'custom input file') into fragments of size specified in 'fragmentationSize'.
+
+'blastType' takes one of 'blastn' or 'tblastn' and should only be set in conjunction with a 'core' run, where a user-specified input file is used in placec of the 'panGenome', and that input file is a fasta file of amino acid sequences. This defaults to 'blastn' when 'coreInputType' is set to 'panGenome'.
+
+Uses
+----
+This uses either a custom input file or a non-redundant pan-genome for all of the sequences in the 'queryDirectory'. Whether to use an input fasta file or the automatically generated pan-genome is specified by 'coreInputType'. The 'fragmentationSize' determines what size the sequences will be fragmented into before BLAST comparisons; 'percentIdentityCutoff' determines what threshold a region is considered “core” or “accessory” at and 'coreGenomeThreshold' determines what number of sequences a fragment must be present in to be considered part of the 'core' genome. Fragments with a total sequence identity at or above the 'percentIdentityCutoff' and present in  >=  'coreGenomeThreshold' sequences will be considered “core”; all others will be considered “accessory”. Set the 'accessoryType' to the desired output format, depending on your needs. The output includes both a tabular accessory output file, and a tabular SNP file, with name and position information for each SNP given for the first SNP of each alignment. Subsequent SNPs from the same alignment are listed by position only. By default, alignments are output in phylip format, with numbers as unique identifiers due to the 10 character phylip limit. A corresponding information file links each number to its full sequence identifier. Output files are: 'accessory_regions_table.txt', 'core_snps_table.txt', 'accessory_alignment.phylip', 'accessory_alignment_info.txt',  'core_alignment.phylip', 'core_alignment_info.txt'.
+
+Loci Selector
+-------------
+
+  perl loci_selector.pl <input file name> <loci number, or 'best'> > <output file name>
+
+would run a lociSelector analysis on the data present in <input file name>, selecting the given number of loci, or "best", and outputting the results to <output file name>
+
+The approach of the loci selector module in Panseq is to iteratively build the final loci set, including only the loci that produce the most unique fingerprints, and offer the most variability among input sequences at each step. This allows it to efficiently examine datasets that would be computationally prohibitive if all possible combinations were considered. To return a specific number of hgihest-scoring loci, set 'lociNumber' to a non-zero integer value. Setting 'lociNumber' to 'best' automatically determines the fewest loci that will maximize discrimination based on the tabular data provided.
+

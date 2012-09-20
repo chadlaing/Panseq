@@ -10,7 +10,7 @@ package Mummer::DeltaBlockFactory;
 use strict;
 use warnings;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use IO::File;
 use Mummer::DeltaBlockObject;
 use Carp;

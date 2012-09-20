@@ -14,7 +14,8 @@ use Tie::Log4perl;
 use File::Basename;
 use File::Path qw{make_path remove_tree};
 use Visual::Bacteria;
-#use Blast::Annotator;
+use Blast::Annotator;
+use Mummer::MummerGPU;
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
@@ -49,8 +50,8 @@ if ( defined $ca->_baseDirectory ) {
 
 #closing STDERR and associating it with Log4perl is done below
 #the logger.MummerGPU section in log4p.conf logs this output to a file
-#close STDERR;
-#tie *STDERR, "Tie::Log4perl";
+close STDERR;
+tie *STDERR, "Tie::Log4perl";
 Log::Log4perl->init("$SCRIPT_LOCATION/Logging/core_accessory_log4p.conf");
 $ca->logger->info("CoreAccessory begin");
 my $logger = Log::Log4perl->get_logger();
@@ -100,7 +101,10 @@ else{
 	$ca->logger->fatal("incorrect type specified in coreInputType");
 	exit(1);
 }
-		
+
+#store the panGenome
+$ca->panGenomeFile($inputLociFile);
+
 #segment the input if required
 if($ca->_segmentCoreInput eq 'yes'){
 	$ca->logger->info("Segmenting the input sequences");
@@ -168,24 +172,62 @@ $forker->wait_all_children;
 
 #add visualization 
 if($ca->createGraphic eq 'yes'){
-		my $visFH = IO::File->new('>' . $ca->_baseDirectory . 'panGenome.svg') or die "$!";
+		#this creates a simple visual of the accessory table, if it exists
+		my $visFH = IO::File->new('>' . $ca->_baseDirectory . 'accessory_visualization.svg') or die "$!";
 		my $vis = Visual::Bacteria->new();
 		$visFH->print($vis->run($ca->_baseDirectory . 'accessory_regions_table.txt','large'));
 		$visFH->close;	
+
+		#create a panGenome graphic of all sequences
+		#combine panGenome into a single sequence for proper functioning of SvgDrawer
+		my $manipulator = FileInteraction::FileManipulation->new();
+		my $singleFile = $ca->_baseDirectory . 'panGenome_single.fasta';
+		$manipulator->outputFH(IO::File->new('>' . $singleFile)) or die "$!";
+		$manipulator->multiFastaToSingleFasta($ca->panGenomeFile);
+
+		#run mummer
+		#include the base dir in _p if need to modify
+		$logger->info("MUMmer for graphics initiated");
+		my $mum = Mummer::MummerGPU->new(
+			'baseDirectory'   => $ca->_baseDirectory
+		);
+
+		$mum->run(
+				'queryFile'       => $ca->combinedQueryFile,
+				'referenceFile'   => $singleFile,
+				'mummerDirectory' => $ca->mummerDirectory,					
+				'numberOfCores'   => $ca->_numberOfCores,
+				'p'=>$ca->_baseDirectory . 'svg'
+		);
+		$logger->info("MUMmer for graphics finished");
+
+		#create coords file for svg
+		$mum->showCoords(
+			'deltaFile'=>$mum->deltaFile,
+			'coordsFile'=>$ca->_baseDirectory . 'graphics.coords'
+		);
+
+		#create the visualization
+		my $systemLine = "perl $SCRIPT_LOCATION/Visual/svgDrawer.pl " . $mum->coordsFile . ' ' . ' ' . $ca->panGenomeFile . ' ' . '1'
+			. ' > ' . $ca->_baseDirectory . 'panGenomeGraphic.svg';
+		$logger->info("Creating graphic with $systemLine");
+		system($systemLine);
+		$logger->info("Graphic created");
 }
 
-# #add annotation
-# my $annotator = Blast::Annotator->new(
-# 	'inputFile'=>$inputLociFile,
-# 	'outputFile'=>$ca->_baseDirectory . '/panGenome_annotation.txt',
-# 	'blastDirectory'=>'/home/phac/ncbi-blast-2.2.26+/bin/',
-# 	'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
-# 	'numberOfCores'=>'20'
-# );
-#$annotator->annotate();
-
-$ca->logger->info("Finished CoreAccessory Analysis");		
-
+if($ca->toAnnotate eq 'yes'){
+my $annotator = Blast::Annotator->new(
+	'inputFile'=>$inputLociFile,
+	'outputFile'=>$ca->_baseDirectory . '/panGenome_annotation.txt',
+	'blastDirectory'=>'/home/phac/ncbi-blast-2.2.26+/bin/',
+	'blastDatabase'=>'/home/phac/workspace/Panseq_dev/Panseq2/NCBI_DB/NR',
+	'numberOfCores'=>'20'
+);
+$annotator->annotate();	
+}
+		
+$ca->cleanUp();
+$ca->logger->info("Finished CoreAccessory Analysis");
 
 
 #HOOKS for log4p.conf

@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use diagnostics;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../";
 use Carp;
 use Mummer::DeltaBlockFactory;
 use FileInteraction::Fasta::SequenceName;
@@ -105,7 +105,7 @@ sub validateNovelSettings {
 
 		#requirements
 		$self->_adjacentJoiningSize(0)               unless defined $self->_adjacentJoiningSize;
-		$self->missingParam('referenceDirectory')    unless ( defined $self->referenceDirectory || defined $self->_skipGatherFiles );
+		#$self->missingParam('referenceDirectory')    unless ( defined $self->referenceDirectory || defined $self->_skipGatherFiles );
 		$self->missingParam('novelRegionFinderMode') unless defined $self->novelRegionFinderMode;
 	}
 }
