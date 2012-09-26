@@ -168,9 +168,9 @@ if(!defined $nrf->_skipGatherFiles){
 	else{
 		$logger->info("No Annotation performed");
 	}#end of else
+	$nrf->cleanUp();
 }#end of check for _skipGatherFiles
 
-$nrf->cleanUp();
 $nrf->logger->info("Novel regions extracted");
 
 #end
