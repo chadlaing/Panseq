@@ -1,8 +1,0 @@
-queryDirectory	/home/phac/panseq/queryLarge/
-referenceDirectory	/home/phac/panseq/referenceLarge/
-baseDirectory	/home/phac/panseq/output/panseq2test/
-numberOfCores	22
-mummerDirectory	/home/phac/MUMmer3.23/
-minimumNovelRegionSize	50
-novelRegionFinderMode	common_to_all
-createGraphic	no
