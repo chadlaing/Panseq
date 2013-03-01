@@ -84,7 +84,8 @@ sub _initialize{
 	my($self)=shift;
 
     #logging
-    $self->logger(Log::Log4perl->get_logger());      
+    $self->logger(Log::Log4perl->get_logger()); 
+    $self->logger->debug("Logger initialized in Modules::Fasta::SequenceRetriever");     
     
     #outputFile and inputFile should be read only
     my %params=@_; 

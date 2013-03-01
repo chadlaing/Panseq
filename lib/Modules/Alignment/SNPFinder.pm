@@ -46,6 +46,11 @@ sub startBpHashRef{
 	$self->{'_startBpHashRef'}=shift // return $self->{'_startBpHashRef'};
 }
 
+sub _dashOffset{
+	my $self=shift;
+	$self->{'__dashOffset'}=shift // return $self->{'__dashOffset'};
+}
+
 #methods
 sub _initialize{
 	my($self)=shift;
@@ -77,12 +82,16 @@ sub _initialize{
 		't'=>1,
 		'g'=>1
 	});
+
+	#init data structures
+	$self->_dashOffset({});
 }
 
 sub findSNPs{
 	my($self)=shift;
 	
 	my ($alignmentLength,$alignedHashRef) = $self->_getHashOfFastaAlignment();
+	$self->_setOffsetHash($alignedHashRef);
 
 	my @orderedResults; 
 	my $addedNames=0;
@@ -107,6 +116,27 @@ sub findSNPs{
 		return undef;
 	}
 	
+}
+
+
+=head3 _setOffsetHash
+
+Stores the number of dashes in the Muscle alignment, so that the correct SNP position relative
+to the original sequence can be given. We get the original startbp of the alignment via the blast
+result, which is stored in the startBPhash.
+During the SNP finding, we need to count each dash for each sequence and use it as an offset when
+reporting the correct original SNP position.
+Stored in _dashOffset->{sequenceName}=<dash count>
+
+=cut
+
+sub _setOffsetHash{
+	my $self=shift;
+	my $alignedHashRef=shift;
+
+	foreach my $name(keys %{$alignedHashRef}){
+		$self->_dashOffset->{$name}=0;
+	}
 }
 
 =head3 _getFastaNamesForOutput
@@ -166,9 +196,10 @@ sub _getSingleBaseResult{
 		#need to fill in the position as '-'
 		if(exists $alignedHashRef->{$name}->{'fasta'}){
 			$base = substr($alignedHashRef->{$name}->{'sequence'},$position,1); 
+			my $dashOffset = $self->_dashOffset->{$name};
 
 			unless(defined $base){
-				$self->logger->warn("name: $name\nfasta: " . $alignedHashRef->{$name}->{'fasta'}. "\nseq: " . $alignedHashRef->{$name}->{'sequence'} . "\npos: $position");
+				$self->logger->fatal("name: $name\nfasta: " . $alignedHashRef->{$name}->{'fasta'}. "\nseq: " . $alignedHashRef->{$name}->{'sequence'} . "\npos: $position");
 			}
 
 			if(defined $self->allowableChars->{$base}){
@@ -178,7 +209,13 @@ sub _getSingleBaseResult{
 			$baseLine .= ("\t$base");	
 			my $startBp = $self->startBpHashRef->{$alignedHashRef->{$name}->{'fasta'}};
 
-			$positionLine .= ("\t" . ($startBp + $position));			
+			$positionLine .= ("\t" . ($startBp + $position - $dashOffset));	
+
+			#update _dashOffset if need be
+			if($base eq '-'){
+				$dashOffset++;
+				$self->_dashOffset->{$name}=$dashOffset;
+			}		
 		}
 		else{
 			$baseLine .= ("\t" . '-');

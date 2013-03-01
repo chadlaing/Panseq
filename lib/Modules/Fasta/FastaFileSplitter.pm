@@ -90,7 +90,7 @@ sub _initialize {
 
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
-	$self->logger->info("Logger initialized in Modules::Fasta::FastaFileSplitter");
+	$self->logger->debug("Logger initialized in Modules::Fasta::FastaFileSplitter");
 
 
 	my %params = @_;

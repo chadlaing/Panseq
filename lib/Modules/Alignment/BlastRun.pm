@@ -235,7 +235,7 @@ sub _copyExtensions{
 		my $newFile = $file . $counter . '.' . $extension;
 
 		copy("$oldFile","$newFile") or $self->logger->logdie("Could not make copy of BLAST $oldFile to $newFile");
-		$self->logger->info("Copying BLAST database file $oldFile to $newFile");
+		$self->logger->debug("Copying BLAST database file $oldFile to $newFile");
 		push @{$self->_filesToRemove}, $newFile;
 	}
 }
@@ -273,7 +273,7 @@ sub _removeTempFiles{
 	my $self=shift;
 
 	foreach my $file(@{$self->_filesToRemove}){
-		$self->logger->warn("Removing $file");
+		$self->logger->debug("Removing $file");
 		unlink $file;
 	}
 }

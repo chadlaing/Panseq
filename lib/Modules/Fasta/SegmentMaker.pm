@@ -121,6 +121,7 @@ sub _initialize{
 
 	#logging
 	$self->logger(Log::Log4perl->get_logger());
+	$self->logger->debug("Logger initialized in Modules::Fasta::SegmentMaker");
 
 	my %params=@_;
 	

@@ -593,7 +593,7 @@ Takes a single BLAST result and extracts both the core and accessory information
 Every result should have an accessory entry (even if all negative)
 while a core result is only calculated if the restrictions are met.
 In preparation for calculating a core result, an array of fasta sequences is produced,
-for direct use in the Muscle alignment proram.
+for direct use in the Muscle alignment program.
 
 =cut
 

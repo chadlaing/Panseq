@@ -38,7 +38,7 @@ sub initialize{
 
 	#logging
 	$self->logger( Log::Log4perl->get_logger());
-	$self->logger->info("Logger initialized in Modules::Alignment::MakeBlastDB");
+	$self->logger->debug("Logger initialized in Modules::Alignment::MakeBlastDB");
 
 	#init values
 	my %params = @_;

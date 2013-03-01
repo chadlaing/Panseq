@@ -37,7 +37,6 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use File::Basename;
-use Modules::Setup::Settings;
 use Modules::Setup::PanseqFiles;
 use Modules::NovelRegion::NovelIterator;
 use Modules::Alignment::BlastRun;
@@ -48,6 +47,7 @@ use Modules::Phylogeny::PhylogenyFileCreator;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
+use File::Path 'make_path';
 use Carp;
 use Role::Tiny::With;
 
@@ -74,34 +74,17 @@ Anything else that the _initialize function does.
 sub _initialize{
 	my($self)=shift;
 
-	#some programs default messages to STDERR
-	#we want them logged
-	#closing STDERR and associating it with Log4perl is done below
-	# close STDERR;
-	# tie *STDERR, "Tie::Log4perl";
+  
 
-    #logging
-    $self->logger(Log::Log4perl->get_logger()); 
-
-    $self->logger->debug("Logger initialized in Modules::Setup::Panseq");  
-
-    my $configFile = shift // $self->logger->logdie("Configuration file required for Panseq run");
+    my $settingsObj = shift;
    
     #get and parse the configuration file for Panseq
-	$self->settings(Modules::Setup::Settings->new($configFile));
+	$self->settings($settingsObj);
+	$self->_createDirectories();
 
-   # my %params = @_;
-
- #    #on object construction set all parameters
- #    foreach my $key(keys %params){
-	# 	if($self->can($key)){
-	# 		$self->$key($params{$key});
-	# 	}
-	# 	else{
-	# 		#logconfess calls the confess of Carp package, as well as logging to Log4perl
-	# 		$self->logger->logconfess("$key is not a valid parameter in Modules::Setup::Panseq");
-	# 	}
-	# }	
+	#logging
+    $self->logger(Log::Log4perl->get_logger()); 
+	$self->logger->info("Logger initialized in Modules::Setup::Panseq");  
 }
 
 =head3 logger
@@ -129,7 +112,7 @@ sub settings{
 sub run{
 	my $self=shift;
 
-	#if mode is set to pan, we should ignore all referenceDirectory items
+	#if mode is set to pan, we should ignore all referenceDirectory item
 
 	#get the query/reference files to use in the comparison
 	my $files = Modules::Setup::PanseqFiles->new(
@@ -155,6 +138,31 @@ sub run{
 	}
 
 	$self->_cleanUp();
+}
+
+
+=head3
+
+Given the $self->settings->baseDirectory,
+test to see if it exists.
+If it does, stop program with a message.
+If it does not, create directory, as well as directory/logs for logging output.
+
+=cut
+
+sub _createDirectories{
+	my $self=shift;
+
+	if(-d $self->settings->baseDirectory){
+		print "\nThe directory you have specified for program output:\n\t" . $self->settings->baseDirectory . "\n"
+			. 'already exists. Please specify a new baseDirectory' . "\n";
+		exit(1);
+	}
+	else{
+		#with File::Path
+		make_path($self->settings->baseDirectory);
+		make_path($self->settings->baseDirectory . 'logs/');
+	}
 }
 
 
