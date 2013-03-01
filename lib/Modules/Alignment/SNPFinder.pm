@@ -213,6 +213,7 @@ sub _getSingleBaseResult{
 
 			#update _dashOffset if need be
 			if($base eq '-'){
+				$self->logger->debug("Adjusting $name in " . $alignedHashRef->{$name}->{'fasta'} . " startbp $startBp position $position");
 				$dashOffset++;
 				$self->_dashOffset->{$name}=$dashOffset;
 			}		
