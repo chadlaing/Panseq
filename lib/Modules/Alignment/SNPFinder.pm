@@ -94,19 +94,17 @@ sub findSNPs{
 	$self->_setOffsetHash($alignedHashRef);
 
 	my @orderedResults; 
-	my $addedNames=0;
+	my $nameLine = $self->_getFastaNamesForOutput($alignedHashRef);
 	for my $position(0..($alignmentLength-1)){
 		my $resultLine = $self->_getSingleBaseResult($position,$alignedHashRef);
 
-		#add the contig names as tab-delimited values at the start of each new contig
-		if(defined $resultLine && $addedNames==0){
-			$addedNames=1;
-			$resultLine .= $self->_getFastaNamesForOutput($alignedHashRef);
-		}
-
 		if(defined $resultLine){
+			$resultLine .= $nameLine;
+
+			#add the contig names as tab-delimited values at the start of each new contig
 			push @orderedResults,$resultLine;
 		}
+		
 	}
 	
 	if(scalar(@orderedResults) > 0){
@@ -203,19 +201,24 @@ sub _getSingleBaseResult{
 			}
 
 			if(defined $self->allowableChars->{$base}){
+				#make sure base is uppercase
+				$base = uc($base);
 				$baseTypes{$base}=1;
 			}
 			
 			$baseLine .= ("\t$base");	
-			my $startBp = $self->startBpHashRef->{$alignedHashRef->{$name}->{'fasta'}};
-
-			$positionLine .= ("\t" . ($startBp + $position - $dashOffset));	
+			my $startBp = $self->startBpHashRef->{$alignedHashRef->{$name}->{'fasta'}};		
 
 			#update _dashOffset if need be
+			#if the char is a '-', there is no position information for the original sequence, so report a 0
 			if($base eq '-'){
+				$positionLine .= ("\t0");	
 				$self->logger->debug("Adjusting $name in " . $alignedHashRef->{$name}->{'fasta'} . " startbp $startBp position $position");
 				$dashOffset++;
 				$self->_dashOffset->{$name}=$dashOffset;
+			}
+			else{
+				$positionLine .= ("\t" . ($startBp + $position - $dashOffset));	
 			}		
 		}
 		else{
