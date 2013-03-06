@@ -79,6 +79,31 @@ sub minimumPresent{
 	$self->{'_minimumPresent'}=shift // return $self->{'_minimumPresent'};
 }
 
+sub tableType{
+	my $self=shift;
+	$self->{'_tableType'}=shift // return $self->{'_tableType'};
+}
+
+
+sub run{
+	my $self =shift;
+
+	if($self->tableType eq 'core'){
+		$self->_extractCoreTable();
+	}
+	elsif($self->tableType eq 'pan'){
+		$self->extractPanTable();
+	}
+	else{
+		$self->logger->fatal("\nIncorrect tableType of " . $self->tableType
+			. ".\n The values \'core\' and \'pan\' are acceptable."
+		);
+		exit(1);
+	}
+}
+
+
+
 
 
 
