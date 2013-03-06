@@ -15,8 +15,6 @@ Or, for pan_genome data, produce a binary table based on a new %ID cutoff value.
 
 =cut
 
-
-
 #object creation
 sub new {
 	my ($class) = shift;
@@ -66,7 +64,21 @@ sub percentId{
 	$self->{'_percentId'}=shift // return $self->{'_percentId'};
 }
 
-sub number{
+sub minimumCharacters{
 	my $self=shift;
-	$self->{'_number'}=shift // return $self->{'_number'};
+	$self->{'_minimumDifferentCharacters'}=shift // return $self->{'_minimumDifferentCharacters'};
 }
+
+sub maximumMissing{
+	my $self=shift;
+	$self->{'_maximumMissing'}=shift // return $self->{'_maximumMissing'};
+}
+
+sub minimumPresent{
+	my $self=shift;
+	$self->{'_minimumPresent'}=shift // return $self->{'_minimumPresent'};
+}
+
+
+
+
