@@ -4,6 +4,11 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
+use IO::File;
+use Role::Tiny;
+
+with 'Roles::FlexiblePrinter';
+
 
 =head1 Description
 
@@ -84,6 +89,12 @@ sub tableType{
 	$self->{'_tableType'}=shift // return $self->{'_tableType'};
 }
 
+=head2 run
+
+Runs the program. Calls _extractCoreTable or _extractPanTable
+depending on the tableType value.
+
+=cut
 
 sub run{
 	my $self =shift;
@@ -92,7 +103,7 @@ sub run{
 		$self->_extractCoreTable();
 	}
 	elsif($self->tableType eq 'pan'){
-		$self->extractPanTable();
+		$self->_extractPanTable();
 	}
 	else{
 		$self->logger->fatal("\nIncorrect tableType of " . $self->tableType
@@ -103,7 +114,75 @@ sub run{
 }
 
 
+sub _extractCoreTable{
+	my $self=shift;
 
+	if((defined $self->minimumPresent && defined $self->maximumMissing) || 
+		(!defined $self->minimumPresent && !defined $self->maximumMissing)){
+			$self->logger->fatal("\nExactly one of minimumPresent or maximumMissing must be defined at one time");
+			exit(1);
+	}
 
+	my $inFH = IO::File->new('<' . $self->inputFile) or die "Could not open file $!";
+
+	my $numberOfColums=0;
+	while(my $line = $inFH->getline){
+		if($inFH->input_line_number == 1){
+			$numberOfColums = $self->_determineNumberOfColumns($line);
+
+			unless(defined $self->minimumPresent){
+				$self->minimumPresent($numberOfColums - $self->maximumMissing);
+			}
+		}
+		my $numberPresent = $self->_determineNumberPresent($line,$numberOfColums);
+
+		if($numberPresent >= $self->minimumPresent){
+			#use Roles::FlexiblePrinter->printOut (default STDOUT)
+			$line =~ s/\R//g;
+			my @la = split('\t',$line);
+			$self->printOut(join('',(@la[1..$numberOfColums])));
+		}
+	}
+	$inFH->close();
+}
+
+=head2 _determineNumberOfColumns
+
+Given the output table first line, return a count of how many data columns
+
+=cut
+
+sub _determineNumberOfColumns{
+	my $self=shift;
+	my $line =shift;
+
+	$line =~ s/\R//g;
+	my @la = split('\t',$line);
+	return(scalar(@la) -1);
+}
+
+=head2 _determineNumberPresent
+
+Determines the number of columns that contain a nucleotide value, rather than a '-'
+
+=cut
+
+sub _determineNumberPresent{
+	my $self=shift;
+	my $line =shift;
+	my $numberOfColumns=shift;
+
+	$line =~ s/\R//g;
+	my @la = split('\t',$line);
+
+	my $numberPresent=0;
+
+	for my $i(1..$numberOfColumns){
+		unless($la[$i] eq '-'){
+			$numberPresent++;
+		}
+	}
+	return $numberPresent;
+}
 
 
