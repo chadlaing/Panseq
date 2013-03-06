@@ -1,7 +1,3 @@
-# Panseq README 
-
-
-
 ## OVERVIEW
 This is the "lean" development branch, optimized for pan-genomic analyses of large numbers of sequences.
 
@@ -46,10 +42,9 @@ To install, and automatically retrieve the CPAN packages, do the following:
 
 The following free, external programs must also be installed:
 
-MUMmer: mummer.sourceforge.net 
-BLAST+: blast.ncbi.nlm.nih.gov/Blast.cgi
-Muscle: www.drive5.com/muscle
-
+* [MUMmer:](http://mummer.sourceforge.net)
+* [BLAST+:](http://blast.ncbi.nlm.nih.gov/Blast.cgi)
+* [Muscle:](www.drive5.com/muscle)
 
 ## Running Panseq
 
