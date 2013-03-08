@@ -112,7 +112,7 @@ depending on the tableType value.
 
 sub run{
 	my $self =shift;
-
+	$self->logger->info("Start");
 	if($self->tableType eq 'core'){
 		$self->_extractCoreTable();
 	}
@@ -125,6 +125,7 @@ sub run{
 		);
 		exit(1);
 	}
+	$self->logger->info("End");
 }
 
 
@@ -153,8 +154,7 @@ sub _extractCoreTable{
 
 			#determine the number of \t\w instances to match
 			$stringToMatch = $self->_createStringToMatch($numberOfColums);
-			$stringToMatch = qr/$stringToMatch/;
-			$self->logger->info("stringToMatch: $stringToMatch");
+			#$self->logger->info("stringToMatch: $stringToMatch");
 			next;
 		}
 
@@ -168,7 +168,7 @@ sub _extractCoreTable{
 			exit;
 		}	
 
-		my $numberPresent = $self->_determineNumberPresent($dataLine);	
+		my $numberPresent = () = $dataLine =~ m/\t[^-]/g;	
 		#$self->logger->info("Number present: $numberPresent");
 
 		if($numberPresent >= $self->minimumPresent){
@@ -193,7 +193,7 @@ sub _createStringToMatch{
 	for(1..$numberOfColumns){
 		$matchString .= '\t[\w\-]';
 	}
-	return $matchString;
+	return qr/$matchString/;
 }
 
 =head2 _determineNumberOfColumns
@@ -208,21 +208,6 @@ sub _determineNumberOfColumns{
 
 	my $count = () = $line =~ m/\t\S+/g;
 	return $count;
-}
-
-=head2 _determineNumberPresent
-
-Determines the number of columns that contain a nucleotide value, rather than a '-'
-
-=cut
-
-sub _determineNumberPresent{
-	my $self=shift;
-	my $line =shift;
-
-	my $numberPresent = () = $line =~ m/\t[^-]/g;
-	
-	return $numberPresent;
 }
 
 1;
