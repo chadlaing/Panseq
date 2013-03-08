@@ -140,24 +140,60 @@ sub _extractCoreTable{
 	my $inFH = IO::File->new('<' . $self->inputFile) or die "Could not open file $!";
 
 	my $numberOfColums=0;
+	my $stringToMatch;
 	while(my $line = $inFH->getline){
 		if($inFH->input_line_number == 1){
 			$numberOfColums = $self->_determineNumberOfColumns($line);
+			$self->logger->info("Number of columns: $numberOfColums");
 
 			unless(defined $self->minimumPresent){
 				$self->minimumPresent($numberOfColums - $self->maximumMissing);
+				$self->logger->info("minimumPresent: " . $self->minimumPresent);
 			}
+
+			#determine the number of \t\w instances to match
+			$stringToMatch = $self->_createStringToMatch($numberOfColums);
+			$stringToMatch = qr/$stringToMatch/;
+			$self->logger->info("stringToMatch: $stringToMatch");
+			next;
 		}
-		my $numberPresent = $self->_determineNumberPresent($line,$numberOfColums);
+
+		my $dataLine;		
+		if($line =~ m/($stringToMatch)/){
+			$dataLine = $1;
+			#$self->logger->info("dataline: $dataLine");
+		}
+		else{
+			$self->logger->info("Dataline not defined!");
+			exit;
+		}	
+
+		my $numberPresent = $self->_determineNumberPresent($dataLine);	
+		$self->logger->info("Number present: $numberPresent");
 
 		if($numberPresent >= $self->minimumPresent){
 			#use Roles::FlexiblePrinter->printOut (default STDOUT)
-			$line =~ s/\R//g;
-			my @la = split('\t',$line);
-			$self->printOut(join('\t',(@la[1..$numberOfColums])));
+			#$self->printOut($dataLine . "\n");
 		}
 	}
 	$inFH->close();
+}
+
+=head2 _createStringToMatch
+
+Based on the number of columns, create a perl string to use for a regex match
+
+=cut
+
+sub _createStringToMatch{
+	my $self = shift;
+	my $numberOfColumns = shift;
+
+	my $matchString='^\S+';
+	for(1..$numberOfColumns){
+		$matchString .= '\t[\w\-]';
+	}
+	return $matchString;
 }
 
 =head2 _determineNumberOfColumns
@@ -170,9 +206,8 @@ sub _determineNumberOfColumns{
 	my $self=shift;
 	my $line =shift;
 
-	$line =~ s/\R//g;
-	my @la = split('\t',$line);
-	return(scalar(@la) -1);
+	my $count = () = $line =~ m/\t\S+/g;
+	return $count;
 }
 
 =head2 _determineNumberPresent
@@ -184,18 +219,9 @@ Determines the number of columns that contain a nucleotide value, rather than a 
 sub _determineNumberPresent{
 	my $self=shift;
 	my $line =shift;
-	my $numberOfColumns=shift;
 
-	$line =~ s/\R//g;
-	my @la = split('\t',$line);
-
-	my $numberPresent=0;
-
-	for my $i(1..$numberOfColumns){
-		unless($la[$i] eq '-'){
-			$numberPresent++;
-		}
-	}
+	my $numberPresent = () = $line =~ m/\t[^-]/g;
+	
 	return $numberPresent;
 }
 
