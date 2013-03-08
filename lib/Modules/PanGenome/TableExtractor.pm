@@ -169,7 +169,7 @@ sub _extractCoreTable{
 		}	
 
 		my $numberPresent = $self->_determineNumberPresent($dataLine);	
-		$self->logger->info("Number present: $numberPresent");
+		#$self->logger->info("Number present: $numberPresent");
 
 		if($numberPresent >= $self->minimumPresent){
 			#use Roles::FlexiblePrinter->printOut (default STDOUT)
