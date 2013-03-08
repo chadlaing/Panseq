@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+package Modules::PanGenome::TableExtractor;
+
 
 use strict;
 use warnings;
@@ -6,6 +8,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;
 use Role::Tiny;
+use Log::Log4perl;
 
 with 'Roles::FlexiblePrinter';
 
@@ -27,6 +30,17 @@ sub new {
 	bless( $self, $class );
 	$self->_initialize(@_);
 	return $self;
+}
+
+=head2 logger
+
+Stores a logger object for the module.
+
+=cut
+
+sub logger{
+	my $self=shift;
+	$self->{'_logger'} = shift // return $self->{'_logger'};
 }
 
 
@@ -140,7 +154,7 @@ sub _extractCoreTable{
 			#use Roles::FlexiblePrinter->printOut (default STDOUT)
 			$line =~ s/\R//g;
 			my @la = split('\t',$line);
-			$self->printOut(join('',(@la[1..$numberOfColums])));
+			$self->printOut(join('\t',(@la[1..$numberOfColums])));
 		}
 	}
 	$inFH->close();
@@ -184,5 +198,8 @@ sub _determineNumberPresent{
 	}
 	return $numberPresent;
 }
+
+1;
+
 
 
