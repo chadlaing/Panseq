@@ -212,14 +212,10 @@ sub _getCharacterCount{
 	foreach my $match(@matches){
 		my $count= () = $dataLine =~ m/$match/g;
 		push @counts, $count;
-		$self->logger->info("match: $match");
 	}
 	
 	#sort numerically descending
 	my @sortedCounts = sort {$b<=>$a} @counts;
-
-	$self->logger->info("counts: @sortedCounts");
-
 	return $sortedCounts[1];
 }
 

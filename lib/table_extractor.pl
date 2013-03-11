@@ -41,7 +41,7 @@ sub printHelp{
 	print "\ntable_extractor.pl has the following options:\n\t",
 	"-inputFile <file>\t\t:(required) specifies the tabular data to extract a subset from\n\t",
 	"-tableType <core|pan>\t\t:(required) specifies either 'core' (SNP data) or 'pan' (%ID data)\n\t",
-	#"-minimumCharacters <integer>\t:(optional) defaults to '2'. Specifies the minimum distinct character types required per line\n\t",
+	"-minimumCharacters <integer>\t:(optional) defaults to '2'. Specifies the minimum occurrence of each SNP per line\n\t",
 	"-maximumMissing <integer>\t:(optional) defaults to '0'. Specifies the maximum number of '-' characters allowed per line\n\t",
 	"-minimumPresent <integer>\t:(optional) specifies the minimum number of non '-' characters required per line\n\t",
 	"-percentId <integer>\t\t:(required for tableType 'pan') specifies the minimum %ID required for a locus to be considered 'present'\n\n";
