@@ -114,11 +114,17 @@ sub run{
 	my $self =shift;
 	$self->logger->info("Start");
 
+	unless(defined $self->tableType){
+		$self->logger->fatal("tableType required in TableExtractor");
+	}
+
+	my $inFH = IO::File->new('<' . $self->inputFile) or die "Could not open file $!";
+
 	if($self->tableType eq 'core'){
-		$self->_extractCoreTable();
+		$self->_extractCoreTable($inFH);
 	}
 	elsif($self->tableType eq 'pan'){
-		$self->_extractPanTable();
+		$self->_extractPanTable($inFH);
 	}
 	else{
 		$self->logger->fatal("\nIncorrect tableType of " . $self->tableType
@@ -130,16 +136,22 @@ sub run{
 }
 
 
+=head2 _extractCoreTable
+
+Takes a tab-delimited file of SNPs, and prints only the lines that contain fewer than the
+user specified number of gaps, and at least X of each SNP character.
+
+=cut
+
 sub _extractCoreTable{
 	my $self=shift;
+	my $inFH = shift;
 
 	if((defined $self->minimumPresent && defined $self->maximumMissing) || 
 		(!defined $self->minimumPresent && !defined $self->maximumMissing)){
 			$self->logger->fatal("\nExactly one of minimumPresent or maximumMissing must be defined at one time");
 			exit(1);
 	}
-
-	my $inFH = IO::File->new('<' . $self->inputFile) or die "Could not open file $!";
 
 	my $numberOfColums=0;
 	my $stringToMatch;
@@ -171,7 +183,7 @@ sub _extractCoreTable{
 
 		if($numberPresent >= $self->minimumPresent){
 			#use Roles::FlexiblePrinter->printOut (default STDOUT)
-			$self->printOut($dataLine . "\n");
+			$self->printOut($line . "\n");
 		}
 	}
 	$inFH->close();
@@ -209,14 +221,23 @@ sub _determineNumberOfColumns{
 }
 
 
+=head2 _extractPanTable
+
+Given the input file of tab-delimited percentIds, and a percentId cutoff, prints out the lines as binary,
+specifying 1 as greater than or equal the percentId cutoff and 0 as below.
+
+=cut
+
 sub _extractPanTable{
 	my $self =shift;
+	my $inFH = shift;
 
 	unless(defined $self->percentId){
 		$self->logger->fatal("\nperdentId is required in a 'pan' run\n");
 		exit(1);
 	}
 
+	my $numberOfColums;
 	while(my $line = $inFH->getline){
 		if($inFH->input_line_number == 1){
 			$numberOfColums = $self->_determineNumberOfColumns($line);
@@ -224,15 +245,15 @@ sub _extractPanTable{
 			next;
 		}
 
-		$self->printOut($self->_getBinaryLine($line));
+		$self->printOut($self->_getBinaryLine($line,$numberOfColums));
 	}
 }
 
 
 =head2 _getBinaryLine
 
-Based on the percentId cutoff-value, given a line of tab-delimited percent-Ids, print a binary 
-representation of the line.
+Based on the percentId cutoff-value, given a line of tab-delimited percent-Ids, returns a binary 
+representation of the line of percentIds present in the input line.
 
 =cut
 
@@ -240,9 +261,15 @@ representation of the line.
 sub _getBinaryLine{
 	my $self=shift;
 	my $line =shift;
+	my $numberOfColums=shift;
 
+	my $count=0;
 	while($line =~ m/\t(\d)/gc){
 		my $percentId = $1;
+
+		if($count > $numberOfColums){
+			last;
+		}	
 
 		if($percentId >= $self->percentId){
 			$line =~ s/$percentId/1/;
@@ -250,6 +277,7 @@ sub _getBinaryLine{
 		else{
 			$line =~ s/$percentId/0/;
 		}
+		$count++;
 	}
 	return $line;	
 }
