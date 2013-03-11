@@ -74,7 +74,7 @@ Below is an example configuration file:
 
 * ‘referenceDirectory’ should contain the full directory path of the folder where all of the reference sequences you are interested in comparing reside. Panseq only uses this folder for Novel Region Comparisons of type 'common_to_all' and 'no_duplicates'. All other analyses use the contents of the Query folder only.
 
-* ‘baseDirectory’ is the directory where all the output from Panseq is placed, and should be the full directory path. WARNING: This directory is automatically cleared of all contents at the beginning of each run.
+* ‘baseDirectory’ is the directory where all the output from Panseq is placed, and should be the full directory path. 
 
 * 'numberOfCores' sets the number of processors available to Panseq. Increasing this can reduce run times.
 
@@ -88,9 +88,9 @@ Below is an example configuration file:
 
 * 'muscleExecutable' specifies the full path to the muscle executable file.
 
-* 'fragmentationSize' when running a ‘core’ analysis with 'coreInputType' set to 'panGenome', it determines the size of the fragments that the genomic sequences are segmented into.
+* 'fragmentationSize' when running a in mode `pan' determines the size of the fragments that the genomic sequences are segmented into.
 
-* 'percentIdentityCutoff' when running a ‘core’ analysis sets the threshold of sequence identity for determining whether a fragment is part of the ‘core’ or ‘accessory’ genome.
+* 'percentIdentityCutoff' when running in mode `pan' sets the threshold of sequence identity for determining whether a fragment is part of the ‘core’ or ‘accessory’ genome.
 
 * 'coreGenomeThreshold' defines the number of the initial sequences that a segment must be found in to be considered part of the 'core' genome; multi-fasta files of a single sequence are treated as a single sequence.
 
