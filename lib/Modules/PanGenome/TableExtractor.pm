@@ -113,6 +113,7 @@ depending on the tableType value.
 sub run{
 	my $self =shift;
 	$self->logger->info("Start");
+
 	if($self->tableType eq 'core'){
 		$self->_extractCoreTable();
 	}
@@ -154,14 +155,12 @@ sub _extractCoreTable{
 
 			#determine the number of \t\w instances to match
 			$stringToMatch = $self->_createStringToMatch($numberOfColums);
-			#$self->logger->info("stringToMatch: $stringToMatch");
 			next;
 		}
 
 		my $dataLine;		
 		if($line =~ m/($stringToMatch)/){
 			$dataLine = $1;
-			#$self->logger->info("dataline: $dataLine");
 		}
 		else{
 			$self->logger->info("Dataline not defined!");
@@ -169,11 +168,10 @@ sub _extractCoreTable{
 		}	
 
 		my $numberPresent = () = $dataLine =~ m/\t[^-]/g;	
-		#$self->logger->info("Number present: $numberPresent");
 
 		if($numberPresent >= $self->minimumPresent){
 			#use Roles::FlexiblePrinter->printOut (default STDOUT)
-			#$self->printOut($dataLine . "\n");
+			$self->printOut($dataLine . "\n");
 		}
 	}
 	$inFH->close();
@@ -208,6 +206,52 @@ sub _determineNumberOfColumns{
 
 	my $count = () = $line =~ m/\t\S+/g;
 	return $count;
+}
+
+
+sub _extractPanTable{
+	my $self =shift;
+
+	unless(defined $self->percentId){
+		$self->logger->fatal("\nperdentId is required in a 'pan' run\n");
+		exit(1);
+	}
+
+	while(my $line = $inFH->getline){
+		if($inFH->input_line_number == 1){
+			$numberOfColums = $self->_determineNumberOfColumns($line);
+			$self->logger->info("Number of columns: $numberOfColums");
+			next;
+		}
+
+		$self->printOut($self->_getBinaryLine($line));
+	}
+}
+
+
+=head2 _getBinaryLine
+
+Based on the percentId cutoff-value, given a line of tab-delimited percent-Ids, print a binary 
+representation of the line.
+
+=cut
+
+
+sub _getBinaryLine{
+	my $self=shift;
+	my $line =shift;
+
+	while($line =~ m/\t(\d)/gc){
+		my $percentId = $1;
+
+		if($percentId >= $self->percentId){
+			$line =~ s/$percentId/1/;
+		}
+		else{
+			$line =~ s/$percentId/0/;
+		}
+	}
+	return $line;	
 }
 
 1;
