@@ -14,7 +14,6 @@ sub outputFH{
 	$self->{'_outputFH'}=shift // return $self->{'_outputFH'};
 }
 
-
 #methods
 sub printOut{
 	my($self)=shift;
@@ -22,25 +21,6 @@ sub printOut{
 	my $outFH = $self->outputFH // *STDOUT{IO};
 	print $outFH @_;
 }
-
-# sub outputFile{
-# 	my $self=shift;
-# 	$self->{'_outputFile'}=shift // return $self->{'_outputFile'};
-# }
-
-# sub setNewOutputFile{
-# 	my $self=shift;
-# 	my $newFile=shift;
-
-# 	if(defined $newFile){
-# 		if($self->outputFH){
-# 			$self->outputFH->close();
-# 		}
-		
-# 		$self->outputFile($newFile);
-# 		$self->outputFH(IO::File->new('>' . $newFile) or die "Could not create FH from $newFile in Roles::FlexiblePrinter");
-# 	}
-# }
 
 sub DESTROY{
 	my $self=shift;
