@@ -121,7 +121,8 @@ This creates a tab-delimited table that lists the conversion information.
 sub _printConversionInformation{
 	my $self=shift;
 
-	$self->setNewOutputFile($self->conversionFile);
+	my $conversionFH = IO::File->new('>' . $self->conversionFile) or die "$!";
+	$self->outputFH($conversionFH);
 	$self->printOut(
 		'#Name Conversion Information',
 		"\n"
