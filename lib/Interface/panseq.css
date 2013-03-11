@@ -1,0 +1,100 @@
+body{
+	/*The most popular method in working with em values is to set the font-size on the body to 62.5%. 
+	Because the default browser font-size is 16px, this makes it 10px (without hard-setting it to 10px, which wouldn't cascade). 
+	Using 10 as a multiplier is much easier than using 16. This way, you need a font size of 18px? Use font-size: 1.8em.
+	font-size: 1em;
+	http://css-tricks.com/css-font-size/
+	*/
+	font-size: 62.5%;
+	padding:0em;
+	margin:0em;
+	border:0em;
+}
+
+footer{
+	float:left;
+}
+
+select{
+	width:10em;
+}
+
+
+.nav{
+	float:left;
+	background-color: chartreuse;
+	width:100%;
+	font-size:2em;
+}
+
+.nav ul li{
+	float:left;
+	width:5em;
+}
+
+.columnContainer{
+	float:left;
+	width:90%;
+	height:40em;
+	background-color:blue;
+	margin-left:5%;
+	margin-right: 5%;
+}
+
+.columnContainer div{
+	float:left;
+	width:33.3333%;
+	height:100%;
+	background-color:grey;
+}
+
+.columnContainer div p{
+	font-size: 2em;
+}
+
+/*.columnContainer > a{
+	display:block;
+}*/
+
+.userOptions{
+	float:left;
+	width:100%;
+	height:40em;
+	background-color: white;
+}
+
+
+
+/*display proper controls, based on selection*/
+#userPan{
+	display: none;
+}
+
+#userPan:target{
+	display:block;
+	background-color: red;
+}
+
+
+#userNovel{
+	display: block;
+}
+
+#userNovel:target{
+	display:block;
+	background-color: white;
+}
+
+#userLoci{
+	display: none;
+}
+
+#userLoci:target{
+	display: block;
+	background-color: green;
+}
+
+
+
+
+
