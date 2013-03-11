@@ -182,11 +182,45 @@ sub _extractCoreTable{
 		my $numberPresent = () = $dataLine =~ m/\t[^-]/g;	
 
 		if($numberPresent >= $self->minimumPresent){
-			#use Roles::FlexiblePrinter->printOut (default STDOUT)
-			$self->printOut($line . "\n");
+			#print line only if 2 or more characters each occur greater than or equal to the $self->minimumCharacters cutoff
+			if($self->_getCharacterCount($dataLine) > $self->minimumCharacters){
+				#use Roles::FlexiblePrinter->printOut (default STDOUT)
+				$self->printOut($line . "\n");
+			}			
 		}
 	}
 	$inFH->close();
+}
+
+
+=head2 _getCharacterCount
+
+Counts the number of A, C, T, G in each line.
+Uses regular expression matching to determine the counts.
+Sorts the number of hits for each nucleotide in an array of descending values.
+The second array item is returned, as if this number is greater than or equal to the cutoff,
+then at least two nucleotides have met the cutoff as specified in $self->minimumCharacters
+
+=cut
+
+sub _getCharacterCount{
+	my $self = shift;
+	my $dataLine = shift;
+
+	my @counts;
+	my @matches = ('\t[aA]', '\t[tT]', '\t[cC]', '\t[gG]');
+	foreach my $match(@matches){
+		my $count= () = $dataLine =~ m/$match/g;
+		push @counts, $count;
+		$self->logger->info("match: $match");
+	}
+	
+	#sort numerically descending
+	my @sortedCounts = sort {$b<=>$a} @counts;
+
+	$self->logger->info("counts: @sortedCounts");
+
+	return $sortedCounts[1];
 }
 
 =head2 _createStringToMatch
@@ -264,7 +298,7 @@ sub _getBinaryLine{
 	my $numberOfColums=shift;
 
 	my $count=0;
-	while($line =~ m/\t(\d)/gc){
+	while($line =~ m/\t(\d+)/gc){
 		my $percentId = $1;
 
 		if($count > $numberOfColums){
@@ -272,10 +306,10 @@ sub _getBinaryLine{
 		}	
 
 		if($percentId >= $self->percentId){
-			$line =~ s/$percentId/1/;
+			$line =~ tr/$percentId/1/;
 		}
 		else{
-			$line =~ s/$percentId/0/;
+			$line =~ tr/$percentId/0/;
 		}
 		$count++;
 	}
