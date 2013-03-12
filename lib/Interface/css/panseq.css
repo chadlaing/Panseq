@@ -1,0 +1,60 @@
+body{
+	/*The most popular method in working with em values is to set the font-size on the body to 62.5%. 
+	Because the default browser font-size is 16px, this makes it 10px (without hard-setting it to 10px, which wouldn't cascade). 
+	Using 10 as a multiplier is much easier than using 16. This way, you need a font size of 18px? Use font-size: 1.8em.
+	font-size: 1em;
+	http://css-tricks.com/css-font-size/
+	*/
+	font-size: 62.5%;
+	padding:0em;
+	margin:0em;
+	border:0em;
+}
+
+footer{
+	float:left;
+}
+
+select{
+	float:left;
+	width:10em;
+}
+
+
+#panseqImage{
+	float:left;
+	overflow:hidden;
+	margin-top:2em;
+	margin-left: 10em;
+	background-image: url("/panseq/images/panseq.png");
+	background-position: left top;
+	background-repeat: no-repeat;
+}
+
+#panseqImage > p{
+	font-family: Merriweather;
+	font-size: 5em;
+	margin: 0;
+	margin-left: 5em;
+	padding:0;
+}
+
+
+
+
+/*http://www.quirksmode.org/css/clearing.html
+For getting the nav tabs to display horizontally
+The floats were messed up with jQueryUI
+*/
+.nav{
+	font-size:2em;
+	overflow:hidden;
+	width:100%;
+}
+
+.nav ul li{
+	list-style-type: none;
+	float:left;
+	margin-left: 0em;
+}
+
