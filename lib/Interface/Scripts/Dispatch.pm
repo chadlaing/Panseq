@@ -10,17 +10,22 @@ $ENV{PATH_INFO} =~ s/^$ENV{DOCUMENT_ROOT}// if defined $ENV{PATH_INFO};
 use strict;
 use warnings;
 use FindBin;
-use lib "$FindBin::Bin/../../";
+use lib "$FindBin::Bin/..";
 use parent qw/CGI::Application::Dispatch/;
-
 
 sub dispatch_args {
     return {
         prefix  => 'Interface::Scripts',
+        args_to_new=>{
+        	TMPL_PATH=>"$FindBin::Bin/../Templates/"
+        },
         table   => [
-        	''	=>	{app=>'Panseq',rm=>'display'},
-        	'/'	=>	{app=>'Panseq',rm=>'display'},
-        	'/home/' => {app=>'Panseq',rm=>'display'},
+        	''	=>	{app=>'Home',rm=>'display'},
+        	'/'	=>	{app=>'Home',rm=>'display'},
+        	'/home/' => {app=>'Home',rm=>'display'},
+            '/home' => {app=>'Home',rm=>'display'},
+            ':app/:rm'        => { },
+            'admin/:app/:rm'  => { prefix   => 'MyApp::Admin' },
         ],
     };
 }
