@@ -19,12 +19,10 @@
 	</div>
 
 
-	<div id="userNovel">
-		<fieldset>
-			<legend>Program Options</legend>
-			<p>Form 2</p>
-			<div id="source-container">
-			  <h2 id="source-title">Widgets</h2>
+	<div id="userNovel">		
+		<div class="selectionContainer ui-state-default">
+		  <h2 class="selectionTitle">Query Strains</h2>
+		  	<div class="listContainer">
 			  <ul id="source-list">
 			    <li>Accordion</li>
 			    <li>Autocomplete</li>
@@ -35,23 +33,25 @@
 			    <li>Slider</li>
 			    <li>Tabs</li>
 			  </ul>
-			</div>	
+			</div>    
+		</div>	
 
-			<div id="target-container">
-			  <h2 id="target-title">Widgets You Used</h2>
-			  <ul id="target-list">
-			  </ul>
-			</div>
-
-			<div id="transfer-buttons-container">
-			  <div id="transfer-buttons">
-			    <button id="add-button">Add &rarr;</button>
-			    <button id="add-all-button">Add All *&rarr;</button>
-			    <button id="remove-button">&larr; Remove</button>
-			    <button id="remove-all-button">&larr;* Remove All</button>           
+		<div class="selectionContainer ui-state-default">
+			  <h2 class="selectionTitle">Selected Query</h2>
+			  <div class="listContainer">
+			  	<ul id="target-list">
+			  	</ul>
 			  </div>
-			</div>
-		</fieldset>
+		</div>
+
+		<div id="transfer-buttons-container">
+		  <div id="transfer-buttons">
+		    <button id="add-button">Add &rarr;</button>
+		    <button id="add-all-button">Add All *&rarr;</button>
+		    <button id="remove-button">&larr; Remove</button>
+		    <button id="remove-all-button">&larr;* Remove All</button>           
+		  </div>
+		</div>
 	</div>
 
 	<div id="userLoci">
