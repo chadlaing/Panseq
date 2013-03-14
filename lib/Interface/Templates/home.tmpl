@@ -1,66 +1,112 @@
 <TMPL_INCLUDE NAME='pageTop.tmpl'>
-
-<form 	method="post",
-			enctype="application/x-www-form-urlencoded",
-			action="/submit/"
->
-
 <div id="tabs">
 	<ul>
 		<li><a href="#userPan">Pan</a></li>
 		<li><a href="#userNovel">Novel</a></li>
 		<li><a href="#userLoci">Loci</a></li>
 	</ul>
+	<form 	method="post",
+					enctype="application/x-www-form-urlencoded",
+					action="/submit/"
+		>
+		<button id="submitButton">Submit</button>
+	</form>
+
 	<div id="userPan">	
 		 		<fieldset>
 		  			<legend>Program Options</legend>
 		  			<p>Form 1</p>					 
 		 		</fieldset> <p>userPan</p>
 	</div>
+	<div id="userNovel">
+		<div class="halfPage ui-state-default">
+		<h2 class="ui-widget-header">Strain Selection</h2>
+		<div class="strainSelectionRow">
+			<div class="selectionContainer">
+			  <h2 class="selectionTitle">Query Strains</h2>
+			  	<div class="listContainer">
+				  <ul id="query-source-list">
+				    <li>Accordion</li>
+				    <li>Autocomplete</li>
+				    <li>Button</li>
+				    <li>Datepicker</li>
+				    <li>Dialog</li>
+				    <li>Progressbar</li>
+				    <li>Slider</li>
+				    <li>Tabs</li>
+				  </ul>
+				</div>    
+			</div>	
 
-
-	<div id="userNovel">		
-		<div class="selectionContainer ui-state-default">
-		  <h2 class="selectionTitle">Query Strains</h2>
-		  	<div class="listContainer">
-			  <ul id="source-list">
-			    <li>Accordion</li>
-			    <li>Autocomplete</li>
-			    <li>Button</li>
-			    <li>Datepicker</li>
-			    <li>Dialog</li>
-			    <li>Progressbar</li>
-			    <li>Slider</li>
-			    <li>Tabs</li>
-			  </ul>
-			</div>    
-		</div>	
-
-		<div class="selectionContainer ui-state-default">
-			  <h2 class="selectionTitle">Selected Query</h2>
-			  <div class="listContainer">
-			  	<ul id="target-list">
-			  	</ul>
+			<div class="transferContainer">
+			  <div id="query-transfer-buttons">
+			    <button id="query-add-button">Add &rarr;</button>
+			    <button id="query-remove-button">&larr; Remove</button>
+			    <button id="query-remove-all-button">&larr;* Remove All</button>           
 			  </div>
+			</div>
+
+			<div class="selectionContainer ui-state-default">
+				  <h2 class="selectionTitle">Selected Query</h2>
+				  <div class="listContainer">
+				  	<ul id="query-target-list">
+				  	</ul>
+				  </div>
+			</div>
 		</div>
 
-		<div id="transfer-buttons-container">
-		  <div id="transfer-buttons">
-		    <button id="add-button">Add &rarr;</button>
-		    <button id="add-all-button">Add All *&rarr;</button>
-		    <button id="remove-button">&larr; Remove</button>
-		    <button id="remove-all-button">&larr;* Remove All</button>           
-		  </div>
+		<!-- Reference Strains -->
+		<div class="strainSelectionRow">
+			<div class="selectionContainer">
+			  <h2 class="selectionTitle">Reference Strains</h2>
+			  	<div class="listContainer">
+				  <ul id="reference-source-list">
+				    <li>Accordion</li>
+				    <li>Autocomplete</li>
+				    <li>Button</li>
+				    <li>Datepicker</li>
+				    <li>Dialog</li>
+				    <li>Progressbar</li>
+				    <li>Slider</li>
+				    <li>Tabs</li>
+				  </ul>
+				</div>    
+			</div>	
+
+			<div class="transferContainer">
+			  <div id="reference-transfer-buttons">
+			    <button id="reference-add-button">Add &rarr;</button>
+			    <button id="reference-remove-button">&larr; Remove</button>
+			    <button id="reference-remove-all-button">&larr;* Remove All</button>           
+			  </div>
+			</div>
+
+			<div class="selectionContainer ui-state-default">
+				  <h2 class="selectionTitle">Selected Reference</h2>
+				  <div class="listContainer">
+				  	<ul id="reference-target-list">
+				  	</ul>
+				  </div>
+			</div>
 		</div>
+	</div>
+
+	<div class="halfPage ui-state-default" >
+		<h2 class ="ui-widget-header">Parameters</h2>
+		<p>Minimum Novel Region size <input type="number" min="0" max="10000" step="50" value="500" class="ui-state-active"></p>
+		<p>Nucmer Values
+			b: <input name="nucB" type="number" min="0" max="10000" step="1" value="200" class="ui-state-active">
+			c: <input name="nucC" type="number" min="0" max="1000" step="1" value="50" class="ui-state-active">
+			d: <input name="nucD" type="number" min="0" max="1" step="0.01" value="0.12" class="ui-state-active">
+			g: <input name="nucG" type="number" min="1" max="5000" step="1" value="100" class="ui-state-active">
+			l: <input name="nucL" type="number" min="1" max="100" step="1" value="20" class="ui-state-active">
+		</p>
+	</div>
 	</div>
 
 	<div id="userLoci">
 		<p>User loci</p>
 	</div>
 </div>  <!-- end tabs -->
-<button>Submit</button>
-</form>
-</div>
-
 
 <TMPL_INCLUDE NAME='pageBottom.tmpl'>

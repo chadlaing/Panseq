@@ -20,6 +20,12 @@ select{
 	width:10em;
 }
 
+#submitButton{
+  margin-left:1.66em;
+  margin-top:0.5em;
+  margin-bottom: 0em;
+  font-size: 1.5em;
+}
 
 #panseqImage{
 	float:left;
@@ -40,7 +46,16 @@ select{
 }
 
 
+.halfPage{
+  float:left;
+  width:45%;
+  padding-left:1em;
+  margin-left:1em;
+}
 
+.halfPage h2 ~ p{
+  padding-left:1em;
+}
 
 /*http://www.quirksmode.org/css/clearing.html
 For getting the nav tabs to display horizontally
@@ -58,6 +73,13 @@ The floats were messed up with jQueryUI
 	margin-left: 0em;
 }
 
+#tabs ul li{
+  font-weight: bold;
+}
+
+.strainSelectionRow{
+  float:left;
+}
 
 .selectionContainer{
 	float: left;
@@ -87,211 +109,36 @@ The floats were messed up with jQueryUI
 	color: #c77405;
 }
 
-#source-list .ui-selected, #target-list .ui-selected{
+#query-source-list .ui-selected, #query-target-list .ui-selected, #reference-source-list .ui-selected, #reference-target-list .ui-selected{
 	color: black;
 	text-decoration: none; 
 	background-color: red;
 }
 
+
+
 #userNovel, #userPan, #userLoci{
-	height: 50em;
+	height: 25em;
 
 }
 
+.transferContainer{
+  padding-top: 4em;
+  float:left;
+  height: 15em;
+  width:14em;
+}
 /*multi-list transfer from http://jquerywall.com/demo-multi-transfer-jquery-ui-selectable/*/
 /* source and target styles */
 
-/*#source-container, #target-container
-{
-  float: left;
-  width: 200px;
-}
-
-#source-title, #target-title
-{
-  color: #eee;
-  border-top-left-radius: 2px;
-  border-top-right-radius: 2px;
-  -moz-border-top-left-radius: 2px;
-  -moz-border-top-right-radius: 2px;
-  -webkit-border-top-left-radius: 2px;
-  -webkit-border-top-right-radius: 2px;
-  font-size: 16px;
-  margin: 0;
-  padding: 8px;
-}
-#source-title
-{
-  background-color:  #6facd5;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #6facd5), to( #497bae));
-  background-image: -webkit-linear-gradient( #6facd5, #497bae);
-  background-image: -moz-linear-gradient( #6facd5, #497bae);
-  background-image: -ms-linear-gradient( #6facd5, #497bae);
-  background-image: -o-linear-gradient( #6facd5, #497bae);
-  background-image: linear-gradient( #6facd5, #497bae);
-  -moz-box-shadow: 0 0 2px 2px #6facd5;
-  -webkit-box-shadow: 0 0 2px 2px#6facd5;
-  box-shadow: 0 0 1px 2px #6facd5;  
-  text-shadow: 0 1px 1px #3e6790;
-}
-#target-title
-{
-  background-color:  #74b042;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #74b042), to( #56a00e));
-  background-image: -webkit-linear-gradient( #74b042, #56a00e);
-  background-image: -moz-linear-gradient( #74b042, #56a00e);
-  background-image: -ms-linear-gradient( #74b042, #56a00e);
-  background-image: -o-linear-gradient( #74b042, #56a00e);
-  background-image: linear-gradient( #74b042, #56a00e);
-  -moz-box-shadow: 0 0 2px 2px #74b042;
-  -webkit-box-shadow: 0 0 2px 2px#74b042;
-  box-shadow: 0 0 1px 2px #74b042;  
-  text-shadow: 0 1px 1px #335413;
-}
-
-#source-list, #target-list
-{
-  -moz-box-shadow: 0 0 2px 2px #cc;
-  -webkit-box-shadow: 0 0 2px 2px#ccc;
-  box-shadow: 0 0 2px 2px #ccc;  
-}
-#target-list
-{
-  height: 296px;
-}
-#source-list li, #target-list li
-{
-  background-color:  #f9f9f9;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #f9f9f9), to( #eee));
-  background-image: -webkit-linear-gradient( #f9f9f9, #eee);
-  background-image: -moz-linear-gradient( #f9f9f9, #eee);
-  background-image: -ms-linear-gradient( #f9f9f9, #eee);
-  background-image: -o-linear-gradient( #f9f9f9, #eee);
-  background-image: linear-gradient( #f9f9f9, #eee);
-  border-bottom: 1px solid #ddd;
-  color: #444;
-  cursor: default;
-  font-size: 16px;
-  padding: 8px;
-  text-shadow: 0 1px 0 #fff;
-}
-#target-list li
-{
-  display: none;
-}
-#source-list li:hover, #target-list li:hover
-{
-  background-color:  #f8f8f8;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #f8f8f8), to( #ddd));
-  background-image: -webkit-linear-gradient( #f8f8f8, #ddd);
-  background-image: -moz-linear-gradient( #f8f8f8, #ddd);
-  background-image: -ms-linear-gradient( #f8f8f8, #ddd);
-  background-image: -o-linear-gradient( #f8f8f8, #ddd);
-  background-image: linear-gradient( #f8f8f8, #ddd);
-}
-#source-list li.ui-selecting, #target-list li.ui-selecting
-{
-  background-color:  #ddd;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #ddd), to( #888));
-  background-image: -webkit-linear-gradient( #ddd, #888);
-  background-image: -moz-linear-gradient( #ddd, #888);
-  background-image: -ms-linear-gradient( #ddd, #888);
-  background-image: -o-linear-gradient( #ddd, #888);
-  background-image: linear-gradient( #ddd, #888);
-  color: #fff;
-}
-
-#source-list li.ui-selected, #target-list li.ui-selected
-{
-  background-color:  #888;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #888), to( #444));
-  background-image: -webkit-linear-gradient( #888, #444);
-  background-image: -moz-linear-gradient( #888, #444);
-  background-image: -ms-linear-gradient( #888, #444);
-  background-image: -o-linear-gradient( #888, #444);
-  background-image: linear-gradient( #888, #444);
-  color: #fff;  
-}
-
-/* end of source and target styles */
-
-
 /* transfer styles */
-/*
-#transfer-buttons-container
-{
-  float: left;
-  margin: 0 10px;
-  width: 100px;
-}
 
-#transfer-buttons
+#query-transfer-buttons button, #reference-transfer-buttons button
 {
-  margin-top: 108px;
-}
-
-#transfer-buttons button
-{
-  color: #fff;
+  float:left;
   cursor:pointer;
-  font-size: 12px;
-  line-height: 25px;
-  outline: none;
   padding: 0;
-  text-shadow: 0 1px 0 #fff;
-  width: 100px;
+  width: 12em;
+  margin-left: 1em;
+  margin-right: 1em;
 }
-#transfer-buttons button:hover
-{
-  opacity: .9;
-}
-
-#add-button, #add-all-button
-{
-  background-color:  #5ba600;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #5ba600), to( #31a200));
-  background-image: -webkit-linear-gradient( #5ba600, #31a200);
-  background-image: -moz-linear-gradient( #5ba600, #31a200);
-  background-image: -ms-linear-gradient( #5ba600, #31a200);
-  background-image: -o-linear-gradient( #5ba600, #31a200);
-  background-image: linear-gradient( #5ba600, #31a200);
-  border: 1px solid #5ba600;
-  border-radius: 5px;  
-  -moz-border-radius: 5px;
-  -webkit-border-radius: 5px;
-  margin-bottom: 5px;
-}
-
-#remove-button, #remove-all-button
-{
-  background-color:  #ec5604;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #ec5604), to( #c04c03));
-  background-image: -webkit-linear-gradient( #ec5604, #c04c03);
-  background-image: -moz-linear-gradient( #ec5604, #c04c03);
-  background-image: -ms-linear-gradient( #ec5604, #c04c03);
-  background-image: -o-linear-gradient( #ec5604, #c04c03);
-  background-image: linear-gradient( #ec5604, #c04c03);
-  border: 1px solid #ec5604;
-  border-radius: 5px;
-  -moz-border-radius: 5px;
-  -webkit-border-radius: 5px;
-  margin-bottom: 5px;
-}
-
-/* end of transfer styles */
-
-
-/* transfer highlight style */
-
-/*#source-list .li-transfer-highlight, #target-list .li-transfer-highlight
-{
-  background-color:  #eee;
-  background-image: -webkit-gradient(linear, left top, left bottom, from( #eee), to( #ccc));
-  background-image: -webkit-linear-gradient( #eee, #ccc);
-  background-image: -moz-linear-gradient( #eee, #ccc);
-  background-image: -ms-linear-gradient( #eee, #ccc);
-  background-image: -o-linear-gradient( #eee, #ccc);
-  background-image: linear-gradient( #eee, #ccc);
-}
-*/
-/* end of transfer highlight style */
