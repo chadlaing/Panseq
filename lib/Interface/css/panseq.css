@@ -94,27 +94,13 @@ The floats were messed up with jQueryUI
 	float:left;
 	width:18em;
 	height:8em;
-	overflow:auto;
+	overflow-y:auto;
+  overflow-x:hidden; 
 }
 
 .listContainer li{
 	list-style-type: none;
 }
-
-.listContainer li:hover{
-	/*the hover styling is from the jqueryui theme, copied here*/
-	border: 1px solid #fbcb09;
-	background: #fdf5ce url(images/ui-bg_glass_100_fdf5ce_1x400.png) 50% 50% repeat-x;
-	font-weight: bold;
-	color: #c77405;
-}
-
-#query-source-list .ui-selected, #query-target-list .ui-selected, #reference-source-list .ui-selected, #reference-target-list .ui-selected{
-	color: black;
-	text-decoration: none; 
-	background-color: red;
-}
-
 
 
 #userNovel, #userPan, #userLoci{
