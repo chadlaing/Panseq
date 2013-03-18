@@ -6,11 +6,14 @@
 		<li><a href="#userLoci">Loci</a></li>
 	</ul>
 	<form 	method="post",
-					enctype="application/x-www-form-urlencoded",
-					action="/submit/"
-		>
-		<button id="submitButton">Submit</button>
-	</form>
+			enctype="application/x-www-form-urlencoded",
+			action="/submit/",
+			id="novelForm"
+	>
+
+	<div id="submitLine">
+		<p><button id="submitButton">Analyze!</button><span class="ui-widget-content">and send results to <input type="email" name="email" value="my.name@email.com"></span></p>
+	</div>
 
 	<div id="userPan">	
 		 		<fieldset>
@@ -19,13 +22,13 @@
 		 		</fieldset> <p>userPan</p>
 	</div>
 	<div id="userNovel">
-		<div class="halfPage ui-state-default">
+		<div class="strainHalf ui-state-default">
 		<h2 class="ui-widget-header">Strain Selection</h2>
 		<div class="strainSelectionRow">
 			<div class="selectionContainer">
 			  <h2 class="selectionTitle">Query Strains</h2>
 			  	<div class="listContainer">
-				  <ul id="query-source-list">
+				  <ul id="query-source-list" class="ui-widget-content">
 				    <li>Accordion</li>
 				    <li>Autocomplete</li>
 				    <li>Button</li>
@@ -35,21 +38,22 @@
 				    <li>Slider</li>
 				    <li>Tabs</li>
 				  </ul>
-				</div>    
+				</div>
+				<input type="file" name="queryFiles" id="queryFiles" multiple>
 			</div>	
 
 			<div class="transferContainer">
 			  <div id="query-transfer-buttons">
 			    <button id="query-add-button">Add &rarr;</button>
 			    <button id="query-remove-button">&larr; Remove</button>
-			    <button id="query-remove-all-button">&larr;* Remove All</button>           
+			    <button id="query-remove-all-button">&larr;* Remove All</button>    
 			  </div>
 			</div>
 
 			<div class="selectionContainer ui-state-default">
 				  <h2 class="selectionTitle">Selected Query</h2>
 				  <div class="listContainer">
-				  	<ul id="query-target-list">
+				  	<ul id="query-target-list" class="ui-widget-content">
 				  	</ul>
 				  </div>
 			</div>
@@ -60,7 +64,7 @@
 			<div class="selectionContainer">
 			  <h2 class="selectionTitle">Reference Strains</h2>
 			  	<div class="listContainer">
-				  <ul id="reference-source-list">
+				  <ul id="reference-source-list" class="ui-widget-content">
 				    <li>Accordion</li>
 				    <li>Autocomplete</li>
 				    <li>Button</li>
@@ -70,7 +74,8 @@
 				    <li>Slider</li>
 				    <li>Tabs</li>
 				  </ul>
-				</div>    
+				</div>   
+				<input type="file" name="referenceFiles" id="referenceFiles" multiple>  
 			</div>	
 
 			<div class="transferContainer">
@@ -84,14 +89,14 @@
 			<div class="selectionContainer ui-state-default">
 				  <h2 class="selectionTitle">Selected Reference</h2>
 				  <div class="listContainer">
-				  	<ul id="reference-target-list">
+				  	<ul id="reference-target-list" class="ui-widget-content">
 				  	</ul>
 				  </div>
 			</div>
 		</div>
 	</div>
 
-	<div class="halfPage ui-state-default" >
+	<div class="paramHalf ui-state-default" >
 		<h2 class ="ui-widget-header">Parameters</h2>
 		<p>Minimum Novel Region size <input type="number" min="0" max="10000" step="50" value="500" class="ui-state-active"></p>
 		<p>Nucmer Values
@@ -107,6 +112,7 @@
 	<div id="userLoci">
 		<p>User loci</p>
 	</div>
+	</form>
 </div>  <!-- end tabs -->
 
 <TMPL_INCLUDE NAME='pageBottom.tmpl'>

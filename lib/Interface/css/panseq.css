@@ -13,6 +13,9 @@ body{
 
 footer{
 	float:left;
+  width:100%;
+  text-align:center;
+  margin-top:1em;
 }
 
 select{
@@ -21,10 +24,29 @@ select{
 }
 
 #submitButton{
+  float:left;
   margin-left:1.66em;
   margin-top:0.5em;
   margin-bottom: 0em;
   font-size: 1.5em;
+}
+
+#submitLine{
+  float:left;
+  width:100%;
+  margin-bottom: 0.5em;
+  margin-top: 0.2em;
+}
+
+#submitLine >p >span{
+  float:left;
+  font-size: 1.5em;
+  margin-top: 0.6em;
+  margin-left:1em;
+}
+
+#submitLine >p >span >input{
+  width:25em;
 }
 
 #panseqImage{
@@ -46,11 +68,19 @@ select{
 }
 
 
-.halfPage{
+.strainHalf, .paramHalf{
   float:left;
-  width:45%;
   padding-left:1em;
   margin-left:1em;
+  height:60em;
+}
+
+.strainHalf{
+  width:70em;
+}
+
+.paramHalf{
+ /* .width:40em;*/
 }
 
 .halfPage h2 ~ p{
@@ -83,8 +113,8 @@ The floats were messed up with jQueryUI
 
 .selectionContainer{
 	float: left;
-	width:20em;
-	height:15em;
+	width:25em;
+	height:25em;
 	margin:0.2em;
 	padding:0.2em;
 	border:0.1em solid;
@@ -92,20 +122,39 @@ The floats were messed up with jQueryUI
 
 .listContainer{
 	float:left;
-	width:18em;
-	height:8em;
+	width:23em;
+	height:19em;
 	overflow-y:auto;
   overflow-x:hidden; 
+  padding:0;
+  margin:0;
+}
+
+.listContainer ul{
+  padding:0;
+  margin: 0;
 }
 
 .listContainer li{
 	list-style-type: none;
 }
 
+.listContainer + input{
+  float:left;
+  width:100%;
+}
 
 #userNovel, #userPan, #userLoci{
-	height: 25em;
+  height:65em;
+}
 
+.selectionTitle{
+  float:left;
+  margin:0;
+  text-align: center;
+  margin-top:0.5em;
+  margin-bottom: 0.5em;
+  width:100%;
 }
 
 .transferContainer{
@@ -127,4 +176,9 @@ The floats were messed up with jQueryUI
   width: 12em;
   margin-left: 1em;
   margin-right: 1em;
+}
+
+#queryFiles, #referenceFiles{
+  .float:left;
+  margin-top:1em;
 }
