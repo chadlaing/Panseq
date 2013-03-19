@@ -36,6 +36,7 @@ select{
   width:100%;
   margin-bottom: 0.5em;
   margin-top: 0.2em;
+  padding: 1em;
 }
 
 #submitLine >p >span{

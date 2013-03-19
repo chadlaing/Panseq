@@ -1,0 +1,28 @@
+<div class="strainSelectionRow">
+	<div class="selectionContainer">
+	  <h2 class="selectionTitle">Query Strains</h2>
+	  	<div class="listContainer">
+		  <ul id="query-source-list" class="ui-widget-content">
+		    <TMPL_INCLUDE NAME="strainList.tmpl">
+		  </ul>
+		</div>
+		<input type="file" name="queryFiles" id="queryFiles" multiple>
+	</div>	
+
+	<div class="transferContainer">
+	  <div id="query-transfer-buttons">
+	    <button id="query-add-button">Add &rarr;</button>
+	    <button id="query-remove-button">&larr; Remove</button>
+	    <button id="query-remove-all-button">&larr;* Remove All</button>    
+	  </div>
+	</div>
+
+	<div class="selectionContainer ui-state-default">
+		  <h2 class="selectionTitle">Selected Query</h2>
+		  <div class="listContainer">
+		  	<ul id="query-target-list" class="ui-widget-content">
+		  	</ul>
+		  </div>
+		  <input type="hidden" name="querySelected">
+	</div>
+</div>

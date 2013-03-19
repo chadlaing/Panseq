@@ -7,110 +7,24 @@
 	</ul>
 	<form 	method="post",
 			enctype="application/x-www-form-urlencoded",
-			action="/submit/",
+			action="/panseq/submit/",
 			id="novelForm"
 	>
 
 	<div id="submitLine">
-		<p><button id="submitButton">Analyze!</button><span class="ui-widget-content">and send results to <input type="email" name="email" value="my.name@email.com"></span></p>
+		<p><button id="submitButton">Analyze!</button><span class="ui-state-default">and send my results to <input type="email" name="email" value="my.name@email.com" required></span></p>
 	</div>
 
 	<div id="userPan">	
-		 		<fieldset>
-		  			<legend>Program Options</legend>
-		  			<p>Form 1</p>					 
-		 		</fieldset> <p>userPan</p>
+	<TMPL_INCLUDE NAME='userPan.tmpl'>
 	</div>
+	
 	<div id="userNovel">
-		<div class="strainHalf ui-state-default">
-		<h2 class="ui-widget-header">Strain Selection</h2>
-		<div class="strainSelectionRow">
-			<div class="selectionContainer">
-			  <h2 class="selectionTitle">Query Strains</h2>
-			  	<div class="listContainer">
-				  <ul id="query-source-list" class="ui-widget-content">
-				    <li>Accordion</li>
-				    <li>Autocomplete</li>
-				    <li>Button</li>
-				    <li>Datepicker</li>
-				    <li>Dialog</li>
-				    <li>Progressbar</li>
-				    <li>Slider</li>
-				    <li>Tabs</li>
-				  </ul>
-				</div>
-				<input type="file" name="queryFiles" id="queryFiles" multiple>
-			</div>	
-
-			<div class="transferContainer">
-			  <div id="query-transfer-buttons">
-			    <button id="query-add-button">Add &rarr;</button>
-			    <button id="query-remove-button">&larr; Remove</button>
-			    <button id="query-remove-all-button">&larr;* Remove All</button>    
-			  </div>
-			</div>
-
-			<div class="selectionContainer ui-state-default">
-				  <h2 class="selectionTitle">Selected Query</h2>
-				  <div class="listContainer">
-				  	<ul id="query-target-list" class="ui-widget-content">
-				  	</ul>
-				  </div>
-			</div>
-		</div>
-
-		<!-- Reference Strains -->
-		<div class="strainSelectionRow">
-			<div class="selectionContainer">
-			  <h2 class="selectionTitle">Reference Strains</h2>
-			  	<div class="listContainer">
-				  <ul id="reference-source-list" class="ui-widget-content">
-				    <li>Accordion</li>
-				    <li>Autocomplete</li>
-				    <li>Button</li>
-				    <li>Datepicker</li>
-				    <li>Dialog</li>
-				    <li>Progressbar</li>
-				    <li>Slider</li>
-				    <li>Tabs</li>
-				  </ul>
-				</div>   
-				<input type="file" name="referenceFiles" id="referenceFiles" multiple>  
-			</div>	
-
-			<div class="transferContainer">
-			  <div id="reference-transfer-buttons">
-			    <button id="reference-add-button">Add &rarr;</button>
-			    <button id="reference-remove-button">&larr; Remove</button>
-			    <button id="reference-remove-all-button">&larr;* Remove All</button>           
-			  </div>
-			</div>
-
-			<div class="selectionContainer ui-state-default">
-				  <h2 class="selectionTitle">Selected Reference</h2>
-				  <div class="listContainer">
-				  	<ul id="reference-target-list" class="ui-widget-content">
-				  	</ul>
-				  </div>
-			</div>
-		</div>
-	</div>
-
-	<div class="paramHalf ui-state-default" >
-		<h2 class ="ui-widget-header">Parameters</h2>
-		<p>Minimum Novel Region size <input type="number" min="0" max="10000" step="50" value="500" class="ui-state-active"></p>
-		<p>Nucmer Values
-			b: <input name="nucB" type="number" min="0" max="10000" step="1" value="200" class="ui-state-active">
-			c: <input name="nucC" type="number" min="0" max="1000" step="1" value="50" class="ui-state-active">
-			d: <input name="nucD" type="number" min="0" max="1" step="0.01" value="0.12" class="ui-state-active">
-			g: <input name="nucG" type="number" min="1" max="5000" step="1" value="100" class="ui-state-active">
-			l: <input name="nucL" type="number" min="1" max="100" step="1" value="20" class="ui-state-active">
-		</p>
-	</div>
+	<TMPL_INCLUDE NAME='userNovel.tmpl'>
 	</div>
 
 	<div id="userLoci">
-		<p>User loci</p>
+	<TMPL_INCLUDE NAME='userLoci.tmpl'>
 	</div>
 	</form>
 </div>  <!-- end tabs -->

@@ -1,0 +1,28 @@
+<div class="strainSelectionRow">
+	<div class="selectionContainer">
+	  <h2 class="selectionTitle">Reference Strains</h2>
+	  	<div class="listContainer">
+		  <ul id="reference-source-list" class="ui-widget-content">
+		    <TMPL_INCLUDE NAME="strainList.tmpl">
+		  </ul>
+		</div>   
+		<input type="file" name="referenceFiles" id="referenceFiles" multiple>  
+	</div>	
+
+	<div class="transferContainer">
+	  <div id="reference-transfer-buttons">
+	    <button id="reference-add-button">Add &rarr;</button>
+	    <button id="reference-remove-button">&larr; Remove</button>
+	    <button id="reference-remove-all-button">&larr;* Remove All</button>           
+	  </div>
+	</div>
+
+	<div class="selectionContainer ui-state-default">
+		  <h2 class="selectionTitle">Selected Reference</h2>
+		  <div class="listContainer">
+		  	<ul id="reference-target-list" class="ui-widget-content">
+		  	</ul>
+		  </div>
+		  <input type="hidden" name="referenceSelected">
+	</div>
+</div>

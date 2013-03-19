@@ -24,6 +24,8 @@ sub dispatch_args {
         	'/'	=>	{app=>'Home',rm=>'display'},
         	'/home/' => {app=>'Home',rm=>'display'},
             '/home' => {app=>'Home',rm=>'display'},
+            '/submit/'=> {app=>'Home', rm=>'submit'},
+            'submit'=>{app=>'Home',rm=>'submit'},
             ':app/:rm'        => { },
             'admin/:app/:rm'  => { prefix   => 'MyApp::Admin' },
         ],
