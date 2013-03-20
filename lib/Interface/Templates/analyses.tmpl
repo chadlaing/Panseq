@@ -1,0 +1,32 @@
+<TMPL_INCLUDE NAME='pageTop.tmpl'>
+<div id="tabs">
+	<ul>
+		<li><a href="#userPan">Pan</a></li>
+		<li><a href="#userNovel">Novel</a></li>
+		<li><a href="#userLoci">Loci</a></li>
+	</ul>
+	<form 	method="post",
+			enctype="application/x-www-form-urlencoded",
+			action="/panseq/submit/",
+			id="formSubmit"
+	>
+
+	<div id="submitLine">
+		<p><button id="submitButton">Analyze!</button><span class="ui-state-default">and send my results to <input type="email" name="email" value="my.name@email.com" required></span></p>
+	</div>
+
+	<div id="userPan">	
+	<TMPL_INCLUDE NAME='userPan.tmpl'>
+	</div>
+	
+	<div id="userNovel">
+	<TMPL_INCLUDE NAME='userNovel.tmpl'>
+	</div>
+
+	<div id="userLoci">
+	<TMPL_INCLUDE NAME='userLoci.tmpl'>
+	</div>
+	</form>
+</div>  <!-- end tabs -->
+
+<TMPL_INCLUDE NAME='pageBottom.tmpl'>

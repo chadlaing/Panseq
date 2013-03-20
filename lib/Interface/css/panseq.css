@@ -88,6 +88,20 @@ select{
   padding-left:1em;
 }
 
+.pageHeader{
+  margin:0.1em;
+  font-size: 3em;
+  text-align: center;
+}
+
+.pageWrapper{
+  width:60%;
+  margin-left: auto;
+  margin-right:auto;
+  font-size: 2em;
+  line-height: 2em;
+}
+
 /*http://www.quirksmode.org/css/clearing.html
 For getting the nav tabs to display horizontally
 The floats were messed up with jQueryUI

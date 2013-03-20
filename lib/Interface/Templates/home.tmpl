@@ -1,32 +1,14 @@
 <TMPL_INCLUDE NAME='pageTop.tmpl'>
-<div id="tabs">
-	<ul>
-		<li><a href="#userPan">Pan</a></li>
-		<li><a href="#userNovel">Novel</a></li>
-		<li><a href="#userLoci">Loci</a></li>
-	</ul>
-	<form 	method="post",
-			enctype="application/x-www-form-urlencoded",
-			action="/panseq/submit/",
-			id="novelForm"
-	>
 
-	<div id="submitLine">
-		<p><button id="submitButton">Analyze!</button><span class="ui-state-default">and send my results to <input type="email" name="email" value="my.name@email.com" required></span></p>
-	</div>
+<h2 class="pageHeader ui-widget-header">Welcome</h2>
+<div class="pageWrapper" class="ui-widget">
+	<p class="ui-widget-content">
+	Panseq is an easy-to-use, web-based group of tools for pan-genomic analyses.
+	</p>
 
-	<div id="userPan">	
-	<TMPL_INCLUDE NAME='userPan.tmpl'>
-	</div>
-	
-	<div id="userNovel">
-	<TMPL_INCLUDE NAME='userNovel.tmpl'>
-	</div>
-
-	<div id="userLoci">
-	<TMPL_INCLUDE NAME='userLoci.tmpl'>
-	</div>
-	</form>
-</div>  <!-- end tabs -->
+	<p class="ui-widget-content">
+	Panseq is open source. Get it from <a id="hrefPanseqGithub" href='https://github.com/chadlaing/Panseq'>https://github.com/chadlaing/Panseq</a>
+	</p>
+</div>
 
 <TMPL_INCLUDE NAME='pageBottom.tmpl'>
