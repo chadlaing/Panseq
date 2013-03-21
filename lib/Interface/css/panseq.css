@@ -183,7 +183,7 @@ The floats were messed up with jQueryUI
 
 /* transfer styles */
 
-#query-transfer-buttons button, #reference-transfer-buttons button
+#query-transfer-buttons-novel button, #query-transfer-buttons button, #reference-transfer-buttons button
 {
   float:left;
   cursor:pointer;
