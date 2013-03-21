@@ -10,6 +10,9 @@
 			action="/panseq/submit/",
 			id="formSubmit"
 	>
+	<input type="hidden" name="querySelected">
+	<input type="hidden" name="referenceSelected">
+	<input type="hidden" name="runMode">
 
 	<div id="submitLine">
 		<p><button id="submitButton">Analyze!</button><span class="ui-state-default">and send my results to <input type="email" name="email" value="my.name@email.com" required></span></p>
@@ -26,6 +29,7 @@
 	<div id="userLoci">
 	<TMPL_INCLUDE NAME='userLoci.tmpl'>
 	</div>
+	
 	</form>
 </div>  <!-- end tabs -->
 

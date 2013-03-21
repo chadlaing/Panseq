@@ -102,6 +102,20 @@ select{
   line-height: 2em;
 }
 
+#settingsOutput{
+  float:left;
+  line-height: 1.2em;
+}
+
+#settingsOutput > div{
+  float:left;
+  width:100%;
+}
+
+#settingsOutput > div > span{
+  width:20em;
+}
+
 /*http://www.quirksmode.org/css/clearing.html
 For getting the nav tabs to display horizontally
 The floats were messed up with jQueryUI

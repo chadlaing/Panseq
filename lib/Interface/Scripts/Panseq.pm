@@ -63,10 +63,12 @@ sub submit{
 		my $template = $self->load_tmpl('submit.tmpl', die_on_bad_params=>0);
 		$template->param(LOOP_VAL => $LOOP_VAL_REF);
 		return $template->output();
-		exit(0);
     }
     else{
     	#launch the panseq program
+    	close STDERR;
+    	close STDOUT;
+
     	$self->_launchPanseq();
 	}
 
@@ -101,19 +103,73 @@ sub _getFormSettings{
 
 	my $q = $self->query();
 	my @vals = $q->param();
+	my $runMode = $q->param('runMode');
 
 	my @loopVals;
 	foreach my $val(@vals){
+		unless ($self->_keepCurrentSetting($val, $runMode)){
+			next;
+		}
+
+		# print STDERR "val: $val\nparamVal: " . $q->param($val) . "\nrunmode:$runMode\n";
 		my %settings=(
-			'VAL'=>$val,
-			'INFO'=>$q->param($val)
+			'VAL'=>$val // 0,
+			'INFO'=>$q->param($val) // 0
 		);
 		push @loopVals, \%settings;
 	}
+	my %runMode=(
+		'VAL'=>'runMode',
+		'INFO'=>$runMode
+	);
+	push @loopVals, \%runMode;
 	return \@loopVals;
 }
 
+sub _keepCurrentSetting{
+	my $self=shift;
+	my $key=shift;
+	my $mode=shift;
 
+	my %modeHash=(
+		'email'=>1,
+		'runMode'=>1
+	);
+
+	if($mode eq 'pan' || $mode eq 'novel'){
+		$modeHash{'querySelected'}=1;
+		$modeHash{'nucB'}=1;
+		$modeHash{'nucC'}=1;
+		$modeHash{'nucD'}=1;
+		$modeHash{'nucG'}=1;
+		$modeHash{'nucL'}=1;
+
+		if($mode eq 'pan'){
+			$modeHash{'coreGenomeThreshold'}=1;
+			$modeHash{'percentIdentityCutoff'}=1;
+			$modeHash{'fragmentationSize'}=1;
+		}
+		else{
+			$modeHash{'referenceSelected'}=1;
+		}
+	}
+	elsif($mode eq 'loci'){
+		$modeHash{'numberOfLoci'}=1;
+		$modeHash{'lociFile'}=1;
+	}
+	else{
+		print STDERR "Unknown Panseq mode: $mode";
+		exit(1);
+	}
+
+
+	if($modeHash{$key}){
+		return 1;
+	}
+	else{
+		return 0;
+	}
+}
 1;
 
 

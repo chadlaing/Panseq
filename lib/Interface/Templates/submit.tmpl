@@ -1,14 +1,19 @@
 <TMPL_INCLUDE NAME='pageTop.tmpl'>
 
-<div class="ui-state-heading">
-<p>Your Panseq run has been submitted. The settings of your run were: </p>
+<h2 class="pageHeader ui-widget-header">Your Panseq analysis has been submitted!</h2>
 
+<div class="pageWrapper">
+<p class="ui-state-default">
+An email will be sent to the address below containing a download link upon program completion.
+The results will remain available for one week.
+<p>
+<h2>The settings for the submitted analysis were: </h2>
+
+<p id="settingsOutput">
 <TMPL_LOOP NAME="LOOP_VAL">
-	<p><TMPL_VAR NAME="VAL"><p>
-	<p><TMPL_VAR NAME="INFO"><p>
+	<div><span class="ui-state-active"><TMPL_VAR NAME="VAL"></span> : <TMPL_VAR NAME="INFO"></div>
 </TMPL_LOOP>
-
+</p>
 </div>
-
 
 <TMPL_INCLUDE NAME='pageBottom.tmpl'>
