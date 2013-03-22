@@ -92,7 +92,12 @@ sub _createBatchFile{
 	my $batchFH = IO::File->new('>' . $self->batchFile) or die "$!";
 
 	foreach my $setting(@params){
-		$batchFH->print($setting . "\t" . $q->param($setting) . "\n");
+		if($setting eq 'querySelected' || $setting eq 'referenceSelected'){
+			
+		}
+		else{
+			$batchFH->print($setting . "\t" . $q->param($setting) . "\n");
+		}
 	}
 
 	$batchFH->close();
@@ -111,7 +116,6 @@ sub _getFormSettings{
 			next;
 		}
 
-		# print STDERR "val: $val\nparamVal: " . $q->param($val) . "\nrunmode:$runMode\n";
 		my %settings=(
 			'VAL'=>$val // 0,
 			'INFO'=>$q->param($val) // 0
