@@ -91,6 +91,11 @@ sub conversionFile{
 	$self->{'_conversionFile'}=shift // return $self->{'_conversionFile'};
 }
 
+sub outputFile{
+	my $self=shift;
+	$self->{'_outputFile'}=shift // return $self->{'_outputFile'};
+}
+
 sub run{
 	my($self)=shift;	
 	
@@ -143,6 +148,9 @@ sub printPhylipFormat{
 	
 	my @names;
 	my $numberOfGenomes = (scalar(@{$self->nameOrderArray})-1);
+
+	my $outputFH=IO::File->new('>' . $self->outputFile) or die "$!";
+	$self->outputFH($outputFH);
 	
 	$self->printOut(
 		$numberOfGenomes,
@@ -163,53 +171,53 @@ sub printPhylipFormat{
 sub printNexusFormat{
 	my($self)=shift;
 	
-	my @names;
+	# my @names;
 	
-	$self->print(
-		'#NEXUS' . "\n",
-		'BEGIN Taxa;' . "\n",
-		'DIMENSIONS ntax=' . scalar(keys %{$self->_tableHash}) . ";\n",
-		'TAXLABELS' . "\n"
-	);
+	# $self->print(
+	# 	'#NEXUS' . "\n",
+	# 	'BEGIN Taxa;' . "\n",
+	# 	'DIMENSIONS ntax=' . scalar(keys %{$self->_tableHash}) . ";\n",
+	# 	'TAXLABELS' . "\n"
+	# );
 	
-	for(my $i=1; $i<=scalar(keys %{$self->_tableHash});$i++){
+	# for(my $i=1; $i<=scalar(keys %{$self->_tableHash});$i++){
 		
-		my $name;
-		if(defined $self->nameOrderArray && defined $self->nameOrderArray->[$i-1]){
-			$name = $self->nameOrderArray->[$i-1];
-		}
-		else{
-			$name=$i;
-		}
-		push @names, $name;
+	# 	my $name;
+	# 	if(defined $self->nameOrderArray && defined $self->nameOrderArray->[$i-1]){
+	# 		$name = $self->nameOrderArray->[$i-1];
+	# 	}
+	# 	else{
+	# 		$name=$i;
+	# 	}
+	# 	push @names, $name;
 		
-		$self->print(
-			$name,
-			"\n"
-		);
-	}
+	# 	$self->print(
+	# 		$name,
+	# 		"\n"
+	# 	);
+	# }
 	
-	$self->print(
-		'BEGIN data;' . "\n",
-		'DIMENSIONS ntax=',
-		scalar(keys %{$self->_tableHash}),
-		' nchar=',
-		length($self->_tableHash->{1}) . ';' . "\n",
-		'FORMAT datatype=dna symbols="ATGC" missing=? gap=-;' . "\n",
-		'Matrix' . "\n",
-	);
+	# $self->print(
+	# 	'BEGIN data;' . "\n",
+	# 	'DIMENSIONS ntax=',
+	# 	scalar(keys %{$self->_tableHash}),
+	# 	' nchar=',
+	# 	length($self->_tableHash->{1}) . ';' . "\n",
+	# 	'FORMAT datatype=dna symbols="ATGC" missing=? gap=-;' . "\n",
+	# 	'Matrix' . "\n",
+	# );
 	
-	for(my $i=1; $i<=scalar(keys %{$self->_tableHash});$i++){
-		$self->print(
-			$names[$i-1],
-			"\t",
-			$self->_tableHash->{$i} . "\n"
-		);
-	}
+	# for(my $i=1; $i<=scalar(keys %{$self->_tableHash});$i++){
+	# 	$self->print(
+	# 		$names[$i-1],
+	# 		"\t",
+	# 		$self->_tableHash->{$i} . "\n"
+	# 	);
+	# }
 	
-	$self->print(
-		';' . "\n" . 'End;'
-	)
+	# $self->print(
+	# 	';' . "\n" . 'End;'
+	# )
 }
 
 sub _gatherTableInHash{
