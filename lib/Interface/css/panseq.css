@@ -166,6 +166,7 @@ The floats were messed up with jQueryUI
 
 .listContainer li{
 	list-style-type: none;
+  margin-bottom:1em;
 }
 
 .listContainer + input{

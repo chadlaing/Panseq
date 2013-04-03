@@ -35,6 +35,11 @@ sub logger{
 	$self->{'_logger'} = shift // return $self->{'_logger'};
 }
 
+sub numberOfLoci{
+	my $self=shift;
+	$self->{'_numberOfLoci'}=shift // return $self->{'_numberOfLoci'};
+}
+
 sub blastDatabase{
 	my $self=shift;
 	$self->{'_blastDatabase'} = shift // return $self->{'_blastDatabase'};	

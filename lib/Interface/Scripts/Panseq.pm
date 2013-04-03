@@ -5,6 +5,10 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
+use Interface::Scripts::ServerSettings;
+use File::Path qw/make_path/;
+use IO::File;
+
 use parent 'Interface::Scripts::Panseq_Super';
 
 sub setup{
@@ -19,7 +23,17 @@ sub setup{
 		'contact'=>'contact'
 	);
 
-	$self->batchFile('/home/chad/batfile.txt');
+	$self->serverSettings($self->_loadServerSettings("$FindBin::Bin/../../serverSettings.txt"));
+}
+
+sub logger{
+	my $self=shift;
+	$self->{'_logger'}=shift // return $self->{'_logger'};
+}
+
+sub serverSettings{
+	my $self=shift;
+	$self->{'_serverSettings'}=shift // return $self->{'_serverSettings'};
 }
 
 sub batchFile{
@@ -71,17 +85,72 @@ sub submit{
 
     	$self->_launchPanseq();
 	}
-
-	
 }
 
 
 sub _launchPanseq{
 	my $self=shift;
 
+	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
+	$self->_createQueryReferenceDirectory();
 	$self->_createBatchFile();
 }
 
+sub _createQueryReferenceDirectory{
+	my $self=shift;
+
+	#all query/reference directories are relative to the fastaFile directory
+	#fastaFileDirectory/BaseName/Query
+	#fastaFileDirectory/BaseName/Reference
+
+	my $fastaBase = $self->serverSettings->fastaFileDirectory . $self->serverSettings->baseDirectory . '/';
+	my $queryDir = $fastaBase . 'query/';
+	my $referenceDir = $fastaBase . 'reference/';
+
+	#with File::Path
+	#we don't want any permission issues, so don't downgrade the directory permissions
+	umask(0); 
+	make_path($fastaBase) or die "Couldn't create fastaBase $fastaBase\n";
+	make_path($queryDir) or die "Couldn't create query directory at $fastaBase\n";
+	make_path($referenceDir) or die "Couldn't create reference directory at $fastaBase\n";
+
+	#set serverSettings variables
+	$self->serverSettings->queryDirectory($queryDir);
+	$self->serverSettings->referenceDirectory($referenceDir);
+}
+
+sub _createStrainSymLink{
+	my $self = shift;
+	my $type=shift;
+	my $strainName = shift;
+
+	#get query/ref directory
+	my $linkedLocation; 
+	if($type =~ m/^query/){
+		$linkedLocation = $self->serverSettings->queryDirectory;
+	}
+	else{
+		$linkedLocation = $self->serverSettings->referenceDirectory;
+	}
+
+	my $actualLocation = $self->serverSettings->fastaFileDirectory . $strainName;
+	$linkedLocation .= $strainName;
+
+	#create the link
+	symlink $actualLocation, $linkedLocation;
+}
+	
+
+sub _createBaseDirectoryName{
+    my $self = shift;
+  
+    #use random number as well as localtime to ensure no directory overlap
+    my $randomNumber = int( rand(8999) ) + 1000;
+    my $directory    = localtime . $randomNumber;
+    $directory =~ s/[\W]//g; 
+  
+    return $directory;
+}
 
 sub _createBatchFile{
 	my $self=shift;
@@ -89,16 +158,29 @@ sub _createBatchFile{
 	my $q = $self->query();
 	my @params = $q->param();
 
-	my $batchFH = IO::File->new('>' . $self->batchFile) or die "$!";
+	my $batchFile = $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . '.batch';
+	my $batchFH = IO::File->new('>' . $batchFile) or die "Could not create batch file$!\n";
 
-	foreach my $setting(@params){
-		if($setting eq 'querySelected' || $setting eq 'referenceSelected'){
-			
-		}
-		else{
-			$batchFH->print($setting . "\t" . $q->param($setting) . "\n");
-		}
+	foreach my $setting(@params){	
+		if($setting =~ m/^(queryStrains|referenceStrains)/){
+			#query/ref directory should already exist in serverSettings
+			while($setting =~ m/([\w\.\-]*),/gc){
+				my $fileName = $1;
+		
+				$self->_createStrainSymLink($setting,$fileName);
+			}
+			next;
+		}	
+		$batchFH->print($setting . "\t" . $q->param($setting) . "\n");
 	}
+
+	$batchFH->print('blastDirectory' . "\t" . $self->serverSettings->blastDirectory . "\n");
+	$batchFH->print('mummerDirectory' . "\t" . $self->serverSettings->mummerDirectory . "\n");
+	$batchFH->print('muscleExecutable' . "\t" . $self->serverSettings->muscleExecutable . "\n");
+	$batchFH->print('numberOfCores' . "\t" . $self->serverSettings->numberOfCores . "\n");
+	$batchFH->print('baseDirectory' . "\t" . $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . "/\n");
+	$batchFH->print('queryDirectory' . "\t" . $self->serverSettings->queryDirectory . "\n");
+	$batchFH->print('referenceDirectory' . "\t" . $self->serverSettings->referenceDirectory . "\n");
 
 	$batchFH->close();
 }
@@ -174,6 +256,18 @@ sub _keepCurrentSetting{
 		return 0;
 	}
 }
+
+sub _loadServerSettings{
+	my $self=shift;
+	my $file = shift;
+
+	my $ss = Interface::Scripts::ServerSettings->new($file);
+	return $ss;
+}
+
+
+
+
 1;
 
 
