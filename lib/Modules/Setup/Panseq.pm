@@ -130,9 +130,9 @@ sub run{
 	);
 	$novelIterator->run();
 
-	$self->logger->info("Panseq mode set as " . $self->settings->mode);
+	$self->logger->info("Panseq mode set as " . $self->settings->runMode);
 	#perform pan-genomic analyses
-	if(defined $self->settings->mode && $self->settings->mode eq 'pan'){
+	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
 		my $panObj = $self->_performPanGenomeAnalyses($files,$novelIterator);
 		$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
 	}
@@ -183,7 +183,9 @@ sub _cleanUp{
 			($file =~ m/_db(\.n|temp)/) || 
 			($file =~ m/_sequenceSplitterDB/) || 
 			($file =~ m/singleQueryFile\.fasta/) ||
-			($file =~ m/nucmer\.delta/)
+			($file =~ m/nucmer\.delta/) ||
+			($file =~ m/Temp_\d\d\d\d\d/) ||
+			($file =~ m/\.xml/)
 		){
 			unlink $file;
 		}

@@ -82,7 +82,6 @@ sub submit{
     	#launch the panseq program
     	close STDERR;
     	close STDOUT;
-
     	$self->_launchPanseq();
 	}
 }
@@ -93,8 +92,18 @@ sub _launchPanseq{
 
 	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
 	$self->_createQueryReferenceDirectory();
-	$self->_createBatchFile();
+	$self->_executePanseqSystemCall($self->_createBatchFile);
 }
+
+sub _executePanseqSystemCall{
+	my $self = shift;
+	my $batchFile = shift;
+
+	my $systemLine = "perl $FindBin::Bin/../../panseq.pl $batchFile";
+	system($systemLine);
+	return 1;
+}
+
 
 sub _createQueryReferenceDirectory{
 	my $self=shift;
@@ -137,7 +146,7 @@ sub _createStrainSymLink{
 	$linkedLocation .= $strainName;
 
 	#create the link
-	symlink $actualLocation, $linkedLocation;
+	symlink($actualLocation, $linkedLocation);
 }
 	
 
@@ -162,11 +171,13 @@ sub _createBatchFile{
 	my $batchFH = IO::File->new('>' . $batchFile) or die "Could not create batch file$!\n";
 
 	foreach my $setting(@params){	
-		if($setting =~ m/^(queryStrains|referenceStrains)/){
-			#query/ref directory should already exist in serverSettings
-			while($setting =~ m/([\w\.\-]*),/gc){
-				my $fileName = $1;
+		if($setting =~ m/^(query|reference)/){
 		
+			#query/ref directory should already exist in serverSettings
+			my $stringOfNames = $q->param("$setting");
+	
+			while($stringOfNames =~ /([\w\.\-]+)/gc){
+				my $fileName = $1;
 				$self->_createStrainSymLink($setting,$fileName);
 			}
 			next;
@@ -181,8 +192,10 @@ sub _createBatchFile{
 	$batchFH->print('baseDirectory' . "\t" . $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . "/\n");
 	$batchFH->print('queryDirectory' . "\t" . $self->serverSettings->queryDirectory . "\n");
 	$batchFH->print('referenceDirectory' . "\t" . $self->serverSettings->referenceDirectory . "\n");
-
+	$batchFH->print('novelRegionFinderMode' . "\tno_duplicates\n"); #hard coded, until interface options exist
 	$batchFH->close();
+
+	return $batchFile;
 }
 
 sub _getFormSettings{

@@ -155,7 +155,7 @@ sub novelRegionFinderMode{
 	$self->{'_novelRegionFinderMode'} = shift // return $self->{'_novelRegionFinderMode'};
 }
 
-sub mode{
+sub runMode{
 	my $self=shift;
 	$self->{'_mode'}=shift // return $self->{'_mode'};
 }
@@ -244,7 +244,7 @@ sub _setDefaults{
 		$self->logger->info("Setting default fragmentation size to 0");
 	}
 
-	unless(defined $self->mode && $self->mode eq 'pan' && defined $self->accessoryType){
+	unless(defined $self->runMode && $self->runMode eq 'pan' && defined $self->accessoryType){
 		$self->accessoryType('binary');
 	}
 }

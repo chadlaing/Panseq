@@ -67,7 +67,7 @@ Below is an example configuration file:
 	fragmentationSize	500
 	percentIdentityCutoff	85
 	coreGenomeThreshold	2
-	mode 	pan
+	runMode 	pan
 
 
 * ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
@@ -94,4 +94,4 @@ Below is an example configuration file:
 
 * 'coreGenomeThreshold' defines the number of the initial sequences that a segment must be found in to be considered part of the 'core' genome; multi-fasta files of a single sequence are treated as a single sequence.
 
-* 'mode' is currently required to be 'pan', for pan-genome analyses.
+* 'runMode' is currently required to be 'pan', for pan-genome analyses.
