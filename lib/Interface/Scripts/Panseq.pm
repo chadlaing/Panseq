@@ -80,8 +80,8 @@ sub submit{
     }
     else{
     	#launch the panseq program
-    	close STDERR;
-    	close STDOUT;
+    	# close STDERR;
+    	# close STDOUT;
     	$self->_launchPanseq();
 	}
 }
@@ -171,7 +171,8 @@ sub _createBatchFile{
 	my $batchFH = IO::File->new('>' . $batchFile) or die "Could not create batch file$!\n";
 
 	foreach my $setting(@params){	
-		if($setting =~ m/^(query|reference)/){
+		#these are the strains included in the database
+		if($setting =~ m/^(querySelected|referenceSelected)/){
 		
 			#query/ref directory should already exist in serverSettings
 			my $stringOfNames = $q->param("$setting");
@@ -181,7 +182,14 @@ sub _createBatchFile{
 				$self->_createStrainSymLink($setting,$fileName);
 			}
 			next;
-		}	
+		}
+
+
+		#these are the strains uploaded by the user
+		if($setting =~ m/^(queryFiles|referenceFiles)/){
+			$self->_uploadFiles($setting,$q);
+		}
+
 		$batchFH->print($setting . "\t" . $q->param($setting) . "\n");
 	}
 
@@ -196,6 +204,63 @@ sub _createBatchFile{
 	$batchFH->close();
 
 	return $batchFile;
+}
+
+sub _uploadFiles{
+	my $self =shift;
+	my $type = shift;
+	my $q =shift;
+
+	my $directory;
+	if($type =~ m/^query/){
+            $directory= $self->serverSettings->queryDirectory;
+    }
+    elsif($type =~ m/^reference/){
+            $directory = $self->serverSettings->referenceDirectory;
+    }
+    else{
+            print STDERR "Incorrect type sent to uploadFile\n";
+            exit(1);
+    }
+   
+   #upload returns a list of filehandles
+   #this requires enctype="multipart/form-data"
+    my @FHS = $q->upload($type);
+
+    foreach my $FH(@FHS){
+    	$self->_uploadFile($directory,$FH);
+    }
+
+}
+
+sub _uploadFile{
+        my $self = shift; 
+        my $directory=shift;
+        my $FH = shift;
+      
+        my $cleanedFile = $FH;
+        $cleanedFile =~ s/\W/_/g;
+
+        if ($FH){
+        	#need to get the actual handle, otherwise will try to work on the name, and will fail
+        	my $inFH = $FH->handle;
+
+            my $outputHandle = IO::File->new( '>' . $directory . $cleanedFile ) or die "Cannot create $directory$cleanedFile\n";
+
+            #upload file using 1024 byte buffer
+            my $buffer;
+            my $bytesread = $inFH->read( $buffer, 1024 );
+            while ($bytesread) {
+                    $outputHandle->print($buffer);
+                    $bytesread = $inFH->read( $buffer, 1024 );
+            }
+            $outputHandle->close();
+            return 1;
+        }
+        else {
+        		print STDERR "no upload obj\n";
+                return 0;
+        }
 }
 
 sub _getFormSettings{
