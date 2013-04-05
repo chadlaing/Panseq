@@ -24,7 +24,8 @@ my $build=Module::Build->new(
 		'Bio::Seq' => 0,
 		'File::Basename'=>0,
 		'Tie::Log4perl'=>0,
-		'Statistics::R'=>0
+		'Statistics::R'=>0,
+		'Archive::Zip'=>0
 	}
 );
 $build->create_build_script();

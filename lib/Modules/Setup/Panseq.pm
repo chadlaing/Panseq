@@ -49,6 +49,7 @@ use Tie::Log4perl;
 use Log::Log4perl;
 use File::Path 'make_path';
 use Carp;
+use Archive::Zip;
 use Role::Tiny::With;
 
 with 'Roles::CombineFilesIntoSingleFile';
@@ -121,6 +122,7 @@ sub run{
 	}
 
 	$self->_cleanUp();
+	$self->_createZipFile();
 }
 
 =head2 _launchLociFinder
@@ -323,6 +325,39 @@ sub _performPanGenomeAnalyses{
 	);
 	$panAnalyzer->run();
 	return $panAnalyzer;
+}
+
+
+sub _createZipFile{
+    my $self=shift;
+    
+    $self->logger->info("Creating zip file");
+    #object to add all files the user receives
+    my $zipper = Archive::Zip->new();
+    
+    #this is used in creating the batch file for the program run. called 'baseDirectory' within the Panseq scripts.
+    my $outputDir =  $self->settings->baseDirectory;
+
+    #get all file names from directory (to avoid dealing with logging, not using FileManipulation.pm)
+    opendir( DIRECTORY, $outputDir ) or die "cannot open directory $outputDir $!\n";
+    my @dir = readdir DIRECTORY;
+    closedir DIRECTORY;
+    foreach my $fileName (@dir) {
+            #dont add directories or . and .. files
+            next if substr( $fileName, 0, 1 ) eq '.';
+            next if ($fileName eq 'logs');                  
+            $zipper->addFile($outputDir . $fileName);
+    }
+    my $status = $zipper->writeToFileNamed($outputDir . 'panseq_results.zip');
+    
+    if($status == 0){
+            #everything ok
+            return 1;
+    }
+    else{
+            #something went wrong, return error
+            return 0;
+    }
 }
 
 
