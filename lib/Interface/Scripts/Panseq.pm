@@ -228,9 +228,8 @@ sub _uploadFiles{
     my @FHS = $q->upload($type);
 
     foreach my $FH(@FHS){
-    	$self->_uploadFile($directory,$FH);
+    	$self->_uploadFile($directory,$FH)
     }
-
 }
 
 sub _uploadFile{

@@ -198,13 +198,19 @@ sub run{
 	#get all names of genomes from the queryFile
 	my @genomeNames = map {$_} (keys %{$multiFastaSN->sequenceNameHash});
 
-	$self->logger->info("We have " . scalar(@genomeNames) . " genomes this run");
+	my $numberOfGenomes = scalar(@genomeNames);
+	$self->logger->info("We have " . $numberOfGenomes . " genomes this run");
+	if($numberOfGenomes ==0){
+		$self->logger->fatal("Input error. Require at least 1 genome");
+		exit(1);
+	}
 
 	#create the seed file and get the seed name
 	#we only need to do this if there is no reference file provided
 	#otherwise, the reference file can be the start of the 'panGenome'
 	my $seedName='';
-	unless(defined $self->referenceFile){
+	unless(defined $self->referenceFile && (-s $self->referenceFile >0)){
+		$self->logger->info("No referenceFile, creating seed");
 		$seedName = $self->_getBestSeed($multiFastaSN, $retriever);
 		$self->_createFileFromGenomeName(
 			'mfsn'=>$multiFastaSN,

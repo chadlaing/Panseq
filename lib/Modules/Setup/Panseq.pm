@@ -112,18 +112,49 @@ sub settings{
 sub run{
 	my $self=shift;
 
-	#if mode is set to pan, we should ignore all referenceDirectory item
+	#if mode is set to loci, launch loci_finder, rather than Panseq
+	if($self->settings->runMode eq 'loci'){
+		$self->_launchLociFinder();
+	}
+	else{
+		$self->_launchPanseq();
+	}
+
+	$self->_cleanUp();
+}
+
+=head2 _launchLociFinder
+
+Runs the loci_finder.pl script.
+
+=cut
+
+sub _launchLociFinder{
+	my $self = shift;
+
+	
+}
+
+
+=head2 _launchPanseq
+
+Runs either pan-genome or novel region finding, based on the $self->settings->runMode option
+
+=cut
+
+sub _launchPanseq{
+	my $self = shift;
 
 	#get the query/reference files to use in the comparison
 	my $files = Modules::Setup::PanseqFiles->new(
 		'queryDirectory'=>$self->settings->queryDirectory,
-		#'referenceDirectory'=>$self->settings->referenceDirectory
+		'referenceDirectory'=>$self->settings->referenceDirectory // undef
 	);
 
 	#get novel regions
 	my $novelIterator = Modules::NovelRegion::NovelIterator->new(
 		'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
-		#'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
+		'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
 		'panGenomeFile'=>$self->settings->baseDirectory . 'panGenome.fasta',
 		'novelRegionsFile'=>$self->settings->baseDirectory . 'novelRegions.fasta',
 		'settings'=>$self->settings
@@ -136,8 +167,6 @@ sub run{
 		my $panObj = $self->_performPanGenomeAnalyses($files,$novelIterator);
 		$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
 	}
-
-	$self->_cleanUp();
 }
 
 
