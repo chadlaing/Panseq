@@ -48,6 +48,7 @@ opendir( DIRECTORY, $directory ) or die "cannot open directory $directory $!\n";
 my @dir = readdir DIRECTORY;
 closedir DIRECTORY;
 
+my %names;
 foreach my $file(@dir){
 	next if substr( $file, 0, 1 ) eq '.';
 
@@ -56,9 +57,11 @@ foreach my $file(@dir){
 
 	my $seq = $inFH->next_seq();
 	my $fullHeader = $seq->id() . ' ' . $seq->desc();
-	print _createTemplateLine($fullHeader,$file);
+	_createTemplateLine($fullHeader,$file);
 	$inFH->close();
 }
+
+_printNames();
 
 sub _createTemplateLine{
 	my $header =shift;
@@ -75,5 +78,13 @@ sub _createTemplateLine{
 		$humanLine =$1;
 	}
 
-	return(qq{<li name="$file">$humanLine</li>\n});
+	$names{$humanLine}=qq{<li name="$file">$humanLine</li>\n};
+}
+
+
+
+sub _printNames{
+	foreach my $key(sort keys(%names)){
+		print $names{$key};
+	}
 }
