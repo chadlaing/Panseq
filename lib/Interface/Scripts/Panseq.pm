@@ -8,6 +8,7 @@ use lib "$FindBin::Bin/../../";
 use Interface::Scripts::ServerSettings;
 use File::Path qw/make_path/;
 use IO::File;
+use Interface::Scripts::SendMailWrapper;
 
 use parent 'Interface::Scripts::Panseq_Super';
 
@@ -92,8 +93,24 @@ sub _launchPanseq{
 
 	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
 	$self->_createQueryReferenceDirectory();
-	$self->_executePanseqSystemCall($self->_createBatchFile);
+	my ($q,$batchFile) = $self->_createBatchFile();
+	$self->_executePanseqSystemCall($batchFile);
+	$self->_sendEmail($q);
 }
+
+
+sub _sendEmail{
+	my $self=shift;
+	my $q=shift;
+
+	my $mail = Interface::Scripts::SendMailWrapper->new($self->serverSettings->emailDefaultsFile);
+	$mail->to($q->param('email'));
+	$mail->downloadLink($self->serverSettings->baseDirectory . 'panseq_result.zip');
+	$mail->sendTheEmail();
+}
+
+
+
 
 sub _executePanseqSystemCall{
 	my $self = shift;
@@ -203,7 +220,7 @@ sub _createBatchFile{
 	$batchFH->print('novelRegionFinderMode' . "\tno_duplicates\n"); #hard coded, until interface options exist
 	$batchFH->close();
 
-	return $batchFile;
+	return ($q,$batchFile);
 }
 
 sub _uploadFiles{

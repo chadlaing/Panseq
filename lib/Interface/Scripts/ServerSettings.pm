@@ -28,6 +28,11 @@ sub logger{
 	$self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
+sub emailDefaultsFile{
+	my $self=shift;
+	$self->{'_emailDefaults'} = shift // return $self->{'_emailDefaults'};
+}
+
 sub baseDirectory{
 	my $self=shift;
 	$self->{'_baseDirectory'}=shift // return $self->{'_baseDirectory'};
