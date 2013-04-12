@@ -16,7 +16,7 @@ sub setup{
 	my $self=shift;
 
 
-	$self->start_mode('display');
+	$self->start_mode('home');
 	$self->run_modes(
 		'analyses'=>'analyses',
 		'submit'=>'submit',

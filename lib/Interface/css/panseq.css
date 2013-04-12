@@ -23,6 +23,11 @@ select{
 	width:10em;
 }
 
+.panseqDescription{
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
 #submitButton{
   float:left;
   margin-left:1.66em;
