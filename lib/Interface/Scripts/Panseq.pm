@@ -21,7 +21,8 @@ sub setup{
 		'analyses'=>'analyses',
 		'submit'=>'submit',
 		'home'=>'home',
-		'contact'=>'contact'
+		'contact'=>'contact',
+		'download'=>'download'
 	);
 
 	$self->serverSettings($self->_loadServerSettings("$FindBin::Bin/../../serverSettings.txt"));
@@ -66,6 +67,10 @@ sub contact{
 sub submit{
 	my $self=shift;
 
+	#create name of directory
+	#needs to go here, so that both forks have access to the name
+	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
+
 	my $pid = fork();
     if(!defined $pid){
             die "cannot fork process!\n $!";
@@ -76,6 +81,7 @@ sub submit{
         #display alldone!
         my $LOOP_VAL_REF = $self->_getFormSettings();
 		my $template = $self->load_tmpl('submit.tmpl', die_on_bad_params=>0);
+		$template->param(DOWNLOAD_LINK => $self->serverSettings->baseDirectory);
 		$template->param(LOOP_VAL => $LOOP_VAL_REF);
 		return $template->output();
     }
@@ -91,7 +97,6 @@ sub submit{
 sub _launchPanseq{
 	my $self=shift;
 
-	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
 	$self->_createQueryReferenceDirectory();
 	my ($q,$batchFile) = $self->_createBatchFile();
 	$self->_executePanseqSystemCall($batchFile);
@@ -357,6 +362,31 @@ sub _loadServerSettings{
 
 	my $ss = Interface::Scripts::ServerSettings->new($file);
 	return $ss;
+}
+
+sub download{
+	my $self=shift;
+
+	my $file = $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . $self->param('analysis_id') . '/panseq_results.zip';
+	my $inFH = IO::File->new('<' . $file) or die("Error: Failed to download file <b>$file</b>:<br>$!<br>");
+	
+	my $buffer='';
+	my $output='';
+
+	while(my $bytesread = read($inFH,$buffer,1024)){
+		$output .= $buffer;
+	}
+	$inFH->close();
+
+	my $fileSize = (-s $file) or die("Error: Could not get size of <b>$file</b>:<br>$!<br>");
+
+	$self->header_props(
+		-type => 'application/zip',
+		-attachment => 'panseq_results.zip',
+       	-content_length => $fileSize,
+	);
+
+	return $output;
 }
 
 1;

@@ -346,6 +346,8 @@ sub _createZipFile{
             #dont add directories or . and .. files
             next if substr( $fileName, 0, 1 ) eq '.';
             next if ($fileName eq 'logs');                  
+
+            #usage is: addFile( $fileName [, $newName ] ) from Archive::Zip manual
             $zipper->addFile($outputDir . $fileName);
     }
     my $status = $zipper->writeToFileNamed($outputDir . 'panseq_results.zip');
