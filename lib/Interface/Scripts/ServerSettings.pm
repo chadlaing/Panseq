@@ -78,6 +78,11 @@ sub outputDirectory{
 	$self->{'_outputDirectory'}=shift // return $self->{'_outputDirectory'};
 }
 
+sub serverBase{
+	my $self=shift;
+	$self->{'_serverBase'}=shift // return $self->{'_serverBase'};
+}
+
 
 sub _getSettingsFromConfigurationFile{
 	my $self=shift;

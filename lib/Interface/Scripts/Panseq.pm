@@ -22,7 +22,8 @@ sub setup{
 		'submit'=>'submit',
 		'home'=>'home',
 		'contact'=>'contact',
-		'download'=>'download'
+		'download'=>'download',
+		'waiting'=>'waiting'
 	);
 
 	$self->serverSettings($self->_loadServerSettings("$FindBin::Bin/../../serverSettings.txt"));
@@ -76,13 +77,18 @@ sub submit{
             die "cannot fork process!\n $!";
     };
 
-
     if($pid){
         #display alldone!
         my $LOOP_VAL_REF = $self->_getFormSettings();
 		my $template = $self->load_tmpl('submit.tmpl', die_on_bad_params=>0);
-		$template->param(DOWNLOAD_LINK => $self->serverSettings->baseDirectory);
+		$template->param(DOWNLOAD_LINK => $self->serverSettings->serverBase . '/panseq/download/' . $self->serverSettings->baseDirectory);
+		$template->param(JOB_ID => $self->serverSettings->baseDirectory);
 		$template->param(LOOP_VAL => $LOOP_VAL_REF);
+
+		#get wait time
+		my $waitTime = $self->_calculateWaitTime();
+		$template->param(WAIT_TIME => $waitTime);
+
 		return $template->output();
     }
     else{
@@ -93,6 +99,17 @@ sub submit{
 	}
 }
 
+sub _calculateWaitTime{
+	my $self=shift;
+
+	my $q = $self->query();
+	my @strains = $q->param('querySelected');
+
+	my $waitTime = 5 + ((scalar @strains) * 0.5);
+	return $waitTime;
+}
+
+
 
 sub _launchPanseq{
 	my $self=shift;
@@ -100,7 +117,7 @@ sub _launchPanseq{
 	$self->_createQueryReferenceDirectory();
 	my ($q,$batchFile) = $self->_createBatchFile();
 	$self->_executePanseqSystemCall($batchFile);
-	$self->_sendEmail($q);
+	#$self->_sendEmail($q);
 }
 
 
@@ -113,8 +130,6 @@ sub _sendEmail{
 	$mail->downloadLink($self->serverSettings->baseDirectory . 'panseq_result.zip');
 	$mail->sendTheEmail();
 }
-
-
 
 
 sub _executePanseqSystemCall{
@@ -367,7 +382,16 @@ sub _loadServerSettings{
 sub download{
 	my $self=shift;
 
-	my $file = $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . $self->param('analysis_id') . '/panseq_results.zip';
+	my $file;
+	if(defined $self->serverSettings->baseDirectory){
+		$file = $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . '/'. $self->serverSettings->baseDirectory . '/panseq_results.zip';
+	}
+	#Identify if the file exists
+	#If not, send to the thanks for waiting page
+	unless(defined $file && (-s $file > 0)){
+		return $self->redirect('/panseq/waiting');
+	}
+
 	my $inFH = IO::File->new('<' . $file) or die("Error: Failed to download file <b>$file</b>:<br>$!<br>");
 	
 	my $buffer='';
@@ -385,8 +409,15 @@ sub download{
 		-attachment => 'panseq_results.zip',
        	-content_length => $fileSize,
 	);
-
 	return $output;
+}
+
+
+sub waiting{
+	my $self=shift;
+
+	my $template=$self->load_tmpl('waiting.tmpl',die_on_bad_params=>0);
+	return $template->output();
 }
 
 1;

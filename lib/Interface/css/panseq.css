@@ -73,6 +73,9 @@ select{
 	padding:0;
 }
 
+h3 > span{
+  font-size: 2em;
+}
 
 .strainHalf, .paramHalf{
   float:left;
