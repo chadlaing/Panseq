@@ -103,9 +103,12 @@ sub _calculateWaitTime{
 	my $self=shift;
 
 	my $q = $self->query();
-	my @strains = $q->param('querySelected');
+	
+	#selected strains stored as comma-delimited string
+	my $strainList = $q->param('querySelected');
+	my $numStrains = () = $strainList =~ m/\,/gc;
 
-	my $waitTime = 5 + ((scalar @strains) * 0.5);
+	my $waitTime = 5 + ($numStrains * 0.5);
 	return $waitTime;
 }
 

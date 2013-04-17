@@ -1,5 +1,4 @@
 ## OVERVIEW
-This is the "lean" development branch, optimized for pan-genomic analyses of large numbers of sequences.
 
 Panseq determines the core and accessory regions among a collection of genomic sequences based on user-defined parameters. It readily extracts regions unique to a genome or group of genomes, identifies SNPs within shared core genomic regions, constructs files for use in phylogeny programs based on both the presence/absence of accessory regions and SNPs within core regions
 
@@ -94,4 +93,4 @@ Below is an example configuration file:
 
 * 'coreGenomeThreshold' defines the number of the initial sequences that a segment must be found in to be considered part of the 'core' genome; multi-fasta files of a single sequence are treated as a single sequence.
 
-* 'runMode' is currently required to be 'pan', for pan-genome analyses.
+* 'runMode' can be either 'novel' or 'pan', for novel-region finding and pan-genome analyses respectively.
