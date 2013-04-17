@@ -5,3 +5,4 @@
 *.project
 .htaccess
 Batch/*
+serverSettings.txt

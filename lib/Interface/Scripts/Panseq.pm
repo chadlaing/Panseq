@@ -8,6 +8,7 @@ use lib "$FindBin::Bin/../../";
 use Interface::Scripts::ServerSettings;
 use File::Path qw/make_path/;
 use IO::File;
+use Interface::Scripts::SendMailWrapper;
 
 use parent 'Interface::Scripts::Panseq_Super';
 
@@ -15,12 +16,14 @@ sub setup{
 	my $self=shift;
 
 
-	$self->start_mode('display');
+	$self->start_mode('home');
 	$self->run_modes(
 		'analyses'=>'analyses',
 		'submit'=>'submit',
 		'home'=>'home',
-		'contact'=>'contact'
+		'contact'=>'contact',
+		'download'=>'download',
+		'waiting'=>'waiting'
 	);
 
 	$self->serverSettings($self->_loadServerSettings("$FindBin::Bin/../../serverSettings.txt"));
@@ -65,35 +68,69 @@ sub contact{
 sub submit{
 	my $self=shift;
 
+	#create name of directory
+	#needs to go here, so that both forks have access to the name
+	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
+
 	my $pid = fork();
     if(!defined $pid){
             die "cannot fork process!\n $!";
     };
 
-
     if($pid){
         #display alldone!
         my $LOOP_VAL_REF = $self->_getFormSettings();
 		my $template = $self->load_tmpl('submit.tmpl', die_on_bad_params=>0);
+		$template->param(DOWNLOAD_LINK => $self->serverSettings->serverBase . '/panseq/download/' . $self->serverSettings->baseDirectory);
+		$template->param(JOB_ID => $self->serverSettings->baseDirectory);
 		$template->param(LOOP_VAL => $LOOP_VAL_REF);
+
+		#get wait time
+		my $waitTime = $self->_calculateWaitTime();
+		$template->param(WAIT_TIME => $waitTime);
+
 		return $template->output();
     }
     else{
     	#launch the panseq program
-    	# close STDERR;
-    	# close STDOUT;
+    	close STDERR;
+    	close STDOUT;
     	$self->_launchPanseq();
 	}
 }
+
+sub _calculateWaitTime{
+	my $self=shift;
+
+	my $q = $self->query();
+	my @strains = $q->param('querySelected');
+
+	my $waitTime = 5 + ((scalar @strains) * 0.5);
+	return $waitTime;
+}
+
 
 
 sub _launchPanseq{
 	my $self=shift;
 
-	$self->serverSettings->baseDirectory($self->_createBaseDirectoryName());
 	$self->_createQueryReferenceDirectory();
-	$self->_executePanseqSystemCall($self->_createBatchFile);
+	my ($q,$batchFile) = $self->_createBatchFile();
+	$self->_executePanseqSystemCall($batchFile);
+	#$self->_sendEmail($q);
 }
+
+
+sub _sendEmail{
+	my $self=shift;
+	my $q=shift;
+
+	my $mail = Interface::Scripts::SendMailWrapper->new($self->serverSettings->emailDefaultsFile);
+	$mail->to($q->param('email'));
+	$mail->downloadLink($self->serverSettings->baseDirectory . 'panseq_result.zip');
+	$mail->sendTheEmail();
+}
+
 
 sub _executePanseqSystemCall{
 	my $self = shift;
@@ -203,7 +240,7 @@ sub _createBatchFile{
 	$batchFH->print('novelRegionFinderMode' . "\tno_duplicates\n"); #hard coded, until interface options exist
 	$batchFH->close();
 
-	return $batchFile;
+	return ($q,$batchFile);
 }
 
 sub _uploadFiles{
@@ -340,6 +377,47 @@ sub _loadServerSettings{
 
 	my $ss = Interface::Scripts::ServerSettings->new($file);
 	return $ss;
+}
+
+sub download{
+	my $self=shift;
+
+	my $file;
+	if(defined $self->serverSettings->baseDirectory){
+		$file = $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . '/'. $self->serverSettings->baseDirectory . '/panseq_results.zip';
+	}
+	#Identify if the file exists
+	#If not, send to the thanks for waiting page
+	unless(defined $file && (-s $file > 0)){
+		return $self->redirect('/panseq/waiting');
+	}
+
+	my $inFH = IO::File->new('<' . $file) or die("Error: Failed to download file <b>$file</b>:<br>$!<br>");
+	
+	my $buffer='';
+	my $output='';
+
+	while(my $bytesread = read($inFH,$buffer,1024)){
+		$output .= $buffer;
+	}
+	$inFH->close();
+
+	my $fileSize = (-s $file) or die("Error: Could not get size of <b>$file</b>:<br>$!<br>");
+
+	$self->header_props(
+		-type => 'application/zip',
+		-attachment => 'panseq_results.zip',
+       	-content_length => $fileSize,
+	);
+	return $output;
+}
+
+
+sub waiting{
+	my $self=shift;
+
+	my $template=$self->load_tmpl('waiting.tmpl',die_on_bad_params=>0);
+	return $template->output();
 }
 
 1;

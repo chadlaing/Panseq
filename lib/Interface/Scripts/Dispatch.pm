@@ -29,6 +29,8 @@ sub dispatch_args {
             '/contact/' => {app=>'Panseq',rm=>'contact'},
             '/contact' => {app=>'Panseq',rm=>'contact'},
             '/submit/'=> {app=>'Panseq', rm=>'submit'},
+            '/waiting' => {app=>'Panseq', rm=>'waiting'},
+            '/download/:analysis_id' => {app=>'Panseq', rm=>'download'},
             'submit'=>{app=>'Panseq',rm=>'submit'},
             ':app/:rm'        => { },
             'admin/:app/:rm'  => { prefix   => 'MyApp::Admin' },
