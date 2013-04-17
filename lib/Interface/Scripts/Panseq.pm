@@ -383,9 +383,10 @@ sub download{
 	my $self=shift;
 
 	my $file;
-	if(defined $self->serverSettings->baseDirectory){
-		$file = $self->serverSettings->outputDirectory . $self->serverSettings->baseDirectory . '/'. $self->serverSettings->baseDirectory . '/panseq_results.zip';
+	if(defined $self->param("analysis_id")){
+		$file = $self->serverSettings->outputDirectory . $self->param("analysis_id") . '/panseq_results.zip';
 	}
+
 	#Identify if the file exists
 	#If not, send to the thanks for waiting page
 	unless(defined $file && (-s $file > 0)){
