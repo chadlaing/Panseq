@@ -55,17 +55,20 @@ select{
   width:25em;
 }
 
+
 #panseqImage{
 	float:left;
-	overflow:hidden;
+	/*overflow:hidden;*/
 	margin-top:2em;
 	margin-left: 10em;
 	background-image: url("/panseq/images/panseq.png");
 	background-position: left top;
 	background-repeat: no-repeat;
+  width:100%;
 }
 
 #panseqImage > p{
+  float:left;
 	font-family: Merriweather;
 	font-size: 5em;
 	margin: 0;
@@ -97,17 +100,23 @@ h3 > span{
 }
 
 .pageHeader{
+  width:100%;
+  float:left;
   margin:0.1em;
   font-size: 3em;
   text-align: center;
 }
 
 .pageWrapper{
+  float:left;
+  margin-left: 5em;
   width:60%;
-  margin-left: auto;
-  margin-right:auto;
   font-size: 2em;
   line-height: 2em;
+}
+
+.panseqDescription ~ p >p{
+  padding-left: 2em;
 }
 
 #settingsOutput{
@@ -130,7 +139,7 @@ The floats were messed up with jQueryUI
 */
 .nav{
 	font-size:2em;
-	overflow:hidden;
+	/*overflow:hidden;*/
 	width:100%;
 }
 
@@ -138,6 +147,11 @@ The floats were messed up with jQueryUI
 	list-style-type: none;
 	float:left;
 	margin-left: 0em;
+}
+
+#tabs{
+  float:left;
+  width:100%;
 }
 
 #tabs ul li{
