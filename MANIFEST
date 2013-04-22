@@ -1,6 +1,5 @@
 Build.PL
 lib/fet.pl
-lib/Interface/.htaccess
 lib/Interface/css/panseq.css
 lib/Interface/css/ui-lightness/images/animated-overlay.gif
 lib/Interface/css/ui-lightness/images/ui-bg_diagonals-thick_18_b81900_40x40.png
