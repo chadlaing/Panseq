@@ -3,11 +3,13 @@
 use warnings;
 use strict;
 use Module::Build;
+use IO::File;
 
 my $build=Module::Build->new(
-	dist_name => 'Panseq',
-	dist_version => _getVersionNumber(),
+	module_name => 'Panseq',
+	dist_version => _getVersion(),
 	license => 'perl',
+	dist_abstract => 'Panseq: pan-genomic sequence analysis',
 	dist_author => 'Chad Laing <chadlaing@gmail.com>',
 	requires =>{
 		'Carp' => 0,
@@ -30,8 +32,10 @@ my $build=Module::Build->new(
 );
 $build->create_build_script();
 
-sub _getVersionNumber{
-	my @time = localtime();
-	my $majorVersion = $time[5] - 109;
-	return $majorVersion . '.' . $time[7];
+sub _getVersion{
+	my $inFH = IO::File->new('<' . '.git/refs/heads/master');
+	my $version = $inFH->getline();
+	$version =~ s/\R//g;
+	$inFH->close();
+	return $version;
 }
