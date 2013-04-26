@@ -123,6 +123,11 @@ sub _initialize{
     my %params = @_;
 
     foreach my $key(keys %params){
+        #so that reference directory can be specified without a value (undef)
+        unless(defined $params{$key}){
+            next;
+        }
+
     	if($key eq 'queryDirectory'){
     		$self->queryFileNames($self->_getFileNamesFromDirectory($params{$key}));
     		$self->logger->debug("Gathering query file names from $params{$key}");

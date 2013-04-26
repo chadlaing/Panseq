@@ -75,8 +75,6 @@ Anything else that the _initialize function does.
 sub _initialize{
 	my($self)=shift;
 
-  
-
     my $settingsObj = shift;
    
     #get and parse the configuration file for Panseq

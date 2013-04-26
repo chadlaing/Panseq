@@ -14,8 +14,8 @@ my $settings = Modules::Setup::Settings->new($ARGV[0]);
 #MUMmmer defaults its messages to STDERR
 #we want them logged
 #closing STDERR and associating it with Log4perl is done below
-close STDERR;
-tie *STDERR, "Tie::Log4perl";
+# close STDERR;
+# tie *STDERR, "Tie::Log4perl";
 
 my $panseq = Modules::Setup::Panseq->new($settings);
 Log::Log4perl->init("$FindBin::Bin/log4p.conf");
