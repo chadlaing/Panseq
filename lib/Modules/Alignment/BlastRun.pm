@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 package Modules::Alignment::BlastRun;
 
@@ -110,6 +110,11 @@ sub outputXMLfiles{
 	$self->{'_outputXMLfiles'}=shift // return $self->{'_outputXMLfiles'};
 }
 
+sub splitFileDatabase{
+	my $self=shift;
+	$self->{'_splitFileDatabase'}=shift // return $self->{'_splitFileDatabase'};
+}
+
 sub _filesToRemove{
 	my $self=shift;
 	$self->{'__filesToRemove'}=shift // return $self->{'__filesToRemove'};
@@ -170,6 +175,7 @@ sub run{
 
 	my $splitter = Modules::Fasta::FastaFileSplitter->new(
 		'inputFile'=>$self->query,
+		'databaseFile'=>$self->splitFileDatabase,
 		'numberOfSplits'=>$self->numberOfSplits
 	);
 

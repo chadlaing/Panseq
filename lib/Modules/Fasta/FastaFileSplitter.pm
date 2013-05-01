@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 package Modules::Fasta::FastaFileSplitter;
 
 
@@ -84,6 +84,12 @@ sub numberOfSplits{
 	$self->{'_numberOfSplits'}=shift // return $self->{'_numberOfSplits'};
 }
 
+sub databaseFile{
+	my $self=shift;
+	$self->{'_databaseFile'}=shift // return $self->{'_databaseFile'};
+}
+
+
 #methods
 sub _initialize {
 	my $self = shift;
@@ -157,14 +163,14 @@ sub splitFastaFile {
 	#use the Bio::DB in SequenceRetriever
 	my $queryDB = Modules::Fasta::SequenceRetriever->new(	
 		'inputFile'=>$self->inputFile,
-		'outputFile'=>$self->inputFile . '_sequenceSplitterDB'
+		'databaseFile'=>$self->databaseFile
 	);
 
 	my $tempNum    = 0;
 	my $count      = 0;
 	my @sortedKeys = sort { $fastaSizes{$a} <=> $fastaSizes{$b} } keys %fastaSizes;
 	for ( my $start = 0 ; $start < $self->_numberOfTempFiles ; $start++ ) {
-		my $tempFileName = $self->inputFile . $start . '.FastaTemp';
+		my $tempFileName = $self->databaseFile . $start . '.FastaTemp';
 		push @{ $self->arrayOfSplitFiles }, $tempFileName;
 		$self->outputFH(IO::File->new('>' . $tempFileName or die "Cannot open $tempFileName"));
 		

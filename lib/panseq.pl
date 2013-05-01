@@ -10,6 +10,7 @@ use Log::Log4perl qw/:easy/;
 
 #need to get the settings up-front to allow log-file output
 my $settings = Modules::Setup::Settings->new($ARGV[0]);
+print "settings file: $ARGV[0]\n";
 
 #MUMmmer defaults its messages to STDERR
 #we want them logged

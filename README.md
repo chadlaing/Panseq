@@ -87,7 +87,7 @@ Below is an example configuration file:
 
 * 'muscleExecutable' specifies the full path to the muscle executable file.
 
-* 'fragmentationSize' when running a in mode `pan' determines the size of the fragments that the genomic sequences are segmented into.
+* 'fragmentationSize' when running in mode `pan' determines the size of the fragments that the genomic sequences are segmented into.
 
 * 'percentIdentityCutoff' when running in mode `pan' sets the threshold of sequence identity for determining whether a fragment is part of the ‘core’ or ‘accessory’ genome.
 

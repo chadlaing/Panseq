@@ -138,7 +138,11 @@ sub _launchLociFinder{
 
 =head2 _launchPanseq
 
-Runs either pan-genome or novel region finding, based on the $self->settings->runMode option
+Runs either pan-genome or novel region finding, based on the $self->settings->runMode option.
+If a queryFile is specified, it will be used as the 'panGenomeFile' instead of the $files->singleQueryFile,
+and it will also skip the novel region gather. However, $files->singleQueryFile will be used as the
+database file that the 'panGenomeFile' is compared to.
+If $self->settings->queryFile is defined, it is used as the pan-genome file regardless of other settings.
 
 =cut
 
@@ -146,20 +150,42 @@ sub _launchPanseq{
 	my $self = shift;
 
 	#get the query/reference files to use in the comparison
+	my $novelIterator;
 	my $files = Modules::Setup::PanseqFiles->new(
 		'queryDirectory'=>$self->settings->queryDirectory,
 		'referenceDirectory'=>$self->settings->referenceDirectory // undef
 	);
 
-	#get novel regions
-	my $novelIterator = Modules::NovelRegion::NovelIterator->new(
-		'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
-		'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
-		'panGenomeFile'=>$self->settings->baseDirectory . 'panGenome.fasta',
-		'novelRegionsFile'=>$self->settings->baseDirectory . 'novelRegions.fasta',
-		'settings'=>$self->settings
-	);
-	$novelIterator->run();
+	if(defined $self->settings->queryFile){
+		#sanitize the input file for proper fasta format
+		#use the sanitized file for future work
+		#with Roles::CombineFilesIntoSingleFile->_combineAndSanitizeFastaFiles
+
+		#requires ($arrayRef, outputFileName)
+		my $sanitizedFileName = $self->settings->baseDirectory . 'sanitized_queryFile.fasta';
+		$self->_combineAndSanitizeFastaFiles(
+			[$self->settings->queryFile],
+			$sanitizedFileName
+		);
+
+		$novelIterator=Modules::NovelRegion::NovelIterator->new(
+			'panGenomeFile'=>$sanitizedFileName,
+			'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
+			'settings'=>$self->settings
+		); 
+	}
+	else{
+		#get novel regions
+		$novelIterator = Modules::NovelRegion::NovelIterator->new(
+			'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
+			'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
+			'panGenomeFile'=>$self->settings->baseDirectory . 'panGenome.fasta',
+			'novelRegionsFile'=>$self->settings->baseDirectory . 'novelRegions.fasta',
+			'settings'=>$self->settings
+		);
+		$novelIterator->run();
+	}
+
 
 	$self->logger->info("Panseq mode set as " . $self->settings->runMode);
 	#perform pan-genomic analyses
@@ -264,21 +290,37 @@ sub _createTreeFiles{
 	$forker->wait_all_children();
 }
 
+
+=head2 _performPanGenomeAnalyses
+
+If a fragmentation size is set, fragment the pan-genome.
+Assign either the original or fragmented pan-genome to $panGenomeFile.
+The query directory has previously been combined into $files->singleQueryFile,
+which is used as the database to screen the pan-genome against. If providing a single
+queryFile to represent the panGenome, it should be outside of the queryDirectory, so that it
+is not included in the database.
+The list of XML files is then processed and the panAnalyzer (Modules::PanGenome::PanGenome)
+object is returned.
+
+=cut
+
 sub _performPanGenomeAnalyses{
 	my $self=shift;
 	my $files=shift;
 	my $novelIterator=shift;
 
 	#fragmentationSize defaults to 0 if no fragmentation is to be done
-
-	my $segmenter = Modules::Fasta::SegmentMaker->new(
-		'inputFile'=>$novelIterator->panGenomeFile,
-		'outputFile'=>$self->settings->baseDirectory . 'pangenome_fragments.fasta',
-		'segmentSize'=>$self->settings->fragmentationSize
-	);
+	my $panGenomeFile = $novelIterator->panGenomeFile;
+	my $segmenter;
 
 	if($self->settings->fragmentationSize > 0){
+		$segmenter = Modules::Fasta::SegmentMaker->new(
+			'inputFile'=>$panGenomeFile,
+			'outputFile'=>$self->settings->baseDirectory . 'pangenome_fragments.fasta',
+			'segmentSize'=>$self->settings->fragmentationSize
+		);
 		$segmenter->segmentTheSequence;
+		$panGenomeFile = $segmenter->outputFile;
 	}
 
 	my $dbCreator = Modules::Alignment::MakeBlastDB->new(
@@ -297,8 +339,9 @@ sub _performPanGenomeAnalyses{
 	 #'out' will be used as the base from which the actual output files
 	 #are created
 	my $blaster = Modules::Alignment::BlastRun->new(
-		'query'=>$segmenter->outputFile,
+		'query'=>$panGenomeFile,
 		'blastDirectory'=>$self->settings->blastDirectory,
+		'splitFileDatabase'=>$self->settings->baseDirectory . 'splitfile_dbtemp',
 		'task'=>'blastn',
 		'db'=>$self->settings->baseDirectory . $dbCreator->title,
 		'outfmt'=>'5',

@@ -64,7 +64,6 @@ use lib "$FindBin::Bin/../../";
 use IO::File;
 use Bio::SeqIO;
 use Modules::Fasta::SequenceName;
-use Modules::Fasta::SequenceRetriever;
 use Carp;
 use Log::Log4perl;
 

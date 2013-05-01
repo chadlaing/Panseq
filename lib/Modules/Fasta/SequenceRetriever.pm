@@ -13,7 +13,6 @@ Modules::Fasta::SequenceRetriever - Grabs fasta segments from a specified inputF
 	
 	my $retriever = Modules::Fasta::SequenceRetriever->new(
 		'inputFile'=> '/input/file.fasta',
-		'outputFile'=> '/output/file.fasta'
 	);
 
 =head1 DESCRIPTION
@@ -76,7 +75,7 @@ sub new {
 Called upon object construction.
 Creates logger instance.
 Creates a database from the input fasta file if not already created.
-Assigns required inputFile and optional outputFile values.
+Assigns required inputFile and databaseFile value.
 
 =cut
 
@@ -87,7 +86,7 @@ sub _initialize{
     $self->logger(Log::Log4perl->get_logger()); 
     $self->logger->debug("Logger initialized in Modules::Fasta::SequenceRetriever");     
     
-    #outputFile and inputFile should be read only
+    #inputFile should be read only
     my %params=@_; 
 
     #on object construction set all parameters
@@ -105,18 +104,16 @@ sub _initialize{
     $self->_createDatabase();
 }
 
-=head3 outputFile
+=head2 databaseFile
 
-The absolute location of the extracted multi-fasta regions file.
-If not specified, defaults to STDOUT.
+Specify the file location for creation of the database.
 
 =cut
 
-sub outputFile{
+sub databaseFile{
 	my $self=shift;
-	$self->{'_outputFile'} = shift // return $self->{'_outputFile'};	
+	$self->{'_databaseFile'}=shift // return $self->{'_databaseFile'};
 }
-
 
 =head3 logger
 
@@ -189,9 +186,8 @@ sub _createDatabase{
 		$self->logger->info("Creating database");
 		
 		my $originalFH = Bio::SeqIO->new(-file=>'<'.$self->inputFile, -format=>'fasta') or die "$!";
-		
-		my $dbFileName = $self->inputFile . '_dbtemp';
-		
+		my $dbFileName = $self->databaseFile;
+
 		$self->logger->debug($dbFileName);
 		my $outputFH = Bio::SeqIO->new(-file=>'>'. $dbFileName, -format=>'fasta') or die "$!";
 		$outputFH->width(80);
