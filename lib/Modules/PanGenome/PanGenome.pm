@@ -648,7 +648,7 @@ sub _processResult {
 	else{
 		$self->logger->info("Result :" . $result->name . " has no hits!");
 	}
-	my $accessoryResultString = $self->_getAccessoryResult($resultNumber,$resultHash,$result->{'query_def'});
+	my $accessoryResultString = $self->_getAccessoryResult($resultNumber,$resultHash,$result->query_def);
 
 	#return the accessory and core results
 	return($accessoryResultString,$coreResultArrayRef);

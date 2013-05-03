@@ -268,7 +268,7 @@ sub _createTreeFiles{
 			if($num==1){
 				my $treeMaker=Modules::Phylogeny::PhylogenyFileCreator->new(
 					'inputFile'=>$coreSnpsFile,
-					'outputFileType'=>'phylip',
+					'outputFormat'=>'phylip',
 					'outputFile'=>$self->settings->baseDirectory . 'core_snps.phylip'
 				);
 				$treeMaker->run();
@@ -276,7 +276,7 @@ sub _createTreeFiles{
 			elsif($num==2){
 				my $treeMaker=Modules::Phylogeny::PhylogenyFileCreator->new(
 					'inputFile'=>$panGenomeFile,
-					'outputFileType'=>'phylip',
+					'outputFormat'=>'phylip',
 					'outputFile'=>$self->settings->baseDirectory . 'pan_genome.phylip',
 					'conversionFile'=>$self->settings->baseDirectory . 'phylip_name_conversion.txt'
 				);

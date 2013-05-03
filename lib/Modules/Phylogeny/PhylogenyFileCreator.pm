@@ -128,7 +128,9 @@ sub run{
 		)
 	);
 
-	$self->_printConversionInformation($self->nameOrderArray);
+	if(defined $self->conversionFile){
+		$self->_printConversionInformation($self->nameOrderArray);
+	}	
 	$inFH->close();
 
 	$self->logger->info("Finished");
