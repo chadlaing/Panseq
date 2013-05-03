@@ -32,7 +32,7 @@ sub _initialize{
     #logging
     $self->logger(Log::Log4perl->get_logger()); 
 
-    $self->logger->debug("Logger initialized in Modules::PanGenome::PanGenome");  
+    $self->logger->info("Logger initialized in Modules::PanGenome::PanGenome");  
 
     my %params = @_;
 
@@ -130,6 +130,8 @@ sub run{
 
 	$self->_printConversionInformation($self->nameOrderArray);
 	$inFH->close();
+
+	$self->logger->info("Finished");
 }
 
 
@@ -175,17 +177,7 @@ sub _getOriginalData{
 		my @la = split('\t',$line);
 		my @neededColumns = splice(@la,1,($numberOfColumns -1) );
 
-		foreach my $need(@neededColumns){
-			$self->logger->debug("needed: $need");
-		}
 		push @originalData,\@neededColumns;
-	}
-
-	foreach my $org(@originalData){
-		$self->logger->debug("org: $org");
-		foreach my $orgDim(@{$org}){
-			$self->logger->debug("orgLevel2: $orgDim");
-		}
 	}
 	return \@originalData;
 }
@@ -242,11 +234,6 @@ sub _printConversionInformation{
 sub _printPhylipFormat{
 	my($self)=shift;
 	my $transposedArray = shift;
-	
-	$self->logger->debug("Elements in transposed array: " . scalar(@{$transposedArray}));
-	foreach (@{$transposedArray}){
-		$self->logger->debug("transposed: $_");
-	}
 
 	my @names;
 	my $numberOfGenomes = (scalar(@{$self->nameOrderArray})-1);
@@ -263,7 +250,7 @@ sub _printPhylipFormat{
 	for my $i(0 .. ($numberOfGenomes -1)){
 		$outputFH->print(
 			($i+1),
-			' 'x(10-length($i)),
+			' 'x(10-length($i+1)),
 			join('', @{$transposedArray->[$i]} ) . "\n"
 		);
 	}
