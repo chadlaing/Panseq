@@ -8,9 +8,6 @@ use FindBin;
 use lib "$FindBin::Bin";
 use IO::File;
 use Log::Log4perl;
-use Role::Tiny::With;
-
-with 'Roles::FlexiblePrinter';
 
 #object creation
 sub new {
@@ -35,7 +32,7 @@ sub _initialize{
     #logging
     $self->logger(Log::Log4perl->get_logger()); 
 
-    $self->logger->debug("Logger initialized in Modules::PanGenome::PanGenome");  
+    $self->logger->info("Logger initialized in Modules::PanGenome::PanGenome");  
 
     my %params = @_;
 
@@ -52,8 +49,27 @@ sub _initialize{
 
 
 	#deafults
-	$self->_tableHash({});
+	$self->_setDefaults();
 }
+
+
+=head2 _setDefaults
+
+Sets the defaults for a run if not specified.
+
+=cut
+
+
+sub _setDefaults{
+	my $self=shift;
+
+	unless(defined $self->outputFormat){
+		$self->outputFormat('phylip');
+	}
+
+
+}
+
 
 =head3 logger
 
@@ -71,12 +87,7 @@ sub nameOrderArray{
 	$self->{'_nameOrderArray'}=shift // return $self->{'_nameOrderArray'};
 }
 
-sub _tableHash{
-	my $self=shift;
-	$self->{'__tableHash'}=shift // return $self->{'__tableHash'};
-}
-
-sub outputFileType{
+sub outputFormat{
 	my $self=shift;
 	$self->{'_outputFileType'}=shift // return $self->{'_outputFileType'};
 }
@@ -99,21 +110,98 @@ sub outputFile{
 sub run{
 	my($self)=shift;	
 	
-	$self->logger->info("Creating " . $self->outputFileType . " phylogeny file from " . $self->inputFile);
+	$self->logger->info("Creating " . $self->outputFormat . " phylogeny file from " . $self->inputFile);
 
-	$self->_tableHash($self->_gatherTableInHash);
-	
-	if($self->outputFileType eq 'nexus'){
-		$self->printNexusFormat();
-	}
-	elsif($self->outputFileType eq 'phylip'){
-		$self->printPhylipFormat();
-	}
+	my $inFH = IO::File->new('<' . $self->inputFile) // die "$!";
 
-	if($self->conversionFile){
-		$self->_printConversionInformation();
-	}
+	#set the ordered list of names
+	$self->nameOrderArray($self->_getHeaders($inFH->getline));
+
+	#get the original data and transpose it for phylip format, send the number of columns we need
+	$self->_printPhylipFormat(
+		#uses Array::Transpose to return an arrayRef of the original data
+		$self->_transposeArray(
+			$self->_getOriginalData(
+				$inFH, 
+				scalar(@{$self->nameOrderArray})
+			)
+		)
+	);
+
+	$self->_printConversionInformation($self->nameOrderArray);
+	$inFH->close();
+
+	$self->logger->info("Finished");
 }
+
+
+=head2 _transposeArray
+
+Takes the input array of arrays and transposes them.
+Returns the transposed array of array ref.
+
+=cut
+
+sub _transposeArray{
+	my $self = shift;
+	my $arrayRef =shift;
+
+	my @transposedArray;
+	foreach my $row(@{$arrayRef}){
+		for my $column(0..scalar(@{$row})){
+			push(@{$transposedArray[$column]},$row->[$column]);
+		}
+	}
+	return \@transposedArray;
+}
+
+
+=head2 _getOriginalData
+
+Gathers the original data in an array of arrayRefs,
+with each arrayRef being a row of data and returns a reference to the main array.
+Only gathers the number of data columns needed for the generation of a phylogeny file.
+
+=cut
+
+
+sub _getOriginalData{
+	my $self=shift;
+	my $inFH = shift;
+	my $numberOfColumns = shift;
+
+	$self->logger->info("Number of data columns, including row ID: $numberOfColumns");
+
+	my @originalData;
+	while(my $line = $inFH->getline){
+		my @la = split('\t',$line);
+		my @neededColumns = splice(@la,1,($numberOfColumns -1) );
+
+		push @originalData,\@neededColumns;
+	}
+	return \@originalData;
+}
+
+
+=head2 _getHeaders
+
+Takes in the first row of data from the file, and creates a list of ordered headers.
+This allows name conversion information to be generated as well as to identify the number
+of data columns (ie. exclude the second and third set of columns with contig / location information)
+that is stored in the panGenome and coreSnps files.
+Returns an arrayRef to the ordered headers.
+
+=cut
+
+sub _getHeaders{
+	my $self=shift;
+	my $headerLine =shift;
+
+	$headerLine =~ s/\R//g;
+	my @la = split('\t',$headerLine);
+	return \@la;
+}
+
 
 =head3 _printConversionInformation
 
@@ -125,124 +213,50 @@ This creates a tab-delimited table that lists the conversion information.
 
 sub _printConversionInformation{
 	my $self=shift;
+	my $arrayRef =shift;
 
 	my $conversionFH = IO::File->new('>' . $self->conversionFile) or die "$!";
-	$self->outputFH($conversionFH);
-	$self->printOut(
+	$conversionFH->print(
 		'#Name Conversion Information',
 		"\n"
 	);
 
-	for my $i(1 .. (scalar(@{$self->nameOrderArray})-1)){
-		$self->printOut(
+	for my $i(1 .. (scalar(@{$arrayRef})-1)){
+		$conversionFH->print(
 			($i),
 			"\t",
-			$self->nameOrderArray->[$i],
+			$arrayRef->[$i],
 			"\n"
 		);
 	}	
 }
 
-sub printPhylipFormat{
+sub _printPhylipFormat{
 	my($self)=shift;
-	
+	my $transposedArray = shift;
+
 	my @names;
 	my $numberOfGenomes = (scalar(@{$self->nameOrderArray})-1);
 
 	my $outputFH=IO::File->new('>' . $self->outputFile) or die "$!";
-	$self->outputFH($outputFH);
 	
-	$self->printOut(
+	$outputFH->print(
 		$numberOfGenomes,
 		' ',
-		length($self->_tableHash->{'1'}),
+		scalar( @{$transposedArray->[0]} ),
 		"\n" 
 	);
 	
-	for my $i(1 .. $numberOfGenomes){
-		$self->printOut(
-			($i),
-			' 'x(10-length($i)),
-			$self->_tableHash->{$i} . "\n"
+	for my $i(0 .. ($numberOfGenomes -1)){
+		$outputFH->print(
+			($i+1),
+			' 'x(10-length($i+1)),
+			join('', @{$transposedArray->[$i]} ) . "\n"
 		);
 	}
+	$outputFH->close();
 }
 
-sub printNexusFormat{
-	my($self)=shift;
-	
-	# my @names;
-	
-	# $self->print(
-	# 	'#NEXUS' . "\n",
-	# 	'BEGIN Taxa;' . "\n",
-	# 	'DIMENSIONS ntax=' . scalar(keys %{$self->_tableHash}) . ";\n",
-	# 	'TAXLABELS' . "\n"
-	# );
-	
-	# for(my $i=1; $i<=scalar(keys %{$self->_tableHash});$i++){
-		
-	# 	my $name;
-	# 	if(defined $self->nameOrderArray && defined $self->nameOrderArray->[$i-1]){
-	# 		$name = $self->nameOrderArray->[$i-1];
-	# 	}
-	# 	else{
-	# 		$name=$i;
-	# 	}
-	# 	push @names, $name;
-		
-	# 	$self->print(
-	# 		$name,
-	# 		"\n"
-	# 	);
-	# }
-	
-	# $self->print(
-	# 	'BEGIN data;' . "\n",
-	# 	'DIMENSIONS ntax=',
-	# 	scalar(keys %{$self->_tableHash}),
-	# 	' nchar=',
-	# 	length($self->_tableHash->{1}) . ';' . "\n",
-	# 	'FORMAT datatype=dna symbols="ATGC" missing=? gap=-;' . "\n",
-	# 	'Matrix' . "\n",
-	# );
-	
-	# for(my $i=1; $i<=scalar(keys %{$self->_tableHash});$i++){
-	# 	$self->print(
-	# 		$names[$i-1],
-	# 		"\t",
-	# 		$self->_tableHash->{$i} . "\n"
-	# 	);
-	# }
-	
-	# $self->print(
-	# 	';' . "\n" . 'End;'
-	# )
-}
-
-sub _gatherTableInHash{
-	my($self)=shift;
-
-	my $inFile = IO::File->new('<' . $self->inputFile) or die "$!";
-	
-	my %tableHash;
-	while(my $line = $inFile->getline){
-		$line =~ s/\R//g;
-		my @la = split('\t',$line);
-
-		if($. == 1){
-			$self->nameOrderArray(\@la);
-			next;
-		}
-
-		for my $position(0..(scalar(@la)-1)){
-			my $datum = $la[$position];
-			$tableHash{$position} .=$datum;
-		}
-	}		
-	$inFile->close();
-	return \%tableHash;
-}
 
 1;
 
