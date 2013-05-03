@@ -354,6 +354,13 @@ sub _performPanGenomeAnalyses{
 	$blaster->run();
 	#do the pan-genome analysis
 
+	#if the user supplied a query file, rather than generating a new 
+	#pan-genome, we want to use the supplied names of the loci
+	my $useSuppliedLabels =0;
+	if(defined $self->settings->queryFile){
+		$useSuppliedLabels=1;
+	}
+
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
 		'xmlFiles'=>$blaster->outputXMLfiles,
 		'numberOfCores'=>$self->settings->numberOfCores,
@@ -363,7 +370,8 @@ sub _performPanGenomeAnalyses{
 		'outputDirectory'=>$self->settings->baseDirectory,
 		'muscleExecutable'=>$self->settings->muscleExecutable,
 		'accessoryType'=>$self->settings->accessoryType,
-		'queryFile'=>$files->singleQueryFile
+		'queryFile'=>$files->singleQueryFile,
+		'useSuppliedLabels'=>$useSuppliedLabels
 	);
 	$panAnalyzer->run();
 	return $panAnalyzer;

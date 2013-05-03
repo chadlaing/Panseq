@@ -119,6 +119,21 @@ sub logger{
 	$self->{'_logger'} = shift // return $self->{'_logger'};
 }
 
+=head2 useSuppliedLabels
+
+If the user supplied their own input file, instead of using a generated pan-genome,
+we want to keep the supplied loci names.
+If this is set to 1, it uses supplied labels. Default is 0.
+
+=cut
+
+
+sub useSuppliedLabels{
+	my $self=shift;
+	$self->{'_useSuppliedLabels'}=shift // return $self->{'_useSuppliedLabels'};
+}
+
+
 =head3 xmlFiles
 
 The BLAST-output XML files used for core/accessory processing.
@@ -633,7 +648,7 @@ sub _processResult {
 	else{
 		$self->logger->info("Result :" . $result->name . " has no hits!");
 	}
-	my $accessoryResultString = $self->_getAccessoryResult($resultNumber,$resultHash);
+	my $accessoryResultString = $self->_getAccessoryResult($resultNumber,$resultHash,$result->{'query_def'});
 
 	#return the accessory and core results
 	return($accessoryResultString,$coreResultArrayRef);
@@ -677,6 +692,7 @@ sub _getAccessoryResult{
 	my $self=shift;
 	my $resultNumber = shift;
 	my $resultHashRef =shift;
+	my $queryDef = shift;
 
 	#create the output in correct order
 	#the first element of the array is the name of the locus
@@ -684,7 +700,7 @@ sub _getAccessoryResult{
 	my $counter=0;
 
 	#add query name as first element of array
-	my $returnLine='locus_' . $resultNumber;
+	my $returnLine= $self->_getAccessoryLocusName($resultNumber, $queryDef);
 	my $valueLine='';
 	my $positionLine='';
 	my $contigNameLine='';
@@ -709,6 +725,29 @@ sub _getAccessoryResult{
 	$returnLine .= ($valueLine . $positionLine . $contigNameLine );
 	return $returnLine;
 }
+
+
+=head2 _getAccessoryLocusName
+
+Returns either the supplied name or a locus and number combination.
+If queryFile was used for the pan-genome, then default to the given name.
+Otherwise, use the locus and number.
+
+=cut
+
+sub _getAccessoryLocusName{
+	my $self=shift;
+	my $number = shift;
+	my $queryDef = shift;
+
+	if(defined $self->useSuppliedLabels && $self->useSuppliedLabels == 1){
+		return $queryDef;
+	}
+
+	return ('locus_' . $number);
+}
+
+
 
 sub _getCoreResult {
 	my $self = shift;
