@@ -159,6 +159,11 @@ sub _initialize{
 	#init
 	$self->outputXMLfiles([]);	
 	$self->_filesToRemove([]);
+
+	#defaults
+	unless(defined $self->numberOfSplits){
+		$self->numberOfSplits(1);
+	}
 }
 
 =head3 run
@@ -173,11 +178,13 @@ $self->out can be a file or directory, and is used as the basis for creating eac
 sub run{
 	my($self)=shift;		
 
-	my $splitter = Modules::Fasta::FastaFileSplitter->new(
+	my $splitter;
+	$splitter = Modules::Fasta::FastaFileSplitter->new(
 		'inputFile'=>$self->query,
-		'databaseFile'=>$self->splitFileDatabase,
-		'numberOfSplits'=>$self->numberOfSplits
+		'databaseFile'=>$self->splitFileDatabase // undef,
+		'numberOfSplits'=>$self->numberOfSplits // undef
 	);
+
 
 	if($self->numberOfSplits > 1){
 		$splitter->splitFastaFile();

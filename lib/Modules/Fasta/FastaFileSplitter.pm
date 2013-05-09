@@ -111,21 +111,41 @@ sub _initialize {
 		}
 	}	
 
-	unless(defined $self->inputFile && defined $self->numberOfSplits){
+	unless(defined $self->inputFile){
 		$self->logger->logconfess("Modules::Fasta::FastaFileSplitter requires:\n
 			\t'inputFile'\n
-			\t'numberOfSplits'\n
 			to be defined. One or more parameters not defined.
 		");
 	}
 
+	unless(defined $self->numberOfSplits){
+		$self->logger->info("Number of splits not specified, will not split input file.");
+		$self->numberOfSplits(1);
+	}
+
+	unless(defined $self->databaseFile){
+		$self->logger->info("Database file not specified, will not split input file");
+		$self->numberOfSplits(1);
+		$self->databaseFile('not_specified');
+	}
+
 	#defaults
 	$self->arrayOfSplitFiles([]);    #init as an anonymous array
+
+	if($self->numberOfSplits == 1){
+		$self->arrayOfSplitFiles([$self->inputFile]);
+	}
 }
 
 sub splitFastaFile {
 	my $self = shift;
 	
+	if($self->numberOfSplits == 1){
+		$self->logger->info("Number of splits is 1, returning inputFile as only entry in arrayOfSplitFiles");
+		$self->arrayOfSplitFiles([$self->inputFile]);
+		return 1;
+	}
+
 	$self->logger->info("Splitting " . $self->inputFile . " into " . $self->numberOfSplits . " files");
 
 	my $fileHandle = IO::File->new( '<' . $self->inputFile ) or die "cannot open " . $self->inputFile . "$!";

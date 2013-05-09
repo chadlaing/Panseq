@@ -192,8 +192,7 @@ sub run{
 	#ensure we can retrieve the fasta sequences from the query file
 	my $retriever = Modules::Fasta::SequenceRetriever->new(
 		'inputFile'=> $self->queryFile,
-		'databaseFile'=>$self->settings->baseDirectory . 'querfile_dbtemp',
-		'outputFile'=> $self->settings->baseDirectory . 'novelRegions.fasta'
+		'databaseFile'=>$self->settings->baseDirectory . 'querfile_dbtemp'
 	);
 
 	#get all names of genomes from the queryFile

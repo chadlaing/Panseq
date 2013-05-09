@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 package Modules::Alignment::BlastResultFactory;
 
 use strict;
@@ -49,7 +49,7 @@ sub _initialize {
 	$self->logger(Log::Log4perl->get_logger());
 	$self->logger->debug("Logger initialized in Modules::Alignment::BlastResultFactory\n");
 
-	my $fileHandle = shift // $self->logger->logdie("Modules::Alignment::BlastResultFactory requires a file name");
+	my $fileHandle = shift // $self->logger->logdie("Modules::Alignment::BlastResultFactory requires a file handle");
 	$self->fileHandle($fileHandle);
 }
 
