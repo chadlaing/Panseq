@@ -150,7 +150,7 @@ sub _transposeArray{
 
 	my @transposedArray;
 	foreach my $row(@{$arrayRef}){
-		for my $column(0..scalar(@{$row})){
+		for my $column(0..scalar(@{$row})-1){
 			push(@{$transposedArray[$column]},$row->[$column]);
 		}
 	}
