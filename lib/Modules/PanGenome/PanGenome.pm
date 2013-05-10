@@ -374,7 +374,7 @@ sub _removeTempFiles{
 	my $fileNamesRef=shift;
 
 	foreach my $file(@{$fileNamesRef}){
-		#unlink $file;
+		unlink $file;
 	}
 }
 
