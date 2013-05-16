@@ -61,7 +61,7 @@ sub _combineAndSanitizeFastaFiles{
         
         while(my $line = $inFH->getline){
             if($line =~ m/^>/){
-                $line =~ s/\s/_/g;
+                $line =~ s/[^\w\|\.\=\>]/_/g;
                 $line .= "\n";
             }
             $outFH->print($line);

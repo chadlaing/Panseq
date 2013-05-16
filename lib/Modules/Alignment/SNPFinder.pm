@@ -213,7 +213,7 @@ sub _getSingleBaseResult{
 			#if the char is a '-', there is no position information for the original sequence, so report a 0
 			if($base eq '-'){
 				$positionLine .= ("\t0");	
-				$self->logger->debug("Adjusting $name in " . $alignedHashRef->{$name}->{'fasta'} . " startbp $startBp position $position");
+				#$self->logger->debug("Adjusting $name in " . $alignedHashRef->{$name}->{'fasta'} . " startbp $startBp position $position");
 				$dashOffset++;
 				$self->_dashOffset->{$name}=$dashOffset;
 			}
