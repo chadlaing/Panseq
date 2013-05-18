@@ -60,10 +60,11 @@ sub _combineAndSanitizeFastaFiles{
         my $inFH = IO::File->new('<' . $file) or die "Cannot open $file\n $!";
         
         while(my $line = $inFH->getline){
+            $line =~ s/\R//g;
             if($line =~ m/^>/){
-                $line =~ s/[^\w\|\.\=\>]/_/g;
-                $line .= "\n";
+                $line =~ s/[^\w\|\.\=\>]/_/g;                
             }
+            $line .= "\n";
             $outFH->print($line);
         }
 
