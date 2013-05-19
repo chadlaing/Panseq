@@ -310,7 +310,7 @@ sub run{
 	#process all XML files
 	foreach my $xml(@{$self->xmlFiles}){
 		$self->_processBlastXML($xml);
-		unlink $xml;
+		#unlink $xml;
 	}
 	$self->_combineTempFiles();
 }
@@ -374,7 +374,7 @@ sub _removeTempFiles{
 	my $fileNamesRef=shift;
 
 	foreach my $file(@{$fileNamesRef}){
-		unlink $file;
+		#unlink $file;
 	}
 }
 
@@ -590,6 +590,7 @@ sub _getCoreAccessoryType {
 		}
 	}
 	$self->logger->debug("$returnType number over cutoff: $numberOverSequenceCutoff");
+	$self->logger->debug("Returning $returnType");
 	return $returnType;
 }
 
@@ -630,18 +631,21 @@ sub _processResult {
 			$hitObj->setSequence();    #this ensures start <  end bp
 
 			my $sequenceCoverage = $self->_getSequenceCoverage( $hitObj, $result->query_len );
+			$self->logger->debug("Sequence coverage of $hit is $sequenceCoverage");
 
 			$resultHash->{$hit}->{'accessoryValue'} = $self->_getAccessoryValue($hitObj);
 			$resultHash->{$hit}->{'fasta'}= $hitObj->hit_def;
 			$resultHash->{$hit}->{'startBp'}=$hitObj->hsp_hit_from;
 
 			#create a fasta-file format array if core
-			if($type eq 'core'){				
+			if($type eq 'core'){
+				$self->logger->debug("Item $resultNumber is core");			
  				push @fastaArray, ( '>' . $hitObj->hit_def . "\n" . $hitObj->hsp_hseq . "\n");
  				$startBpHash{ $hitObj->hit_def } = $hitObj->hsp_hit_from;
 			}
 		}    #end of foreach
 		if($type eq 'core'){
+			$self->logger->debug("Sending $resultNumber for core analyses.");
 			$coreResultArrayRef = $self->_getCoreResult(\@fastaArray, \%startBpHash, $resultNumber);
 		}
 	}#end of if
@@ -775,8 +779,8 @@ sub _getCoreResult {
 	$resultInFH->close();
 
 # 	#delete temp files
-	unlink $tempInFile;
-	unlink $tempOutFile;
+	#unlink $tempInFile;
+	#unlink $tempOutFile;
 
 # 	#add SNP information to the return
  	my $snpDetective = Modules::Alignment::SNPFinder->new(

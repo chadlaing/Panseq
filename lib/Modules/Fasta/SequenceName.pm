@@ -21,6 +21,7 @@ Modules::Fasta::SequenceName - Takes a fasta header and returns the genome name.
 
 This module is used to unify the name of a genome when given a multi-fasta sequence, such as the case for a draft genome.
 It allows the storing of multiple headers that all share the same "name".
+Removes the '>' fasta header ID by default.
 
 =cut
 
@@ -170,7 +171,7 @@ sub _getName{
 	else{
 		$newName = $originalName;
 	}
-
+	$newName =~ s/^>//;
 	push @{$self->arrayOfHeaders},$originalName;
 	return $newName;
 }

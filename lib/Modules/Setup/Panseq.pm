@@ -240,7 +240,7 @@ sub _cleanUp{
 			($file =~ m/singleQueryFile\.fasta/) ||
 			($file =~ m/nucmer\.delta/) ||
 			#($file =~ m/Temp_\d\d\d\d\d/) ||
-			($file =~ m/\.xml/) ||
+			#($file =~ m/\.xml/) ||
 			($file =~ m/ReferenceFile/)
 		){
 			unlink $file;
