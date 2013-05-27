@@ -253,32 +253,31 @@ sub _processRemainingFilesWithNucmer{
 	my $filesPerComparison = shift;
 	my $remainder = shift;
 
-	$self->logger->info("In _processRemainingFilesWithNucmer. filesPerComparison: $filesPerComparison");
+	$self->logger->info("In _processRemainingFilesWithNucmer. filesPerComparison: $filesPerComparison remainder: $remainder");
 
-	#my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
-	my $forker = Parallel::ForkManager->new(1);
+	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
+	#my $forker = Parallel::ForkManager->new(1);
 
 	my @filesToRun;
-	my @filesFromNucmer;
-
+	
 	my $counter=1;
+	my $reset=0;
 	foreach my $fastaFile (@{$allFastaFiles}){
-		#last if $counter ==5;
-		if((!defined $filesToRun[0]) || (scalar(@filesToRun) < $filesPerComparison)){
-			$self->logger->info("Pushing to array, size of:" . scalar(@filesToRun));
-			push @filesToRun, $fastaFile;
-		}
-		
-		if(scalar(@filesToRun == $filesPerComparison)){
-			$self->logger->info("In the else");
-			if($remainder > 0){
-				push @filesToRun, $fastaFile;
-				$remainder--;
-			}
-			my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName;
-			push @filesFromNucmer, $newFileName;
+		#last if $counter ==7;
+		push @filesToRun, $fastaFile;
 
+		if(scalar(@filesToRun) == $filesPerComparison){
+			if($remainder > 0){
+				$remainder--;
+				next;
+			}
+		}		
+		
+		if(scalar(@filesToRun >= $filesPerComparison)){
+			$reset=1;
+			
 			$forker->start and next;
+				my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
 				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);
 				my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
 				my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
@@ -288,23 +287,48 @@ sub _processRemainingFilesWithNucmer{
 				$self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
 
 				#remove temp files
-				# unlink $queryFile;
-				# unlink $referenceFile;
-				# unlink $coordsFile;
-				# unlink $novelRegionsFile;
+				unlink $queryFile;
+				unlink $referenceFile;
+				unlink $coordsFile;
+				unlink $novelRegionsFile;
 			$forker->finish;
 		}
 	}
 	continue{
 		$counter++;
-		if(scalar(@filesToRun) >= $filesPerComparison){
+		if($reset ==1){
 			$self->logger->info("Resetting filesToRun from size of " . scalar(@filesToRun));
 			@filesToRun=();
+			$reset=0;
 		}
 	}
 
 	$forker->wait_all_children;
-	return \@filesFromNucmer;
+	return $self->_getPanFiles();
+}
+
+
+=head2
+
+The collects the temporary _pan filenames from the baseDirectory and returns them as
+an arrayRef. This list of names is then fed back into the _processRemainingFilesWithNucmer sub.
+
+=cut
+
+sub _getPanFiles{
+	my $self=shift;
+
+	#with Roles::CombineFilesIntoSingleFile
+	my $files = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
+	my @panFiles;
+
+	foreach my $file(@{$files}){
+		if($file =~ m/_pan$/){
+			push @panFiles,$file;
+			$self->logger->info("Pan file: $file");
+		}
+	}
+	return \@panFiles;
 }
 
 
@@ -504,7 +528,7 @@ sub _getTempName{
 
 	my $time = localtime();
 	$time =~ s/\W//g;
-	return($time . 'temp');
+	return($time . int(rand(1000000)) . int(rand(1000000)));
 }
 
 
