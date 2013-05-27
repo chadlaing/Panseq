@@ -153,6 +153,11 @@ sub _getFastaNamesForOutput{
 	my $alignedHashRef=shift;
 
 	my $fastaNameLine='';
+
+	# foreach my $key(keys %{$alignedHashRef}){
+	# 	$self->logger->debug("alignedHashRefName: $key");
+	# }
+
 	foreach my $sName(@{$self->orderedNames}){
 		#it could be there were no BLAST results for a given name
 		#in that case, add 'N/A'
@@ -261,23 +266,28 @@ sub _getHashOfFastaAlignment{
 		$line =~ s/\R//g;
 		
 		if($line =~ /^>(.+)/){		
+			$line =~ s/>//;
 			my $sn = Modules::Fasta::SequenceName->new($line);
 			$name = $sn->name;
-
+			$self->logger->debug("New name: $name");
 			#we don't need or want the '>'; all names are stored without the fasta header signifier
-			$results->{$name}->{'fasta'}=$1;
+			$results->{$name}->{'fasta'}=$line;
 		}
 		else{
+			$self->logger->debug("Not a header in SNPFinder");
 			if(defined $results->{$name}->{'sequence'}){
+			#	$self->logger->debug("Sequence already present, adding to it:\n$line");
 				$results->{$name}->{'sequence'}=$results->{$name}->{'sequence'} . $line;	
 			}
 			else{
+				#$self->logger->debug("New sequence, adding:\n$line");
 				$results->{$name}->{'sequence'}=$line;
 			}
 					
 		}
 	}
 	$alignmentLength=length($results->{$name}->{'sequence'});
+	#$self->logger->debug("Alignment length of core is: $alignmentLength");
 	return ($alignmentLength,$results);
 }
 1;
