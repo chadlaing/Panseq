@@ -227,8 +227,7 @@ sub run{
 		$allFastaFiles = $self->_processRemainingFilesWithNucmer(
 			$allFastaFiles,
 			$filesPerComparison,
-			$remainder,
-			$retriever
+			$remainder
 		);
 	}
 	continue{
@@ -253,24 +252,24 @@ sub _processRemainingFilesWithNucmer{
 	my $allFastaFiles = shift;
 	my $filesPerComparison = shift;
 	my $remainder = shift;
-	my $retriever = shift;
 
 	$self->logger->info("In _processRemainingFilesWithNucmer. filesPerComparison: $filesPerComparison");
 
-	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
+	#my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
+	my $forker = Parallel::ForkManager->new(1);
 
 	my @filesToRun;
 	my @filesFromNucmer;
 
 	my $counter=1;
 	foreach my $fastaFile (@{$allFastaFiles}){
-
-		
+		#last if $counter ==5;
 		if((!defined $filesToRun[0]) || (scalar(@filesToRun) < $filesPerComparison)){
 			$self->logger->info("Pushing to array, size of:" . scalar(@filesToRun));
 			push @filesToRun, $fastaFile;
 		}
-		else{
+		
+		if(scalar(@filesToRun == $filesPerComparison)){
 			$self->logger->info("In the else");
 			if($remainder > 0){
 				push @filesToRun, $fastaFile;
@@ -280,25 +279,25 @@ sub _processRemainingFilesWithNucmer{
 			push @filesFromNucmer, $newFileName;
 
 			$forker->start and next;
-				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun);
+				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);
 				my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
-				my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . 'novelRegions'), $retriever);	
+				my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
 				
 				#combines them into the $newFileName specified above, which is added to the @filesFromNucmer array
 				#this array is returned and used to feed back into this processing sub
 				$self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
 
 				#remove temp files
-				unlink $queryFile;
-				unlink $referenceFile;
-				unlink $coordsFile;
-				unlink $novelRegionsFile;
+				# unlink $queryFile;
+				# unlink $referenceFile;
+				# unlink $coordsFile;
+				# unlink $novelRegionsFile;
 			$forker->finish;
 		}
 	}
 	continue{
 		$counter++;
-		if(scalar(@filesToRun) > $filesPerComparison){
+		if(scalar(@filesToRun) >= $filesPerComparison){
 			$self->logger->info("Resetting filesToRun from size of " . scalar(@filesToRun));
 			@filesToRun=();
 		}
@@ -346,7 +345,6 @@ sub _printNovelRegionsFromQueue{
 	my $coordsFile = shift;
 	my $queryFile = shift;
 	my $outputFile = shift;
-	my $retriever = shift;
 
 	my $nrf = Modules::NovelRegion::NovelRegionFinder->new(
 		'mode'=>$self->settings->novelRegionFinderMode,
@@ -355,6 +353,13 @@ sub _printNovelRegionsFromQueue{
 		'minimumNovelRegionSize'=>$self->settings->minimumNovelRegionSize
 	);
 	$nrf->findNovelRegions();
+
+	$self->logger->info("File for db construction: $queryFile");
+	my $retriever = Modules::Fasta::SequenceRetriever->new(
+		'inputFile'=> $queryFile,
+		'databaseFile'=>$queryFile . '_dbtemp'
+	);
+
 	$nrf->printNovelRegions($retriever, $outputFile);
 	return $outputFile;
 }
@@ -375,11 +380,12 @@ The individual files combined into the single query file are deleted.
 sub _getQueryReferenceFileFromList{
 	my $self = shift;
 	my $listOfFiles = shift;
+	my $name=shift;
 
 	my $ref = shift @{$listOfFiles};
 
 	#with Roles::CombineFilesIntoSingleFile
-	my $queryFileName = $self->settings->baseDirectory . 'query' . $self->_getTempName;
+	my $queryFileName = $name . '_query';
 	$self->_combineFilesIntoSingleFile(
 		$listOfFiles,
 		$queryFileName
