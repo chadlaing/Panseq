@@ -179,14 +179,12 @@ sub _launchPanseq{
 		$novelIterator = Modules::NovelRegion::NovelIterator->new(
 			'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
 			'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
-			'panGenomeFile'=>$self->settings->baseDirectory . 'panGenome.fasta',
 			'novelRegionsFile'=>$self->settings->baseDirectory . 'novelRegions.fasta',
 			'settings'=>$self->settings
 		);
 		$novelIterator->run();
 	}
 	
-	exit;
 	$self->logger->info("Panseq mode set as " . $self->settings->runMode);
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
@@ -238,9 +236,9 @@ sub _cleanUp{
 			($file =~ m/_db(\.n|temp)/) || 
 			($file =~ m/_sequenceSplitterDB/) || 
 			($file =~ m/singleQueryFile\.fasta/) ||
-			($file =~ m/nucmer\.delta/) ||
-			#($file =~ m/Temp_\d\d\d\d\d/) ||
-			#($file =~ m/\.xml/) ||
+			($file =~ m/\.delta$/) ||
+			($file =~ m/(accessory|core|muscle)Temp/) ||
+			($file =~ m/\.xml/) ||
 			($file =~ m/ReferenceFile/)
 		){
 			unlink $file;

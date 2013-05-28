@@ -233,6 +233,14 @@ sub run{
 	continue{
 		$numberOfRemainingFiles = scalar(@{$allFastaFiles});
 	}
+
+	if(scalar(@{$allFastaFiles})==1){
+		$self->panGenomeFile($allFastaFiles->[0]);
+	}
+	else{
+		$self->logger->fatal("Failed to generate a single pan-genome file");
+		exit(1);
+	}
 }
 
 
@@ -379,12 +387,15 @@ sub _printNovelRegionsFromQueue{
 	$nrf->findNovelRegions();
 
 	$self->logger->info("File for db construction: $queryFile");
+	my $databaseFile = $queryFile . '_dbtemp';
+
 	my $retriever = Modules::Fasta::SequenceRetriever->new(
 		'inputFile'=> $queryFile,
-		'databaseFile'=>$queryFile . '_dbtemp'
+		'databaseFile'=>$databaseFile
 	);
-
 	$nrf->printNovelRegions($retriever, $outputFile);
+
+	unlink $databaseFile;
 	return $outputFile;
 }
 
