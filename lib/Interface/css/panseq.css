@@ -28,6 +28,13 @@ select{
   font-weight: bold;
 }
 
+.codeFormat{
+  font-size: 1em;
+  padding-left:4em;
+  font-family: "Source Code Pro";
+  line-height: 1em;
+}
+
 #submitButton{
   float:left;
   margin-left:1.66em;

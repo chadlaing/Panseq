@@ -30,7 +30,6 @@ sub orderedNames{
 	$self->{'_queryNameOrderHash'}=shift // return $self->{'_queryNameOrderHash'};
 }
 
-
 sub alignedFastaSequences{
 	my $self=shift;
 	$self->{'_alignedFastaSequences'}=shift // return $self->{'_alignedFastaSequences'};

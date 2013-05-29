@@ -235,7 +235,12 @@ sub run{
 	}
 
 	if(scalar(@{$allFastaFiles})==1){
-		$self->panGenomeFile($allFastaFiles->[0]);
+		#we need to check the _pan file against the reference directory files, if it exists
+		my $finalFile = $allFastaFiles->[0];
+		if(defined $self->referenceFile){
+			$finalFile = $self->_performFinalNucmer($finalFile);
+		}
+		$self->panGenomeFile($finalFile);
 	}
 	else{
 		$self->logger->fatal("Failed to generate a single pan-genome file");
@@ -243,6 +248,25 @@ sub run{
 	}
 }
 
+
+=head2
+
+If there is a referenceFile directory, we need to perform a final novel regions comparison
+of the "pan-genome" for the "Selected Query" files against these reference files. If we don't,
+the final reference file from the iterative pan-genome generation is automatically included, even
+if it is not novel with respect to the reference directory sequences.
+
+=cut
+
+sub _performFinalNucmer{
+	my $self = shift;
+	my $queryFile = shift;
+
+	my $newFileName = $queryFile . '_final';
+	my $coordsFile = $self->_processNucmerQueue($queryFile,$self->referenceFile, $newFileName);
+	my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
+	return $novelRegionsFile;
+}
 
 =head2 _processRemainingFilesWithNucmer
 
@@ -310,7 +334,6 @@ sub _processRemainingFilesWithNucmer{
 			$reset=0;
 		}
 	}
-
 	$forker->wait_all_children;
 	return $self->_getPanFiles();
 }
@@ -437,7 +460,7 @@ sub _getQueryReferenceFileFromList{
 =head2 _processNucmerQueue
 
 Takes in a query and reference file, runs nucmer and returns the name of the
-generated coords file.
+generated coords file. Includes all files in the "reference directory" if any are present.
 
 =cut
 
@@ -446,6 +469,17 @@ sub _processNucmerQueue{
 	my $queryFile = shift;
 	my $referenceFile = shift;
 	my $outputFile = shift;
+
+	#if there is a reference directory, add these files to the reference file
+	my $referenceFileWithRefDirectory = $referenceFile . '_withRefDirectory_temp';
+	if(defined $self->referenceFile){
+		#with Roles::CombineFilesIntoSingleFile
+		$self->_combineFilesIntoSingleFile(
+			[$referenceFile,$self->referenceFile],
+			$referenceFileWithRefDirectory
+		);
+		$referenceFile = $referenceFileWithRefDirectory;
+	}
 
 	#run mummer
 	my $nucmer = Modules::Alignment::NucmerRun->new(

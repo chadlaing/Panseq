@@ -23,7 +23,8 @@ sub setup{
 		'home'=>'home',
 		'contact'=>'contact',
 		'download'=>'download',
-		'waiting'=>'waiting'
+		'waiting'=>'waiting',
+		'faq'=>'faq'
 	);
 
 	$self->serverSettings($self->_loadServerSettings("$FindBin::Bin/../../serverSettings.txt"));
@@ -48,6 +49,13 @@ sub home{
 	my $self=shift;
 
 	my $template=$self->load_tmpl('home.tmpl',die_on_bad_params=>0);
+	return $template->output();
+}
+
+sub faq{
+	my $self=shift;
+
+	my $template=$self->load_tmpl('faq.tmpl',die_on_bad_params=>0);
 	return $template->output();
 }
 

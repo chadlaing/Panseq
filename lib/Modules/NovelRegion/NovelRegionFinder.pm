@@ -348,8 +348,6 @@ sub _getNewIdStartEnd{
 		my $oldStart = $2;
 		my $oldEnd= $3;
 
-		$self->logger->info("Old location: $oldLocation");
-
 		my $delta = $currEnd - $currStart;
 		my $newStart = $oldStart + $currStart -1;
 		my $newEnd = $newStart + $delta;

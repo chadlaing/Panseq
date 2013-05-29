@@ -49,6 +49,7 @@ use Tie::Log4perl;
 use Log::Log4perl;
 use File::Path 'make_path';
 use Carp;
+use File::Copy;
 use Archive::Zip;
 use Role::Tiny::With;
 
@@ -190,6 +191,11 @@ sub _launchPanseq{
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
 		my $panObj = $self->_performPanGenomeAnalyses($files,$novelIterator);
 		$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
+		#with File::Copy
+		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'panGenome.fasta');
+	}else{
+		#with File::Copy
+		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'novelRegions.fasta');
 	}
 }
 
@@ -239,7 +245,8 @@ sub _cleanUp{
 			($file =~ m/\.delta$/) ||
 			($file =~ m/(accessory|core|muscle)Temp/) ||
 			($file =~ m/\.xml/) ||
-			($file =~ m/ReferenceFile/)
+			($file =~ m/ReferenceFile/) ||
+			($file =~ m/_withRefDirectory_temp/)
 		){
 			unlink $file;
 		}
