@@ -313,20 +313,60 @@ sub printNovelRegions{
 	foreach my $id(keys %{$self->novelRegionsHashRef}){
 		my $coordString = $self->novelRegionsHashRef->{$id};
 			
-		my $novelCounter=0;
 		while($coordString =~ /\,(\d+)\.\.(\d+)/gc){				
 			my $start =$1;
 			my $end =$2;
 			my $length=$end-$start+1;
-				
+			
+			#$self->logger->info("Length: $length cutoff: " . $self->minimumNovelRegionSize);
+
 			next unless $length >= $self->minimumNovelRegionSize;	
-			$novelCounter++;
-				
-			$outFH->print('>' . $id . '|NovelRegion=' . $novelCounter . '|Start=' . $start . '|End=' . $end . '|Length=' . $length . "\n" . $retriever->extractRegion($id,$start,$end) . "\n");	
+			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
+		
+			$outFH->print('>' . $relId . '_(' . $relStart . '..' . $relEnd . ')'. "\n" . $retriever->extractRegion($id,$start,$end) . "\n");	
 		}# end while
 	}# end foreach
 	$outFH->close();	
 }
+
+=head2 _getNewIdStartEnd
+
+Checks for a previous substring ending.
+If this exists, updates the new coords relative to the initial sequence,
+replacing the old substring ending with the new one.
+If not, return the current substring coords and id.
+
+=cut
+
+sub _getNewIdStartEnd{
+	my $self = shift;
+	my $currId = shift;
+	my $currStart =shift;
+	my $currEnd = shift;
+
+	#check for previous substring
+	if($currId =~ m/(_\((\d+)\.\.(\d+)\))$/){
+		my $oldLocation = $1;
+		my $oldStart = $2;
+		my $oldEnd= $3;
+
+		my $delta = $currEnd - $currStart;
+		my $newStart = $oldStart + $currStart -1;
+		my $newEnd = $newStart + $delta;
+
+		my $newId = $currId;
+
+		$newId =~ s/\Q$oldLocation\E//;
+
+		return($newId,$newStart,$newEnd);
+	}
+	else{
+		return($currId, $currStart, $currEnd);
+	}
+}
+
+
+
 
 =head3 _updateComparisonHash
 

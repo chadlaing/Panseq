@@ -58,9 +58,6 @@ use Bio::SeqIO;
 use Bio::Seq;
 use Log::Log4perl;
 
-use Role::Tiny::With;
-with 'Roles::FlexiblePrinter';
-
 sub new {
 	my $class = shift;
 	my $self = {};
@@ -221,13 +218,13 @@ sub extractRegion{
 		my $seqID=shift;
 		my $startBp;
 		my $endBp;
-		
+
 		if(scalar(@_)==2){
 			$startBp=shift;
 			$endBp=shift;
 		}
 
-		my $seqObj = $self->_databaseName->get_Seq_by_id($seqID) // $self->logger->logconfess("Cannot locate $seqID");
+		my $seqObj = $self->_databaseName->get_Seq_by_id($seqID) // $self->logger->logconfess("Cannot locate $seqID in database based on " . $self->databaseFile);
 		$self->logger->debug("Found $seqID\n");
 		if(defined $startBp && defined $endBp){
 			return $seqObj->subseq($startBp=>$endBp);
