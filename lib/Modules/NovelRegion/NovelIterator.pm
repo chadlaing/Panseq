@@ -237,13 +237,13 @@ sub run{
 	if(scalar(@{$allFastaFiles})==1){
 		#we need to check the _pan file against the reference directory files, if it exists
 		my $finalFile = $allFastaFiles->[0];
-		if(defined $self->referenceFile){
+		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
 			$finalFile = $self->_performFinalNucmer($finalFile);
 		}
 		$self->panGenomeFile($finalFile);
 	}
 	else{
-		$self->logger->fatal("Failed to generate a single pan-genome file");
+		$self->logger->fatal("Failed to generate a single pan-genome file. Found " . scalar(@{$allFastaFiles}) . " files");
 		exit(1);
 	}
 }
@@ -295,7 +295,6 @@ sub _processRemainingFilesWithNucmer{
 	my $counter=1;
 	my $reset=0;
 	foreach my $fastaFile (@{$allFastaFiles}){
-		#last if $counter ==7;
 		push @filesToRun, $fastaFile;
 
 		if(scalar(@filesToRun) == $filesPerComparison){
@@ -316,8 +315,9 @@ sub _processRemainingFilesWithNucmer{
 				
 				#combines them into the $newFileName specified above, which is added to the @filesFromNucmer array
 				#this array is returned and used to feed back into this processing sub
-				$self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
-
+				my $combinedFile = $self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
+				$self->logger->info("Combined file: $combinedFile");
+				
 				#remove temp files
 				unlink $queryFile;
 				unlink $referenceFile;
@@ -469,17 +469,6 @@ sub _processNucmerQueue{
 	my $queryFile = shift;
 	my $referenceFile = shift;
 	my $outputFile = shift;
-
-	#if there is a reference directory, add these files to the reference file
-	my $referenceFileWithRefDirectory = $referenceFile . '_withRefDirectory_temp';
-	if(defined $self->referenceFile){
-		#with Roles::CombineFilesIntoSingleFile
-		$self->_combineFilesIntoSingleFile(
-			[$referenceFile,$self->referenceFile],
-			$referenceFileWithRefDirectory
-		);
-		$referenceFile = $referenceFileWithRefDirectory;
-	}
 
 	#run mummer
 	my $nucmer = Modules::Alignment::NucmerRun->new(

@@ -243,7 +243,7 @@ sub _cleanUp{
 			($file =~ m/_sequenceSplitterDB/) || 
 			($file =~ m/singleQueryFile\.fasta/) ||
 			($file =~ m/\.delta$/) ||
-			($file =~ m/(accessory|core|muscle)Temp/) ||
+			($file =~ m/(accessory|core|muscle|nucmer)Temp/) ||
 			($file =~ m/\.xml/) ||
 			($file =~ m/ReferenceFile/) ||
 			($file =~ m/_withRefDirectory_temp/)

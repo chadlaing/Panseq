@@ -318,6 +318,8 @@ sub printNovelRegions{
 			my $end =$2;
 			my $length=$end-$start+1;
 			
+			#$self->logger->info("Length: $length cutoff: " . $self->minimumNovelRegionSize);
+
 			next unless $length >= $self->minimumNovelRegionSize;	
 			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
 		
