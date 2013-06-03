@@ -1,5 +1,5 @@
 Build.PL
-lib/fet.pl
+lib/Interface/.htaccess
 lib/Interface/css/panseq.css
 lib/Interface/css/ui-lightness/images/animated-overlay.gif
 lib/Interface/css/ui-lightness/images/ui-bg_diagonals-thick_18_b81900_40x40.png
@@ -651,7 +651,7 @@ lib/Interface/Templates/analyses.tmpl
 lib/Interface/Templates/contact.tmpl
 lib/Interface/Templates/coreParameters.tmpl
 lib/Interface/Templates/download.tmpl
-lib/Interface/Templates/error404.tmpl
+lib/Interface/Templates/faq.tmpl
 lib/Interface/Templates/home.tmpl
 lib/Interface/Templates/novelRegionParameters.tmpl
 lib/Interface/Templates/pageBottom.tmpl
@@ -689,11 +689,9 @@ lib/Modules/Setup/Panseq.pm
 lib/Modules/Setup/PanseqFiles.pm
 lib/Modules/Setup/Settings.pm
 lib/Modules/Stats/FET.pm
-lib/novel_region_finder.pl
 lib/panseq.pl
 lib/Roles/CombineFilesIntoSingleFile.pm
 lib/Roles/FlexiblePrinter.pm
-lib/serverSettings.txt
 lib/table_extractor.pl
 lib/treeNumberToName.pl
 MANIFEST			This list of files
