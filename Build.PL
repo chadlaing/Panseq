@@ -7,7 +7,7 @@ use IO::File;
 
 my $build=Module::Build->new(
 	module_name => 'Panseq',
-	dist_version => _getVersion(),
+	dist_version => '4',
 	license => 'perl',
 	dist_abstract => 'Panseq: pan-genomic sequence analysis',
 	dist_author => 'Chad Laing <chadlaing@gmail.com>',
@@ -32,10 +32,3 @@ my $build=Module::Build->new(
 );
 $build->create_build_script();
 
-sub _getVersion{
-	my $inFH = IO::File->new('<' . '.git/refs/heads/master');
-	my $version = $inFH->getline();
-	$version =~ s/\R//g;
-	$inFH->close();
-	return $version;
-}
