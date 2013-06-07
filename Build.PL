@@ -27,7 +27,8 @@ my $build=Module::Build->new(
 		'File::Basename'=>0,
 		'Tie::Log4perl'=>0,
 		'Statistics::R'=>0,
-		'Archive::Zip'=>0
+		'Archive::Zip'=>0,
+		'Test::Pretty'=>0
 	}
 );
 $build->create_build_script();
