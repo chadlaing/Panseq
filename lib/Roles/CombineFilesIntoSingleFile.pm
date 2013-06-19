@@ -21,7 +21,7 @@ If append is not specified, it defaults to off.
 
 sub _combineFilesIntoSingleFile{
 	my $self=shift;
-	my $filesToCombine = shift // $self->logger->logdie("_combineFilesIntoSingleFile requires files in an array ref $!");
+	my $filesToCombine = shift // $self->logger->logdie("_combineFilesIntoSingleFile requires files in an array ref");
     my $outputFile = shift // $self->logger->logdie("outputFile required in _combineFilesIntoSingleFile $!");
     my $append = shift // 0;
 
@@ -49,7 +49,7 @@ sub _combineFilesIntoSingleFile{
 sub _combineAndSanitizeFastaFiles{
     my $self=shift;
 
-    my $filesToCombine = shift // $self->logger->logdie("_combineAndSanitizeFastaFiles requires files in an array ref $!");
+    my $filesToCombine = shift // $self->logger->logdie("_combineAndSanitizeFastaFiles requires files in an array ref.");
     my $outputFile = shift // $self->logger->logdie("outputFile required in _combineAndSanitizeFastaFiles $!");
 
     my $outFH = IO::File->new('>'. $outputFile) or $self->logger->logdie("Could not open $outputFile\n $!");
