@@ -84,6 +84,9 @@ use Bio::SeqIO;
 use Bio::Seq;
 use Log::Log4perl;
 use Carp;
+use Role::Tiny::With;
+
+with 'Roles::GetNewIdStartEnd';
 
 sub new{
 	my($class)  = shift;
@@ -144,7 +147,6 @@ sub _initialize{
 			to be defined. Missing one or more parameters"
 		);
 	}
-	
 }
 
 sub segmentTheSequence{
@@ -156,24 +158,26 @@ sub segmentTheSequence{
 	$outputFH->width(80);
 		
 	while(my $seq = $inFH->next_seq()){
-		my $segmentCounter=1;
 		#if twice fragmentation size, print fragmentation size, else print whole thing
 		for(my $i=1; $i<=$seq->length; $i+=$self->segmentSize){
 			my $endCalc = ($i + (2 * $self->segmentSize) -1);
 			my $end =  ($endCalc > $seq->length) ? $seq->length : ($endCalc - $self->segmentSize);
+			my $start = $i;
 			
-			my $newId = $seq->id() . $seq->desc();
-			$newId =~ s/\s//g;
-			$newId .= ('|Segment=' . $segmentCounter . '|SegmentLength=' . ($end -$i +1) . '|Start=' . $i . '|End=' . $end);
+			my $id = $seq->id() . $seq->desc();
+			$id =~ s/\s/_/g;
+
+			#uses Roles::GetNewIdStartEnd to implement _getNewIdStartEnd
+			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
+			$relId .= '_(' . $relStart . '..' . $relEnd . ')';
 
 			my $tempSeq = Bio::Seq->new(
-				-seq => $seq->subseq($i,$end),
-				-id => $newId,
+				-seq => $seq->subseq($start,$end),
+				-id => $relId,
 				-accession_number => $seq->accession_number,
 				#-desc => $newDesc
 			);
 			$outputFH->write_seq($tempSeq);
-			$segmentCounter++;
 			last if $end == $seq->length; #this avoids duplicating the last segment of sequence
 		}			
 	}
