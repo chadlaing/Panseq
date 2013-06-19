@@ -353,7 +353,7 @@ sub _performPanGenomeAnalyses{
 		'evalue'=>'0.00001',
 		'word_size'=>20,
 		'num_threads'=>1,
-		'numberOfSplits'=>20,
+		'numberOfSplits'=>$self->settings->numberOfCores,
 		'out'=>$self->settings->baseDirectory  
 	);
 	$blaster->run();
