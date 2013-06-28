@@ -13,6 +13,7 @@ Modules::Fasta::SequenceRetriever - Grabs fasta segments from a specified inputF
 	
 	my $retriever = Modules::Fasta::SequenceRetriever->new(
 		'inputFile'=> '/input/file.fasta',
+		'databaseFile'=> 'queryfile_dbtemp'
 	);
 
 =head1 DESCRIPTION

@@ -502,7 +502,14 @@ sub _processQueue {
 		$resultNumber++;
 		$self->logger->debug("Processing item $resultNumber"); 
 
-		my $type = $self->_getCoreAccessoryType($item);
+		my $type;
+		if($self->coreGenomeThreshold == 0){
+			$type = 'accessory';
+		}
+		else{
+			$type = $self->_getCoreAccessoryType($item);
+		}
+
 		my ($accessoryLine,$coreLines)=$self->_processResult($item, $type, $resultNumber);
 
 		if(defined $accessoryLine){
@@ -580,6 +587,7 @@ sub _getCoreAccessoryType {
 			my $hitObj = $result->hitHash->{$hit};
 			my $sequenceCoverage = $self->_getSequenceCoverage( $hitObj, $result->query_len );
 			$numberOverSequenceCutoff++ if ( $sequenceCoverage >= $self->percentIdentityCutoff );
+			$self->logger->debug("coverage: $sequenceCoverage" . " cutoff: " . $self->percentIdentityCutoff);
 		}
 
 		if ( $numberOverSequenceCutoff >= $self->coreGenomeThreshold ) {
@@ -600,7 +608,8 @@ sub _getSequenceCoverage {
 
 	my $hit         = shift // $self->logger->logconfess('hit is required in Modules::PanGenome::_getSequenceCoverage');
 	my $queryLength = shift // $self->logger->logconfess('queryLength is required in Modules::PanGenome::_getSequenceCoverage');
-	return ( ( $hit->hsp_align_len - ( $hit->hsp_align_len - $hit->hsp_identity ) ) / $queryLength * 100 );
+	my $sequenceCoverage = $hit->hsp_align_len * $hit->hsp_identity / $queryLength;
+	return $sequenceCoverage;
 }
 
 =head3 _processResult
