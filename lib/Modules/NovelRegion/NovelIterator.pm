@@ -482,6 +482,7 @@ sub _processNucmerQueue{
 		'mummerDirectory'=>$self->settings->mummerDirectory,
 		'queryFile'=>$queryFile,
 		'referenceFile'=>$referenceFile,
+		'percentIdentityCutoff'=>$self->settings->percentIdentityCutoff,
 		'logFile'=> $outputFile . 'mummerlog.txt'
 	);	
 	$self->logger->info("Nucmer query file: $queryFile");

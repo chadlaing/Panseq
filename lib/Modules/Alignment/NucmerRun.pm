@@ -44,6 +44,11 @@ sub logFile{
 	$self->{'_mummerLog'} = shift // return $self->{'_mummerLog'};
 }
 
+sub percentIdentityCutoff{
+	my $self=shift;
+	$self->{'_percentIdentityCutoff'} = shift // return $self->{'_percentIdentityCutoff'};
+}
+
 sub mummerDirectory{
 	my $self=shift;
 	$self->{'_mummerDirectory'} = shift // return $self->{'_mummerDirectory'};
@@ -67,11 +72,6 @@ sub logger{
 sub numberOfCores{
 	my $self=shift;
 	$self->{'_numberOfCores'}=shift // return $self->{'_numberOfCores'};
-}
-
-sub deltaFile{
-	my $self=shift;
-	$self->{'_deltaFile'}=shift // return $self->{'_deltaFile'};
 }
 
 sub referenceFileArray{
@@ -145,7 +145,7 @@ sub run{
 	}
 
 	unless(defined $self->p){
-		$self->logger->logconfess("Delta file prefix required in run\n");
+		$self->logger->logconfess("File prefix required in run\n");
 	}
 
 	unless(defined $self->mummerDirectory){
@@ -153,14 +153,39 @@ sub run{
 	}
 
 	#run mummer
+	my $deltaFile = $self->p . '.delta';
 	my $mummerLine = $self->_createMummerLine();
 	$self->logger->info("Running nucmer comparison with the command: $mummerLine");
 	system($mummerLine);	
 
 	#add a delta-filter to limit the nucmer matches to the percentIdentity cutoff
+	my $filteredDeltaFile = $self->_deltaFilter($deltaFile);
 
 	#run show-coords on delta file
-	$self->_showCoords();
+	$self->_showCoords($filteredDeltaFile);
+}
+
+=head2
+
+Filter the delta-file to contain only those matches that are at or
+above the percentIdentityCutoff.
+
+=cut
+
+sub _deltaFilter{
+	my $self=shift;
+	my $deltaFile = shift;
+
+	#delta-filter [options] <delta file> > <filtered delta file>
+	my $filteredDeltaFile = $self->p . '_filtered.delta';
+	my $filterLine = $self->mummerDirectory . 'delta-filter -i ' . $self->percentIdentityCutoff
+		. ' ' . $deltaFile . ' > ' . $filteredDeltaFile;
+
+	$self->logger->info("Filtering delta-file for minimum percent identity of " . $self->percentIdentityCutoff
+	 . " with command:\n $filterLine");
+
+	system($filterLine);
+	return $filteredDeltaFile;
 }
 
 sub _createMummerLine{
@@ -184,13 +209,14 @@ sub _createMummerLine{
 
 sub _showCoords{
 	my $self=shift;
+	my $deltaFile = shift;
 
 	#check for requirements
 	unless(defined $self->coordsFile){
 		$self->logger->logconfess("Coords file name required in _showCoords");
 	}
 
-	my $coordsLine = $self->mummerDirectory . 'show-coords ' . $self->p . '.delta' . ' -l -q -T > ' . $self->coordsFile;
+	my $coordsLine = $self->mummerDirectory . 'show-coords ' . $deltaFile . ' -l -q -T > ' . $self->coordsFile;
 
 	$self->logger->info("Launching show-coords with $coordsLine");
 
