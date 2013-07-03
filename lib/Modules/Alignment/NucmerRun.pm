@@ -157,6 +157,8 @@ sub run{
 	$self->logger->info("Running nucmer comparison with the command: $mummerLine");
 	system($mummerLine);	
 
+	#add a delta-filter to limit the nucmer matches to the percentIdentity cutoff
+
 	#run show-coords on delta file
 	$self->_showCoords();
 }
