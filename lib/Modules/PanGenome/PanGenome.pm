@@ -608,7 +608,8 @@ sub _getSequenceCoverage {
 
 	my $hit         = shift // $self->logger->logconfess('hit is required in Modules::PanGenome::_getSequenceCoverage');
 	my $queryLength = shift // $self->logger->logconfess('queryLength is required in Modules::PanGenome::_getSequenceCoverage');
-	my $sequenceCoverage = $hit->hsp_align_len * $hit->hsp_identity / $queryLength;
+
+	my $sequenceCoverage = ( $hit->hsp_align_len - ( $hit->hsp_align_len - $hit->hsp_identity ) ) / $queryLength * 100
 	return $sequenceCoverage;
 }
 
