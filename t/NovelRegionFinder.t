@@ -4,11 +4,14 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test::More tests=>15;
+use Test::More tests=>7;
 use Test::Pretty;
-use Log::Log4perl qw/get_logger/;
+use Log::Log4perl qw/:easy/;
 use Modules::NovelRegion::NovelRegionFinder;
 
+Log::Log4perl->easy_init($DEBUG);
+my $logger =  Log::Log4perl->get_logger();
+$logger->info("Testing");
 #data
 
 
@@ -54,7 +57,7 @@ $nrf2->_updateComparisonHash('100	1370	5630	6900	1271	1271	100	2000	7000	ref4	qu
 my $novelRegions2 = $nrf2->_getNoDuplicates();
 is($novelRegions2->{'query'},',4321..4999,5501..5629,6901..7000', ',4321..4999,5501..5629,6901..7000 correctly identified as novelRegions from multiple refs');
 
-
+$logger->info("Finished testing NovelRegionFinder");
 
 
 

@@ -6,33 +6,17 @@ use FindBin;
 use lib "$FindBin::Bin/../lib/";
 use Test::More 'no_plan';
 use Test::Pretty;
-use Log::Log4perl qw/get_logger/;
+use Log::Log4perl qw/:easy/;
 use Modules::PanGenome::PanGenome;
 
-Log::Log4perl->easy_init();
+Log::Log4perl->easy_init($DEBUG);
+my $logger =  Log::Log4perl->get_logger();
+$logger->info("Testing PanGenome");
+#data
 
 my $pg = Modules::PanGenome::PanGenome->new(
 	'xmlFiles'=>[
-		'data/blastout1.xml',
-		'data/blastout2.xml',
-		'data/blastout3.xml',
-		'data/blastout4.xml',
-		'data/blastout5.xml',
-		'data/blastout6.xml',
-		'data/blastout7.xml',
-		'data/blastout8.xml',
-		'data/blastout9.xml',
-		'data/blastout10.xm',
-		'data/blastout11.xm',
-		'data/blastout12.xm',
-		'data/blastout13.xm',
-		'data/blastout14.xm',
-		'data/blastout15.xm',
-		'data/blastout16.xm',
-		'data/blastout17.xm',
-		'data/blastout18.xm',
-		'data/blastout19.xm',
-		'data/blastout20.xm'
+		'data/blastout1.xml'
 	],
 	'numberOfCores'=>4,
 	'resultArraySize'=>5,

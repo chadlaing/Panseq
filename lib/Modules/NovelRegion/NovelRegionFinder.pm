@@ -30,7 +30,6 @@ There are three modes of operation:
 'unique' - regions present only in one of the query strains and no others.
 'common_to_all' - regions present in all of the query strains and no reference strains.
 
-
 =cut
 
 =head1 ACKNOWLEDGEMENTS
@@ -47,7 +46,7 @@ The most recent version of the code may be found at:
 
 =head1 AUTHOR
 
-Your name (yourname@email.com)
+Chad Laing (chadlaing@gmail.com)
 
 =head2 Methods
 
@@ -481,9 +480,7 @@ sub _updateAlignmentCoords {
 sub _getNoDuplicates {
 	my ($self) = shift;
 
-	my %nonDuplicatedCoords;
-	
-	$self->logger->info("Getting no duplicates");
+	my %nonDuplicatedCoords;	
 
 	#algorithm
 	#A vs refs
@@ -503,11 +500,6 @@ sub _getNoDuplicates {
 			
 			my $referenceName = Modules::Fasta::SequenceName->new($ref);
 			next if $queryName->name eq $referenceName->name;
-
-			#if a query name as a reference hit we want to skip
-			# if ( defined $self->_queryFastaHeadersHash->{$ref} ) {
-			# 	next;
-			# }
 			
 			$nonDuplicatedCoords{$query} .= $self->_comparisonHash->{$query}->{$ref};
 			$self->logger->debug("query: $query ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}\n");
@@ -641,43 +633,6 @@ sub _getNegativeImageCoords {
 
 }
 
-#variables
-
-# sub novelRegionFinderMode {
-# 	my $self = shift;
-# 	$self->{'_NRF_novelRegionFinderMode'} = shift // return $self->{'_NRF_novelRegionFinderMode'};
-# }
-
-# sub _skipGatherFiles {
-# 	my $self = shift;
-# 	$self->{'_NRF_skipGatherFiles'} = shift // return $self->{'_NRF_skipGatherFiles'};
-# }
-
-# sub outputFileName {
-# 	my $self = shift;
-# 	$self->{'_NRF_outputFileName'} = shift // return $self->{'_NRF_outputFileName'};
-# }
-
-# sub comparisonHash {
-# 	my $self = shift;
-# 	$self->{'_NRF_comparisonHash'} = shift // return $self->{'_NRF_comparisonHash'};
-# }
-
-# sub _queryFastaNamesHash {
-# 	my $self = shift;
-# 	$self->{'_NRF_queryFastaNamesHash'} = shift // return $self->{'_NRF_queryFastaNamesHash'};
-# }
-
-# sub _adjacentJoiningSize {
-# 	my $self = shift;
-# 	$self->{'_NRF_adjacentJoiningSize'} = shift // return $self->{'_NRF_adjacentJoiningSize'};
-# }
-
-# sub novelRegionsHashRef {
-# 	my $self = shift;
-# 	$self->{'_NRF_novelRegionsHashRef'} = shift // return $self->{'_NRF_novelRegionsHashRef'};
-# }
-
 
 sub _dispatcher {
 	my ($self) = shift;
@@ -687,14 +642,16 @@ sub _dispatcher {
 		my $novelCoordsHashRef;
 
 		if ( $self->mode eq 'no_duplicates' ) {
+			$self->logger->info("Getting non-redundant query regions");
 			$novelCoordsHashRef = $self->_getNoDuplicates();
 		}
-		# elsif ( $self->novelRegionFinderMode eq 'common_to_all' ) {
+		#elsif ( $self->novelRegionFinderMode eq 'common_to_all' ) {
 		# 	$novelCoordsHashRef = $self->getCommonToAll();
 		# }
-		# elsif ( $self->novelRegionFinderMode eq 'unique' ) {
-		# 	$novelCoordsHashRef = $self->getUnique();
-		# }
+		elsif ( $self->mode eq 'unique' ) {
+			$self->logger->info("Getting unique regions of query strains");
+		 	$novelCoordsHashRef = $self->_getNoDuplicates();
+		}
 		else {
 		 	$self->logger->logconfess("incorrect type sent to getNovelRegions");
 		}		
@@ -705,25 +662,6 @@ sub _dispatcher {
 	}
 }
 
-# sub getUnique {
-# 	my ($self) = shift;
-
-# 	my %uniqueMatches;
-
-# 	foreach my $query (sort keys %{ $self->comparisonHash } ) {
-# 		my $qName = FileInteraction::Fasta::SequenceName->new($query);
-		
-# 		foreach my $ref ( keys %{ $self->comparisonHash->{$query} } ) {
-# 			my $rName = FileInteraction::Fasta::SequenceName->new($ref);
-# 			$self->logger->debug("Get unique: Query: $query Ref: $ref");
-
-# 			next if $qName->name eq $rName->name;
-# 			$uniqueMatches{$query} .= $self->comparisonHash->{$query}->{$ref};
-# 		}
-# 	}
-# 	my $sortedHashRef = $self->sortAndCompileCoordsHash( \%uniqueMatches );
-# 	return $self->getNegativeImageCoords($sortedHashRef);
-# }
 
 # sub getCommonToAll {
 # 	my ($self) = shift;

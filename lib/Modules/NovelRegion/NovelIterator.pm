@@ -232,18 +232,39 @@ sub run{
 	}
 	continue{
 		$numberOfRemainingFiles = scalar(@{$allFastaFiles});
-	}
+	}	
 
+	my $finalFile;
 	if(scalar(@{$allFastaFiles})==1){
 		#we need to check the _pan file against the reference directory files, if it exists
-		my $finalFile = $allFastaFiles->[0];
+		$finalFile = $allFastaFiles->[0];
+	}
+	else{
+		$self->logger->fatal("Failed to generate a single pan-genome file. Found " . scalar(@{$allFastaFiles}) . " files");
+		exit(1);
+	}
+
+	#need to run against the referenceDirectory files if they exist
+	if($self->settings->novelRegionFinderMode eq 'unique' || $self->settings->novelRegionFinderMode eq 'common_to_all'){
+		#with Roles::CombineFilesIntoSingleFile ([files to combine],outputFile)
+		my $refFile = $self->_combineFilesIntoSingleFile(
+			[$finalFile,$self->referenceFile],
+			$self->settings->baseDirectory . 'referenceFile_unique_common.fasta'
+		);
+
+		#query,reference,output file order to _processNucmerQueue
+		my $coordsFile = $self->_processNucmerQueue($self->queryFile,$refFile, $self->settings->baseDirectory . '_unique_common.coords');
+		my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $self->queryFile, ($self->queryFile . '_novelRegions'));
+		$self->panGenomeFile($novelRegionsFile);
+	}
+	elsif($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
 			$finalFile = $self->_performFinalNucmer($finalFile);
 		}
 		$self->panGenomeFile($finalFile);
 	}
 	else{
-		$self->logger->fatal("Failed to generate a single pan-genome file. Found " . scalar(@{$allFastaFiles}) . " files");
+		$self->logger->fatal("Unknown novelRegionFinderMode: " . $self->novelRegionFinderMode);
 		exit(1);
 	}
 }
@@ -388,9 +409,7 @@ sub _combineNovelRegionsAndReferenceFile{
 
 =head2 _printNovelRegionsFromQueue
 
-Takes in the coords file, the queryFile, and a retriever object.
-The retriever has the database of all initial query sequences and is passed around
-to avoid having to regenerate the database.
+Takes in the coords file, the queryFile, and an outputFile.
 The output file name is also taken in and returned from the sub.
 
 =cut

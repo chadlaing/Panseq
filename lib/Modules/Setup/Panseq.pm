@@ -185,7 +185,7 @@ sub _launchPanseq{
 		);
 		$novelIterator->run();
 	}
-	
+
 	$self->logger->info("Panseq mode set as " . $self->settings->runMode);
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
