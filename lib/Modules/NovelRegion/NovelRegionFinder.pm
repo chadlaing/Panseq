@@ -499,6 +499,8 @@ sub _getNoDuplicates {
 		foreach my $ref ( keys %{ $self->_comparisonHash->{$query} } ) {
 			
 			my $referenceName = Modules::Fasta::SequenceName->new($ref);
+
+			#the only reason the same sequence should be in the query and ref file
 			next if $queryName->name eq $referenceName->name;
 			
 			$nonDuplicatedCoords{$query} .= $self->_comparisonHash->{$query}->{$ref};
