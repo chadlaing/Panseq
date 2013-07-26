@@ -52,6 +52,7 @@ use Parallel::ForkManager;
 use Modules::Alignment::BlastResultFactory;
 use Modules::Alignment::SNPFinder;
 use Modules::Fasta::MultiFastaSequenceName;
+use DBI;
 use Role::Tiny::With;
 
 with 'Roles::CombineFilesIntoSingleFile';
@@ -95,6 +96,8 @@ sub _initialize{
 		}
 	}	
 
+	#define SQLite db
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","",""));
 
 	#default values
 	unless(defined $self->panGenomeOutputFile){
@@ -107,6 +110,17 @@ sub _initialize{
 
 	$self->_currentResult(0);
 }
+
+=head2 _sqliteDb
+
+Used for temp file store / retrieval of the core / accessory creation.
+
+=cut
+sub _sqliteDb{
+	my $self = shift;
+	$self->{'__sqliteDb'} = shift // return $self->{'__sqliteDb'};
+}
+
 
 =head3 logger
 
