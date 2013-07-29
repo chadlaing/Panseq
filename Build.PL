@@ -28,7 +28,10 @@ my $build=Module::Build->new(
 		'Tie::Log4perl'=>0,
 		'Statistics::R'=>0,
 		'Archive::Zip'=>0,
-		'Test::Pretty'=>0
+		'Test::Pretty'=>0,
+		'DBI'=>0,
+		'DBD::SQLite'=>0,
+		'DBIx::Connector'=>0
 	}
 );
 $build->create_build_script();
