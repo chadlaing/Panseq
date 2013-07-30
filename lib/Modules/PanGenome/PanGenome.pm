@@ -123,9 +123,6 @@ sub _initDb{
 	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT)");
 }
 
-
-
-
 =head2 _sqliteDb
 
 Used for temp file store / retrieval of the core / accessory creation.
