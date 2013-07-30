@@ -48,6 +48,7 @@ Chad Laing(chadlaing gmail com)
 
 package Modules::NovelRegion::NovelIterator;
 
+
 #includes
 use strict;
 use warnings;
@@ -62,6 +63,7 @@ use Modules::Fasta::MultiFastaSequenceName;
 use Parallel::ForkManager;
 use Log::Log4perl;
 use Role::Tiny::With;
+use DBI;
 
 with 'Roles::CombineFilesIntoSingleFile';
 
@@ -235,6 +237,7 @@ sub run{
 	}	
 
 	my $finalFile;
+
 	if(scalar(@{$allFastaFiles})==1){
 		#we need to check the _pan file against the reference directory files, if it exists
 		$finalFile = $allFastaFiles->[0];
@@ -268,7 +271,6 @@ sub run{
 		exit(1);
 	}
 }
-
 
 =head2
 

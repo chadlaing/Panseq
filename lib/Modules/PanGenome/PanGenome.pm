@@ -52,6 +52,7 @@ use Parallel::ForkManager;
 use Modules::Alignment::BlastResultFactory;
 use Modules::Alignment::SNPFinder;
 use Modules::Fasta::MultiFastaSequenceName;
+use DBIx::Connector;
 use Role::Tiny::With;
 
 with 'Roles::CombineFilesIntoSingleFile';
@@ -95,6 +96,8 @@ sub _initialize{
 		}
 	}	
 
+	#construct sqlite DB
+	$self->_initDb();
 
 	#default values
 	unless(defined $self->panGenomeOutputFile){
@@ -107,6 +110,29 @@ sub _initialize{
 
 	$self->_currentResult(0);
 }
+
+sub _initDb{
+	my $self = shift;
+
+	#define SQLite db
+	$self->_sqliteDb(DBIx::Connector->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+	my $dbh = $self->_sqliteDb();
+	$dbh->do("DROP TABLE IF EXISTS snp");
+	$dbh->do("DROP TABLE IF EXISTS binary");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT)");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT)");
+}
+
+=head2 _sqliteDb
+
+Used for temp file store / retrieval of the core / accessory creation.
+
+=cut
+sub _sqliteDb{
+	my $self = shift;
+	$self->{'__sqliteDb'} = shift // return $self->{'__sqliteDb'};
+}
+
 
 =head3 logger
 
@@ -310,72 +336,53 @@ sub run{
 	#process all XML files
 	foreach my $xml(@{$self->xmlFiles}){
 		$self->_processBlastXML($xml);
-		#unlink $xml;
+		unlink $xml;
 	}
-	$self->_combineTempFiles();
-}
-
-=head3 _combineTempFiles
-
-The coreTemp_ and accessoryTemp_ files generated need to be combined into single files.
-This does that.
-Default filenames are core_snps.txt, pan_genome.txt.
-Utilizes Roles::CombineFilesIntoSingleFile
-If two or more cores are available, will do both gathers at the same time.
-
-=cut
-
-
-sub _combineTempFiles{
-	my $self = shift;
-
-	my $fileNamesRef = $self->_getFileNamesFromDirectory($self->outputDirectory);
-	my $accessoryTempFilesRef = $self->_getAllTempFiles('accessoryTemp_',$fileNamesRef);
-	my $coreTempFilesRef = $self->_getAllTempFiles('coreTemp_',$fileNamesRef);
-
 	my $forker = Parallel::ForkManager->new($self->numberOfCores);
 	for my $count(1..2){
 		$forker->start and next;
-			if($count==1){
-				$self->_createHeaderLineForCombinedOutputFile($self->panGenomeOutputFile);
-				$self->_combineFilesIntoSingleFile(
-					$accessoryTempFilesRef,
-					$self->panGenomeOutputFile,
-					1
-				);
-				$self->_removeTempFiles($accessoryTempFilesRef);
-			}
-			elsif($count==2){
-				$self->_createHeaderLineForCombinedOutputFile($self->coreSnpsOutputFile);
-				$self->_combineFilesIntoSingleFile(
-					$coreTempFilesRef,
-					$self->coreSnpsOutputFile,
-					1
-				);
-				$self->_removeTempFiles($coreTempFilesRef);
-			}else{
-				$self->logger->logconfess("Count is $count, but should not be greater than 2");
-			}
-
+		if($count==1){
+			$self->_createOutputFile('snp',$self->outputDirectory . 'core_snps.txt');
+		}
+		elsif($count==2){
+			$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
+		}
+		else{
+			$self->logger->logconfess("Count is $count, but should not be greater than 2");
+		}	
 		$forker->finish;
 	}
 	$forker->wait_all_children;
+	$self->logger->info("Pan-genome generation complete");
 }
 
-=head3 _removeTempFiles
+=head3 _createOutputFile
 
-After combining the temp files, remove them.
-Takes in an arrayRef of file names.
+Takes output filename and database table name from function call.
 
 =cut
 
-sub _removeTempFiles{
-	my $self=shift;
-	my $fileNamesRef=shift;
+sub _createOutputFile{
+	my $self = shift;
+	my $table = shift;
+	my $outputFile = shift;
 
-	foreach my $file(@{$fileNamesRef}){
-		#unlink $file;
+	$self->logger->info("Creating output file $outputFile");
+	
+	my $headerLine = $self->_createHeaderLineForCombinedOutputFile();
+
+	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
+	$outFH->print($headerLine);
+
+	#print all rows from table
+	my $sql = qq{SELECT * FROM $table};
+	my $sth = $self->_sqliteDb->prepare("$sql");
+	$sth->execute();
+
+	while(my $row = $sth->fetchrow_arrayref()) {
+	    $outFH->print(join("\t",@{$row}) . "\n");
 	}
+	$outFH->close();	
 }
 
 
@@ -388,14 +395,12 @@ Position columns and contigName columns do not have the names redundantly printe
 
 sub _createHeaderLineForCombinedOutputFile{
 	my $self=shift;
-	my $outputFile=shift;
 
-	my $outFH = IO::File->new('>' . $outputFile) or die "Could not open $outputFile $!";
+	my $line='';
 	foreach my $name(@{$self->_orderedNames}){
-		$outFH->print("\t" . $name);
+		$line .= "\t" . $name;
 	}
-	$outFH->print("\n");
-	$outFH->close();
+	return ($line . "\n");
 }
 
 
@@ -520,7 +525,9 @@ sub _processQueue {
 		}
 
 		if(defined $coreLines){
-			push @coreOutputBuffer, $coreLines;
+			foreach my $line(@{$coreLines}){
+				push @coreOutputBuffer, $line;
+			}			
 		}
 		else{
 			$self->logger->debug("No core lines for $item $resultNumber");
@@ -545,29 +552,40 @@ sub _emptyBuffers{
 	my $accessoryRef = shift;
 	my $coreRef = shift;
 	my $resultNumber = shift;
+	
+	$self->_insertIntoDb('binary',$accessoryRef);	
+	$self->_insertIntoDb('snp',$coreRef);		
+}
 
-	#accessory items have previously been checked (in _processQueue) for definedness
-	my $accOutFH = IO::File->new('>>' . $self->outputDirectory . 'accessoryTemp_' . $resultNumber) or $self->logger->logdie("$!");
-	foreach my $accLine(@{$accessoryRef}){
-		$accOutFH->print($accLine . "\n");
-	}
-	$accOutFH->close();
+sub _insertIntoDb{
+	my $self = shift;
+	my $table = shift;
+	my $dataRef = shift;
 
-	if(defined $coreRef){
-		my $coreOutFH = IO::File->new('>>' . $self->outputDirectory . 'coreTemp_' . $resultNumber) or $self->logger->logdie("$!");
-		foreach my $arrayRef(@{$coreRef}){
-			foreach my $line(@{$arrayRef}){
-				unless(defined $line){
-					next;
-				}
-				$coreOutFH->print($line . "\n");
-			}
+	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
+	# INSERT INTO 'tablename'
+ 	# SELECT 'data1' AS 'column1', 'data2' AS 'column2'
+	# UNION SELECT 'data3', 'data4'
+	# UNION SELECT 'data5', 'data6'
+	# UNION SELECT 'data7', 'data8'
+	# used UNION ALL due to performance increase (see comments of above linked thread)
+
+	my $sql='';
+	my $counter=0;
+	foreach my $dataLine(@{$dataRef}){
+		unless(defined $dataLine){
+			next;
 		}
-		$coreOutFH->close();
+
+		if($counter ==0){
+			$sql .= qq{INSERT INTO $table(value) SELECT '$dataRef->[0]' AS 'value'};
+			$counter =1;
+		}
+		else{
+			$sql .= qq{ UNION ALL SELECT '$dataLine'};
+		}
 	}
-	else{
-		$self->logger->logwarn("coreRef buffer undefined in Modules::Alignment::PanGenome::_emptyBuffers resultNumber: $resultNumber");
-	}
+	$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
 }
 
 sub _getCoreAccessoryType {

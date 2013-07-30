@@ -204,7 +204,7 @@ Chad Laing (chadlaing gmail com)
 
 =cut
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin../";
 use warnings;
 use strict;
 use Carp;
@@ -372,8 +372,8 @@ sub _setGroup{
 		$self->logger->debug("group2 set to $outputHashRef");
 	}
 	else{
-			$self->logger->error("Incorrect group type (other than group1 or group2) specified in FET");
-			exit(1);
+		$self->logger->error("Incorrect group type (other than group1 or group2) specified in FET");
+		exit(1);
 	}
 
 	return 1;

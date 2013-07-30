@@ -370,7 +370,7 @@ sub _performPanGenomeAnalyses{
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
 		'xmlFiles'=>$blaster->outputXMLfiles,
 		'numberOfCores'=>$self->settings->numberOfCores,
-		'resultArraySize'=>5,
+		'resultArraySize'=>10,
 		'percentIdentityCutoff'=>$self->settings->percentIdentityCutoff,
 		'coreGenomeThreshold'=>$self->settings->coreGenomeThreshold,
 		'outputDirectory'=>$self->settings->baseDirectory,

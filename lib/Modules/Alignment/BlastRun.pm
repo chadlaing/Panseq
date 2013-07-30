@@ -247,8 +247,17 @@ sub _copyExtensions{
 		my $oldFile = $file . '.' . $extension;
 		my $newFile = $file . $counter . '.' . $extension;
 
-		copy("$oldFile","$newFile") or $self->logger->logdie("Could not make copy of BLAST $oldFile to $newFile");
+		#copy("$oldFile","$newFile") or $self->logger->logdie("Could not make copy of BLAST $oldFile to $newFile");
 		$self->logger->debug("Copying BLAST database file $oldFile to $newFile");
+		eval{
+			my $systemLine = 'cp -f -p ' . $oldFile . ' ' . $newFile;
+			system($systemLine);
+		};
+
+		if($@){
+			$self->logger->fatal("Could not copy $oldFile to $newFile");
+		}
+
 		push @{$self->_filesToRemove}, $newFile;
 	}
 }
