@@ -569,6 +569,7 @@ sub _insertIntoDb{
 	# UNION SELECT 'data5', 'data6'
 	# UNION SELECT 'data7', 'data8'
 	# used UNION ALL due to performance increase (see comments of above linked thread)
+	# note that SQLite has default of SQLITE_MAX_COMPOUND_SELECT=500, so we need to account for this
 
 	my $sql='';
 	my $counter=0;
@@ -576,14 +577,20 @@ sub _insertIntoDb{
 		unless(defined $dataLine){
 			next;
 		}
+		$counter++;
 
-		if($counter ==0){
-			$sql .= qq{INSERT INTO $table(value) SELECT '$dataRef->[0]' AS 'value'};
-			$counter =1;
+		if($counter ==1){
+			$sql .= qq{INSERT INTO $table(value) SELECT '$dataLine' AS 'value'};
 		}
 		else{
 			$sql .= qq{ UNION ALL SELECT '$dataLine'};
-		}
+
+			if($counter == 500){				
+				$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
+				$counter=0;
+				$sql='';
+			}
+		}			
 	}
 	$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
 }
