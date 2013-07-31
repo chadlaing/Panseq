@@ -328,6 +328,11 @@ sub _currentResult{
 	$self->{'__currentResult'}=shift // return $self->{'__currentResult'};
 }
 
+sub _sqlSelectNumber{
+	my $self=shift;
+	$self->{'__sqlSelectNumber'}=shift // return $self->{'__sqlSelectNumber'};
+}
+
 
 sub run{
 	my $self=shift;
