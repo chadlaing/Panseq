@@ -232,7 +232,7 @@ sub _getSingleBaseResult{
 	}
 
 	if(scalar keys %baseTypes > 1){
-		return (('snp_' . ($self->resultNumber + $position)) . $baseLine . $positionLine);
+		return ($baseLine . $positionLine);
 	}
 	else{
 		return undef;

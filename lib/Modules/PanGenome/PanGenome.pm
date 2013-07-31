@@ -52,7 +52,7 @@ use Parallel::ForkManager;
 use Modules::Alignment::BlastResultFactory;
 use Modules::Alignment::SNPFinder;
 use Modules::Fasta::MultiFastaSequenceName;
-use DBIx::Connector;
+use DBI;
 use Role::Tiny::With;
 
 with 'Roles::CombineFilesIntoSingleFile';
@@ -115,12 +115,13 @@ sub _initDb{
 	my $self = shift;
 
 	#define SQLite db
-	$self->_sqliteDb(DBIx::Connector->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
-	my $dbh = $self->_sqliteDb();
-	$dbh->do("DROP TABLE IF EXISTS snp");
-	$dbh->do("DROP TABLE IF EXISTS binary");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT)");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT)");
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+	
+	$self->_sqliteDb->do("DROP TABLE IF EXISTS snp");
+	$self->_sqliteDb->do("DROP TABLE IF EXISTS binary");
+	$self->_sqliteDb->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT)");
+	$self->_sqliteDb->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT)");
+	$self->_sqliteDb->disconnect();
 }
 
 =head2 _sqliteDb
@@ -333,14 +334,25 @@ sub run{
 
 	$self->_generateOrderedNamesArray();
 
+	my $forker = Parallel::ForkManager->new($self->numberOfCores);
+	my $counter=0;
 	#process all XML files
 	foreach my $xml(@{$self->xmlFiles}){
-		$self->_processBlastXML($xml);
-		unlink $xml;
+		$counter++;
+		$forker->start and next;
+			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+			$self->_processBlastXML($xml,$counter);
+			unlink $xml;
+			$self->_sqliteDb->disconnect();
+		$forker->finish;
 	}
-	my $forker = Parallel::ForkManager->new($self->numberOfCores);
+	$forker->wait_all_children;
+	$self->logger->info("Procssing XML files complete");
+
 	for my $count(1..2){
 		$forker->start and next;
+		#reopen database handle that has been closed from the forking above
+		$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
 		if($count==1){
 			$self->_createOutputFile('snp',$self->outputDirectory . 'core_snps.txt');
 		}
@@ -442,29 +454,24 @@ sub _generateOrderedNamesArray{
 
 sub _processBlastXML {
 	my $self = shift;
-	my $blastXMLFile    = shift;
+	my $blastXMLFile = shift;
+	my $counter=shift;
 
-	$self->logger->info("Processing Blast XML file $blastXMLFile with " . $self->numberOfCores . ' cores and resultArraySize of ' . $self->resultArraySize);
+	$self->logger->info("Processing Blast XML file $blastXMLFile, counter: $counter");
+	$counter *=1000000000;
 
-	my $forker        = Parallel::ForkManager->new($self->numberOfCores);
 	my @resultArray;
-
 	#create filehandle
 	my $xmlFH = IO::File->new( '<' . $blastXMLFile ) or die "$!";
 	my $xmler = Modules::Alignment::BlastResultFactory->new($xmlFH);
 
 	while ( my $result = $xmler->nextResult) {
 		push @resultArray, $result;
-
-		if ( scalar(@resultArray) == $self->resultArraySize ) {
-			$self->logger->debug("Starting fork. Result " . $self->_currentResult);
-			$forker->start and next;
-				my ($accRef,$coreRef,$resultNumber)=$self->_processQueue(\@resultArray);
-				$self->_emptyBuffers($accRef,$coreRef,$resultNumber);
-			$forker->finish;
+		if ( scalar(@resultArray) == $self->resultArraySize ) {		
+			my ($accRef,$coreRef)=$self->_processQueue(\@resultArray,$counter);
+			$self->_emptyBuffers($accRef,$coreRef);		
 		}
 	}continue {
-		$self->_currentResult($self->_currentResult +1);
 		if ( scalar(@resultArray) == $self->resultArraySize ) {
 			$self->logger->debug("Result array emptied");
 			@resultArray = ();
@@ -472,11 +479,9 @@ sub _processBlastXML {
 	}
 	#$account for stored but unprocessed items
 	if(scalar(@resultArray) > 0){
-		my ($accRef,$coreRef,$resultNumber)=$self->_processQueue(\@resultArray);
-		$self->_emptyBuffers($accRef,$coreRef,$resultNumber);
-	}
-	
-	$forker->wait_all_children();
+		my ($accRef,$coreRef)=$self->_processQueue(\@resultArray,$counter);
+		$self->_emptyBuffers($accRef,$coreRef);
+	}	
 	$xmlFH->close();
 }
 
@@ -492,21 +497,15 @@ a large range to work with.
 =cut
 
 sub _processQueue {
-	my ($self) = shift;
-
-	my $arrayRef        = shift;
-	my $locusNumber    = $self->_currentResult;
+	my $self = shift;
+	my $arrayRef = shift;
+	my $counter=shift;
 
 	my @coreOutputBuffer;
 	my @accessoryOutputBuffer;
 
-	#give each temp process a billion number range to work with
-	my $resultNumber = $locusNumber * 1000000000;
-
 	foreach my $item ( @{$arrayRef} ) {
-		$resultNumber++;
-		$self->logger->debug("Processing item $resultNumber"); 
-
+		$counter++;
 		my $type;
 		if($self->coreGenomeThreshold == 0){
 			$type = 'accessory';
@@ -515,7 +514,7 @@ sub _processQueue {
 			$type = $self->_getCoreAccessoryType($item);
 		}
 
-		my ($accessoryLine,$coreLines)=$self->_processResult($item, $type, $resultNumber);
+		my ($accessoryLine,$coreLines)=$self->_processResult($item, $type,$counter);
 
 		if(defined $accessoryLine){
 			push @accessoryOutputBuffer, $accessoryLine;
@@ -530,10 +529,10 @@ sub _processQueue {
 			}			
 		}
 		else{
-			$self->logger->debug("No core lines for $item $resultNumber");
+			$self->logger->debug("No core lines for $item");
 		}
 	}
-	return(\@accessoryOutputBuffer,\@coreOutputBuffer,$resultNumber);
+	return(\@accessoryOutputBuffer,\@coreOutputBuffer);
 }
 
 
@@ -551,7 +550,6 @@ sub _emptyBuffers{
 
 	my $accessoryRef = shift;
 	my $coreRef = shift;
-	my $resultNumber = shift;
 	
 	$self->_insertIntoDb('binary',$accessoryRef);	
 	$self->_insertIntoDb('snp',$coreRef);		
@@ -650,10 +648,9 @@ for direct use in the Muscle alignment program.
 
 sub _processResult {
 	my $self = shift;
-
 	my $result = shift;
 	my $type = shift;
-	my $resultNumber=shift;
+	my $counter=shift;
 
 	my $resultHash={};
 	my @fastaArray;
@@ -673,21 +670,19 @@ sub _processResult {
 			$resultHash->{$hit}->{'startBp'}=$hitObj->hsp_hit_from;
 
 			#create a fasta-file format array if core
-			if($type eq 'core'){
-				$self->logger->debug("Item $resultNumber is core");			
+			if($type eq 'core'){		
  				push @fastaArray, ( '>' . $hitObj->hit_def . "\n" . $hitObj->hsp_hseq . "\n");
  				$startBpHash{ $hitObj->hit_def } = $hitObj->hsp_hit_from;
 			}
 		}    #end of foreach
 		if($type eq 'core'){
-			$self->logger->debug("Sending $resultNumber for core analyses.");
-			$coreResultArrayRef = $self->_getCoreResult(\@fastaArray, \%startBpHash, $resultNumber);
+			$coreResultArrayRef = $self->_getCoreResult(\@fastaArray, \%startBpHash,$counter++);
 		}
 	}#end of if
 	else{
 		$self->logger->info("Result :" . $result->name . " has no hits!");
 	}
-	my $accessoryResultString = $self->_getAccessoryResult($resultNumber,$resultHash,$result->query_def);
+	my $accessoryResultString = $self->_getAccessoryResult($resultHash,$result->query_def,$counter++);
 
 	#return the accessory and core results
 	return($accessoryResultString,$coreResultArrayRef);
@@ -729,23 +724,20 @@ sub _getAccessoryValue{
 
 sub _getAccessoryResult{
 	my $self=shift;
-	my $resultNumber = shift;
 	my $resultHashRef =shift;
 	my $queryDef = shift;
+	my $counter=shift;
 
 	#create the output in correct order
 	#the first element of the array is the name of the locus
-	#the following are the results per individual genome
-	my $counter=0;
-
+	#the following are the results per individual genome	
 	#add query name as first element of array
-	my $returnLine= $self->_getAccessoryLocusName($resultNumber, $queryDef);
+
 	my $valueLine='';
 	my $positionLine='';
 	my $contigNameLine='';
 
 	foreach my $query (@{$self->_orderedNames}) {
-		$counter++;
 		$valueLine .= "\t";
 		$positionLine .="\t";
 		$contigNameLine .="\t";
@@ -761,83 +753,50 @@ sub _getAccessoryResult{
 			$contigNameLine .= '-';
 		}
 	}
-	$returnLine .= ($valueLine . $positionLine . $contigNameLine );
+	my $returnLine = ($valueLine . $positionLine . $contigNameLine );
 	return $returnLine;
 }
-
-
-=head2 _getAccessoryLocusName
-
-Returns either the supplied name or a locus and number combination.
-If queryFile was used for the pan-genome, then default to the given name.
-Otherwise, use the locus and number.
-
-=cut
-
-sub _getAccessoryLocusName{
-	my $self=shift;
-	my $number = shift;
-	my $queryDef = shift;
-
-	if(defined $self->useSuppliedLabels && $self->useSuppliedLabels == 1){
-		return $queryDef;
-	}
-
-	return ('locus_' . $number);
-}
-
 
 
 sub _getCoreResult {
 	my $self = shift;
 
 	my $fastaArrayRef = shift;
-	my $startBpHashRef = shift;
+	my $startBpHashRef = shift;	
 	my $resultNumber=shift;
 
- 	#create temp files for muscle
- 	my $tempInFile = $self->outputDirectory . 'muscleTemp_in' . $resultNumber;
- 	my $tempInFH  = IO::File->new('>'. $tempInFile) or die "$!";
- 	my $tempOutFile = $self->outputDirectory . 'muscleTemp_out' . $resultNumber;
- 	my $tempOutFH = IO::File->new('>' . $tempOutFile) or die "$!";
-	
- 	$tempInFH->print(@{$fastaArrayRef});	
- 	$self->_runMuscle($tempInFile, $tempOutFile);
-	
-# 	#close the open FH
-	$tempInFH->close();
-	$tempOutFH->close();
-	
-# 	#open the output for reading
-	my $resultInFH = IO::File->new('<'. $tempOutFile) or die "$!";	
-	my @alignedFastaSeqs = $resultInFH->getlines();
-	$resultInFH->close();
+	#create temp files for muscle
+	my $tempInFile = $self->outputDirectory . 'muscleTemp_in' . $resultNumber;
+	my $tempInFH = IO::File->new('>'. $tempInFile) or die "$!";
+	my $tempOutFile = $self->outputDirectory . 'muscleTemp_out' . $resultNumber;
+	my $tempOutFH = IO::File->new('+>' . $tempOutFile) or die "$!";
 
-# 	#delete temp files
-	#unlink $tempInFile;
-	#unlink $tempOutFile;
-
-# 	#add SNP information to the return
- 	my $snpDetective = Modules::Alignment::SNPFinder->new(
- 		'orderedNames'=>$self->_orderedNames,
- 		'alignedFastaSequences'=>\@alignedFastaSeqs,
- 		'resultNumber'=>$resultNumber,
- 		'startBpHashRef'=>$startBpHashRef,
- 		'resultNumber'=>$resultNumber
- 	);	
- 	my $snpDataArrayRef = $snpDetective->findSNPs();
- 	#this returns undef if there are no SNPs
- 	return $snpDataArrayRef;
-}
-
-sub _runMuscle{
-	my $self=shift;
-	my $inFile = shift;
-	my $outFile = shift;
-	
-	my $systemLine = $self->muscleExecutable . ' -in ' . $inFile . ' -out ' . $outFile . ' -maxiters 3 -quiet';
+	$tempInFH->print(@{$fastaArrayRef});	
+	my $systemLine = $self->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
 	system($systemLine);
+
+	# #close the open FH
+	$tempInFH->close();	
+	my @alignedFastaSeqs = $tempOutFH->getlines();
+	$tempOutFH->close();
+
+	# #delete temp files
+	unlink $tempInFile;
+	unlink $tempOutFile;
+
+	#add SNP information to the return
+	my $snpDetective = Modules::Alignment::SNPFinder->new(
+		 'orderedNames'=>$self->_orderedNames,
+		 'alignedFastaSequences'=>\@alignedFastaSeqs,
+		 'startBpHashRef'=>$startBpHashRef,
+		 'resultNumber'=>$resultNumber,
+	 );	
+	 my $snpDataArrayRef = $snpDetective->findSNPs();
+	 #this returns undef if there are no SNPs
+	 return $snpDataArrayRef;	
 }
+
+
 
 1;
 
