@@ -354,6 +354,7 @@ sub _performPanGenomeAnalyses{
 		'word_size'=>20,
 		'num_threads'=>1,
 		'numberOfSplits'=>$self->settings->numberOfCores,
+		'max_target_seqs'=>1000000,
 		'out'=>$self->settings->baseDirectory  
 	);
 	$blaster->run();
@@ -369,7 +370,7 @@ sub _performPanGenomeAnalyses{
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
 		'xmlFiles'=>$blaster->outputXMLfiles,
 		'numberOfCores'=>$self->settings->numberOfCores,
-		'resultArraySize'=>10,
+		'resultArraySize'=>100,
 		'percentIdentityCutoff'=>$self->settings->percentIdentityCutoff,
 		'coreGenomeThreshold'=>$self->settings->coreGenomeThreshold,
 		'outputDirectory'=>$self->settings->baseDirectory,
