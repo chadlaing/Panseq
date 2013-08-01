@@ -97,6 +97,8 @@ sub _initialize{
 	}	
 
 	#construct sqlite DB
+	$self->_sqlString({});
+	$self->_sqlSelectNumber({});
 	$self->_initDb();
 
 	#default values
@@ -115,13 +117,26 @@ sub _initDb{
 	my $self = shift;
 
 	#define SQLite db
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
 	
-	$self->_sqliteDb->do("DROP TABLE IF EXISTS snp");
-	$self->_sqliteDb->do("DROP TABLE IF EXISTS binary");
-	$self->_sqliteDb->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT)");
-	$self->_sqliteDb->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT)");
-	$self->_sqliteDb->disconnect();
+	$dbh->do("DROP TABLE IF EXISTS snp");
+	$dbh->do("DROP TABLE IF EXISTS binary");
+	$dbh->do("DROP TABLE IF EXISTS strain");
+	$dbh->do("DROP TABLE IF EXISTS contig");
+
+	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
+	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, value TEXT,strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+
+	# trackartist INTEGER,
+ # 	FOREIGN KEY(trackartist) REFERENCES artist(artistid)
+	$dbh->disconnect();
+
+	$self->_sqlSelectNumber->{'binary'}=0;
+	$self->_sqlSelectNumber->{'snp'}=0;
+	$self->_sqlString->{'binary'}='';
+	$self->_sqlString->{'snp'}='';
 }
 
 =head2 _sqliteDb
@@ -333,6 +348,11 @@ sub _sqlSelectNumber{
 	$self->{'__sqlSelectNumber'}=shift // return $self->{'__sqlSelectNumber'};
 }
 
+sub _sqlString{
+	my $self=shift;
+	$self->{'__sqlString'}=shift // return $self->{'__sqlString'};
+}
+
 
 sub run{
 	my $self=shift;
@@ -465,99 +485,32 @@ sub _processBlastXML {
 	$self->logger->info("Processing Blast XML file $blastXMLFile, counter: $counter");
 	$counter *=1000000000;
 
-	my @resultArray;
-	#create filehandle
 	my $xmlFH = IO::File->new( '<' . $blastXMLFile ) or die "$!";
 	my $xmler = Modules::Alignment::BlastResultFactory->new($xmlFH);
 
-	while ( my $result = $xmler->nextResult) {
-		push @resultArray, $result;
-		if ( scalar(@resultArray) == $self->resultArraySize ) {		
-			my ($accRef,$coreRef)=$self->_processQueue(\@resultArray,$counter);
-			$self->_emptyBuffers($accRef,$coreRef);		
-		}
-	}continue {
-		if ( scalar(@resultArray) == $self->resultArraySize ) {
-			$self->logger->debug("Result array emptied");
-			@resultArray = ();
-		}
-	}
-	#$account for stored but unprocessed items
-	if(scalar(@resultArray) > 0){
-		my ($accRef,$coreRef)=$self->_processQueue(\@resultArray,$counter);
-		$self->_emptyBuffers($accRef,$coreRef);
-	}	
-	$xmlFH->close();
-}
-
-
-=head3 _processQueue
-
-Takes in the BLAST XML data and extracts the core / accessory alignment information from each.
-Core is only output if it meets the criteria.
-Accessory +/- is output for all loci.
-As the number of XML results in the array can vary, the output number is multiplied to give each fork
-a large range to work with.
-
-=cut
-
-sub _processQueue {
-	my $self = shift;
-	my $arrayRef = shift;
-	my $counter=shift;
-
-	my @coreOutputBuffer;
-	my @accessoryOutputBuffer;
-
-	foreach my $item ( @{$arrayRef} ) {
-		$counter++;
+	while ( my $result = $xmler->nextResult) {	
 		my $type;
 		if($self->coreGenomeThreshold == 0){
 			$type = 'accessory';
 		}
 		else{
-			$type = $self->_getCoreAccessoryType($item);
+			$type = $self->_getCoreAccessoryType($result);
 		}
+		my ($accessoryLine,$coreLines)=$self->_processResult($result, $type,$counter);
 
-		my ($accessoryLine,$coreLines)=$self->_processResult($item, $type,$counter);
+		$self->_insertIntoDb('binary',[$accessoryLine]);
+		$self->_insertIntoDb('snp',$coreLines);
+	}	
+	$xmlFH->close();
 
-		if(defined $accessoryLine){
-			push @accessoryOutputBuffer, $accessoryLine;
-		}
-		else{
-			$self->logger->logconfess("accessoryLine should be defined for every input");
-		}
-
-		if(defined $coreLines){
-			foreach my $line(@{$coreLines}){
-				push @coreOutputBuffer, $line;
-			}			
-		}
-		else{
-			$self->logger->debug("No core lines for $item");
-		}
+	#process any remaining sql
+	if($self->_sqlString->{'binary'} ne ''){
+		$self->_sqliteDb->do($self->_sqlString->{'binary'}) or $self->logger->logdie("$!");
 	}
-	return(\@accessoryOutputBuffer,\@coreOutputBuffer);
-}
 
-
-=head3 _emptyBuffers
-
-Takes in an arrayRef to the accessory lines (an array of lines for printing)
-and an arrayRef of arrayRefs for core lines (an array where every item is itself an arrayRef)
-These need to get printed to temp files in the $self->outputDirectory that will be combined at the end.
-The result number ensures no duplicate temp file names.
-
-=cut
-
-sub _emptyBuffers{
-	my $self=shift;
-
-	my $accessoryRef = shift;
-	my $coreRef = shift;
-	
-	$self->_insertIntoDb('binary',$accessoryRef);	
-	$self->_insertIntoDb('snp',$coreRef);		
+	if($self->_sqlString->{'snp'} ne ''){
+		$self->_sqliteDb->do($self->_sqlString->{'snp'}) or $self->logger->logdie("$!");
+	}
 }
 
 sub _insertIntoDb{
@@ -574,8 +527,19 @@ sub _insertIntoDb{
 	# used UNION ALL due to performance increase (see comments of above linked thread)
 	# note that SQLite has default of SQLITE_MAX_COMPOUND_SELECT=500, so we need to account for this
 
-	my $sql='';
-	my $counter=0;
+	# Customer
+	# ==================
+	# Customer_ID | Name
+
+	# Order
+	# ==============================
+	# Order_ID | Customer_ID | Price
+	# insert into "order" (customer_id, price) values \
+	# ((select customer_id from customer where name = 'John'), 12.34);
+
+	my $sql=$self->_sqlString->{$table};
+	my $counter = $self->_sqlSelectNumber->{$table};
+
 	foreach my $dataLine(@{$dataRef}){
 		unless(defined $dataLine){
 			next;
@@ -595,7 +559,8 @@ sub _insertIntoDb{
 			}
 		}			
 	}
-	$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
+	$self->_sqlSelectNumber->{$table}=$counter;
+	$self->_sqlString->{$table}=$sql;
 }
 
 sub _getCoreAccessoryType {
