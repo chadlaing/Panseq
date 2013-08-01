@@ -433,7 +433,10 @@ sub _createOutputFile{
 	$outFH->print($headerLine);
 
 	#print all rows from table
-	my $sql = qq{SELECT * FROM $table};
+	#SELECT * FROM TableA
+	#INNER JOIN TableB
+	#ON TableA.name = TableB.name
+	my $sql = qq{SELECT value,start_bp,contig.name FROM $table INNER JOIN contig };
 	my $sth = $self->_sqliteDb->prepare("$sql");
 	$sth->execute();
 
@@ -556,7 +559,7 @@ sub _insertIntoDb{
 	# insert into "order" (customer_id, price) values \
 	# ((select customer_id from customer where name = 'John'), 12.34);
 
-
+	#http://www.daniweb.com/software-development/perl/threads/339979/assign-query-result-to-variable
 	#The following query should return only one row containing one integer.
 	# $sth=$dbh->prepare("SELECT 5 as lucky_number;") ||
 	# die "Prepare failed: $DBI::errstr\n";
@@ -566,7 +569,6 @@ sub _insertIntoDb{
 
 	my $sql=$self->_sqlString->{$table};
 	my $counter = $self->_sqlSelectNumber->{$table};
-
 	
 	foreach my $contig(keys %{$dataHash}){
 		if($contig eq 'NA'){
