@@ -91,28 +91,13 @@ sub findSNPs{
 	
 	my ($alignmentLength,$alignedHashRef) = $self->_getHashOfFastaAlignment();
 	$self->_setOffsetHash($alignedHashRef);
-
-	my @orderedResults; 
-	my $nameLine = $self->_getFastaNamesForOutput($alignedHashRef);
+	my $resultHash = {};
+	
 	for my $position(0..($alignmentLength-1)){
-		my $resultLine = $self->_getSingleBaseResult($position,$alignedHashRef);
-
-		if(defined $resultLine){
-			$resultLine .= $nameLine;
-
-			#add the contig names as tab-delimited values at the start of each new contig
-			push @orderedResults,$resultLine;
-		}
-		
-	}
+		$resultHash = $self->_getSingleBaseResult($position,$alignedHashRef,$resultHash);		
+	}	
 	
-	if(scalar(@orderedResults) > 0){
-		return \@orderedResults;
-	}
-	else{
-		return undef;
-	}
-	
+	return $resultHash;
 }
 
 
@@ -187,13 +172,22 @@ sub _getSingleBaseResult{
 	my $self = shift;
 	my $position=shift;
 	my $alignedHashRef=shift;
+	my $resultHash=shift;
 
 	my %baseTypes;
-	my $baseLine='';
-	my $positionLine='';
+	
+	#$resultHash->{contig}=[
+	#									{
+	#										value=>snp_nucleotide
+	#										startBp=>integer
+	#									}
+	#								]
 
 	foreach my $name(@{$self->orderedNames}){
 		my $base;
+		my $contig = $alignedHashRef->{$name}->{'fasta'} // 'NA';
+		my $items = $resultHash->{$contig} // undef;
+
 		#in the case where there was no BLAST hit, there is no hash key to look up
 		#need to fill in the position as '-'
 		if(exists $alignedHashRef->{$name}->{'fasta'}){
@@ -210,33 +204,33 @@ sub _getSingleBaseResult{
 				$baseTypes{$base}=1;
 			}
 			
-			$baseLine .= ("\t$base");	
+			#$baseLine .= ("\t$base");		
+
 			my $startBp = $self->startBpHashRef->{$alignedHashRef->{$name}->{'fasta'}};		
 
 			#update _dashOffset if need be
 			#if the char is a '-', there is no position information for the original sequence, so report a 0
+			my $finalPosition;
 			if($base eq '-'){
-				$positionLine .= ("\t0");	
+				$finalPosition = 0;	
 				#$self->logger->debug("Adjusting $name in " . $alignedHashRef->{$name}->{'fasta'} . " startbp $startBp position $position");
 				$dashOffset++;
 				$self->_dashOffset->{$name}=$dashOffset;
 			}
 			else{
-				$positionLine .= ("\t" . ($startBp + $position - $dashOffset));	
-			}		
+				$finalPosition = ($startBp + $position - $dashOffset);	
+			}
+			push @{$items}, {startBp=>$finalPosition,value=>$base};	
 		}
 		else{
-			$baseLine .= ("\t" . '-');
-			$positionLine .= ("\t" . '-');
+			# $baseLine .= ("\t" . '-');
+			# $positionLine .= ("\t" . '-');
+			push @{$items}, {startBp=>'-',value=>'-'};
 		}
+		$resultHash->{$contig}=$items;
 	}
 
-	if(scalar keys %baseTypes > 1){
-		return ($baseLine . $positionLine);
-	}
-	else{
-		return undef;
-	}
+	return $resultHash;
 }
 
 

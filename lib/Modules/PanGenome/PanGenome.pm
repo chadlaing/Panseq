@@ -117,7 +117,7 @@ sub _initDb{
 	my $self = shift;
 
 	#define SQLite db
-	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
 	
 	$dbh->do("DROP TABLE IF EXISTS snp");
 	$dbh->do("DROP TABLE IF EXISTS binary");
@@ -125,9 +125,9 @@ sub _initDb{
 	$dbh->do("DROP TABLE IF EXISTS contig");
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
-	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, value TEXT,strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
 
 	# trackartist INTEGER,
  # 	FOREIGN KEY(trackartist) REFERENCES artist(artistid)
@@ -354,10 +354,31 @@ sub _sqlString{
 }
 
 
+sub _populateStrainTable{
+	my $self=shift;
+	my $mfsn=shift;
+
+	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	foreach my $name(sort keys %{$mfsn->sequenceNameHash}){
+		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
+		$dbh->do($sql);
+
+		foreach my $contig(@{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders}){
+			my $contigSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$contig")};
+			$dbh->do($contigSql);
+		}		
+	}
+	$dbh->disconnect();
+}
+
 sub run{
 	my $self=shift;
+	
+	my ($mfsn,$orderedNames)=$self->_generateOrderedNamesArray();
+	$self->_mfsn($mfsn);
+	$self->_orderedNames($orderedNames);
 
-	$self->_generateOrderedNamesArray();
+	$self->_populateStrainTable($self->_mfsn);
 
 	my $forker = Parallel::ForkManager->new($self->numberOfCores);
 	my $counter=0;
@@ -470,10 +491,9 @@ sub _generateOrderedNamesArray{
 	my $multiFastaSN = Modules::Fasta::MultiFastaSequenceName->new(
 		'fileName'=>$self->queryFile
 	);
-	$self->_mfsn($multiFastaSN);
-
+	
+	return ($multiFastaSN,[sort keys %{$multiFastaSN->sequenceNameHash}])
 	#order the hash for a consistent order of names
-	$self->_orderedNames([sort keys %{$self->_mfsn->sequenceNameHash}]);
 }
 
 
@@ -496,10 +516,9 @@ sub _processBlastXML {
 		else{
 			$type = $self->_getCoreAccessoryType($result);
 		}
-		my ($accessoryLine,$coreLines)=$self->_processResult($result, $type,$counter);
-
-		$self->_insertIntoDb('binary',[$accessoryLine]);
-		$self->_insertIntoDb('snp',$coreLines);
+		my ($accessoryHash,$coreHash)=$self->_processResult($result, $type,$counter);
+		$self->_insertIntoDb('binary',$accessoryHash);
+		$self->_insertIntoDb('snp',$coreHash);
 	}	
 	$xmlFH->close();
 
@@ -516,7 +535,7 @@ sub _processBlastXML {
 sub _insertIntoDb{
 	my $self = shift;
 	my $table = shift;
-	my $dataRef = shift;
+	my $dataHash = shift;
 
 	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
 	# INSERT INTO 'tablename'
@@ -537,28 +556,46 @@ sub _insertIntoDb{
 	# insert into "order" (customer_id, price) values \
 	# ((select customer_id from customer where name = 'John'), 12.34);
 
+
+	#The following query should return only one row containing one integer.
+	# $sth=$dbh->prepare("SELECT 5 as lucky_number;") ||
+	# die "Prepare failed: $DBI::errstr\n";
+	# $sth->execute() ||
+	# die "Couldn't execute query: $DBI::errstr\n";
+	# my @record = $sth->fetchrow_array; #Assign result to array variable
+
 	my $sql=$self->_sqlString->{$table};
 	my $counter = $self->_sqlSelectNumber->{$table};
 
-	foreach my $dataLine(@{$dataRef}){
-		unless(defined $dataLine){
+	
+	foreach my $contig(keys %{$dataHash}){
+		if($contig eq 'NA'){
 			next;
 		}
-		$counter++;
 
-		if($counter ==1){
-			$sql .= qq{INSERT INTO $table(value) SELECT '$dataLine' AS 'value'};
-		}
-		else{
-			$sql .= qq{ UNION ALL SELECT '$dataLine'};
+		my $sth = $self->_sqliteDb->prepare(qq{SELECT id FROM contig WHERE name = '$contig'});
+		$sth->execute();
+		my @contigIds = $sth->fetchrow_array;
 
-			if($counter == 500){				
-				$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
-				$counter=0;
-				$sql='';
+		foreach my $item(@{$dataHash->{$contig}}){				
+			my $start_bp = $item->{'startBp'};
+			my $value = $item->{'value'};
+
+			$counter++;
+			if($counter ==1){
+				$sql .= qq{INSERT INTO '$table' (value,start_bp,contig_id) SELECT '$value' AS 'value', '$start_bp' AS 'start_bp', '$contigIds[0]' AS 'contig_id'};
 			}
-		}			
-	}
+			else{
+				$sql .= qq{ UNION ALL SELECT '$value','$start_bp', '$contigIds[0]'};
+
+				if($counter == 500){				
+					$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
+					$counter=0;
+					$sql='';
+				}
+			}		
+		}
+	}			
 	$self->_sqlSelectNumber->{$table}=$counter;
 	$self->_sqlString->{$table}=$sql;
 }
@@ -625,19 +662,25 @@ sub _processResult {
 	my $resultHash={};
 	my @fastaArray;
 	my %startBpHash;
-	my $coreResultArrayRef;
+	my $coreResultHash;
 
 	if ( defined $result->hitHash ) {
+
+		#each $hit is the SequenceName::Name of the hit
 		foreach my $hit ( keys %{ $result->hitHash } ) {
 			my $hitObj = $result->hitHash->{$hit};
 			$hitObj->setSequence();    #this ensures start <  end bp
 
+			my @items;
+
 			my $sequenceCoverage = $self->_getSequenceCoverage( $hitObj, $result->query_len );
 			$self->logger->debug("Sequence coverage of $hit is $sequenceCoverage");
+			push @items, {value=> $self->_getAccessoryValue($hitObj), startBp=>$hitObj->hsp_hit_from};
 
-			$resultHash->{$hit}->{'accessoryValue'} = $self->_getAccessoryValue($hitObj);
-			$resultHash->{$hit}->{'fasta'}= $hitObj->hit_def;
-			$resultHash->{$hit}->{'startBp'}=$hitObj->hsp_hit_from;
+			$resultHash->{$hitObj->hit_def}=\@items;
+			# $resultHash->{$hit}->{'value'} = $self->_getAccessoryValue($hitObj);
+			# $resultHash->{$hit}->{'contig'}= $hitObj->hit_def;
+			# $resultHash->{$hit}->{'startBp'}=$hitObj->hsp_hit_from;
 
 			#create a fasta-file format array if core
 			if($type eq 'core'){		
@@ -646,16 +689,15 @@ sub _processResult {
 			}
 		}    #end of foreach
 		if($type eq 'core'){
-			$coreResultArrayRef = $self->_getCoreResult(\@fastaArray, \%startBpHash,$counter++);
+			$coreResultHash = $self->_getCoreResult(\@fastaArray, \%startBpHash,$counter++);
 		}
 	}#end of if
 	else{
 		$self->logger->info("Result :" . $result->name . " has no hits!");
-	}
-	my $accessoryResultString = $self->_getAccessoryResult($resultHash,$result->query_def,$counter++);
+	}	
 
 	#return the accessory and core results
-	return($accessoryResultString,$coreResultArrayRef);
+	return($resultHash,$coreResultHash);
 }
 
 
@@ -692,42 +734,6 @@ sub _getAccessoryValue{
 	return $value;
 }
 
-sub _getAccessoryResult{
-	my $self=shift;
-	my $resultHashRef =shift;
-	my $queryDef = shift;
-	my $counter=shift;
-
-	#create the output in correct order
-	#the first element of the array is the name of the locus
-	#the following are the results per individual genome	
-	#add query name as first element of array
-
-	my $valueLine='';
-	my $positionLine='';
-	my $contigNameLine='';
-
-	foreach my $query (@{$self->_orderedNames}) {
-		$valueLine .= "\t";
-		$positionLine .="\t";
-		$contigNameLine .="\t";
-
-		if ( defined $resultHashRef->{$query} ) {
-			$valueLine .= $resultHashRef->{$query}->{'accessoryValue'};
-			$positionLine .=$resultHashRef->{$query}->{'startBp'};
-			$contigNameLine .=$resultHashRef->{$query}->{'fasta'};
-		}
-		else {
-			$valueLine .= 0;
-			$positionLine .='-';
-			$contigNameLine .= '-';
-		}
-	}
-	my $returnLine = ($valueLine . $positionLine . $contigNameLine );
-	return $returnLine;
-}
-
-
 sub _getCoreResult {
 	my $self = shift;
 
@@ -761,9 +767,9 @@ sub _getCoreResult {
 		 'startBpHashRef'=>$startBpHashRef,
 		 'resultNumber'=>$resultNumber,
 	 );	
-	 my $snpDataArrayRef = $snpDetective->findSNPs();
+	 my $snpDataHashRef = $snpDetective->findSNPs();
 	 #this returns undef if there are no SNPs
-	 return $snpDataArrayRef;	
+	 return $snpDataHashRef;	
 }
 
 
