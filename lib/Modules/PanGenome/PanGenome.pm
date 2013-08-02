@@ -99,6 +99,7 @@ sub _initialize{
 	#construct sqlite DB
 	$self->_sqlString({});
 	$self->_sqlSelectNumber({});
+	$self->_locusId({});
 	$self->_initDb();
 
 	#default values
@@ -126,17 +127,15 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT,locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
 
-	# trackartist INTEGER,
- # 	FOREIGN KEY(trackartist) REFERENCES artist(artistid)
 	$dbh->disconnect();
 
-	$self->_sqlSelectNumber->{'binary'}=0;
-	$self->_sqlSelectNumber->{'snp'}=0;
-	$self->_sqlString->{'binary'}='';
-	$self->_sqlString->{'snp'}='';
+	$self->_sqlString->{'binary'}=[];
+	$self->_sqlString->{'snp'}=[];
+	$self->_locusId->{'snp'}=1;
+	$self->_locusId->{'binary'}=1;
 }
 
 =head2 _sqliteDb
@@ -353,22 +352,49 @@ sub _sqlString{
 	$self->{'__sqlString'}=shift // return $self->{'__sqlString'};
 }
 
+sub _contigIds{
+	my $self=shift;
+	$self->{'_contigIds'}=shift // return $self->{'_contigIds'};
+}
+
+sub _locusId{
+	my $self=shift;
+	$self->{'_locusId'}=shift // return $self->{'_locusId'};
+}
 
 sub _populateStrainTable{
 	my $self=shift;
 	my $mfsn=shift;
 
+	my %contigIds;
+	my $counter=1;
+
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	
+	#add case for missing values
+	my $sql = qq{INSERT INTO strain(name) VALUES('')};
+	$dbh->do($sql);
+
 	foreach my $name(sort keys %{$mfsn->sequenceNameHash}){
 		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
 		$dbh->do($sql);
 
+		#add the no value case
+		my $missingContig = 'NA_' . $name;
+		my $missingSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$missingContig")};
+		$dbh->do($missingSql);
+		$contigIds{$missingContig}=$counter;
+		$counter++;
+
 		foreach my $contig(@{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders}){
 			my $contigSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$contig")};
 			$dbh->do($contigSql);
+			$contigIds{$contig}=$counter;
+			$counter++;
 		}		
 	}
 	$dbh->disconnect();
+	return \%contigIds;
 }
 
 sub run{
@@ -378,7 +404,7 @@ sub run{
 	$self->_mfsn($mfsn);
 	$self->_orderedNames($orderedNames);
 
-	$self->_populateStrainTable($self->_mfsn);
+	$self->_contigIds($self->_populateStrainTable($self->_mfsn));
 
 	my $forker = Parallel::ForkManager->new($self->numberOfCores);
 	my $counter=0;
@@ -426,44 +452,30 @@ sub _createOutputFile{
 	my $outputFile = shift;
 
 	$self->logger->info("Creating output file $outputFile");
-	
-	my $headerLine = $self->_createHeaderLineForCombinedOutputFile();
-
-	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
-	$outFH->print($headerLine);
 
 	#print all rows from table
 	#SELECT * FROM TableA
 	#INNER JOIN TableB
 	#ON TableA.name = TableB.name
-	my $sql = qq{SELECT value,start_bp,contig.name FROM $table INNER JOIN contig };
-	my $sth = $self->_sqliteDb->prepare("$sql");
+	my $sql = qq{
+		SELECT $table.locus_id,strain.name,$table.value,$table.start_bp,contig.name 
+		FROM $table
+		JOIN contig ON $table.contig_id = contig.id
+		JOIN strain ON contig.strain_id = strain.id 
+	};
+	#my $sql = qq{SELECT locus_id,value,start_bp,contig_id FROM $table};
+	my $sth = $self->_sqliteDb->prepare($sql);
 	$sth->execute();
 
-	while(my $row = $sth->fetchrow_arrayref()) {
+	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
+	#print header for output file
+	$outFH->print("Locus Id\tGenome\tAllele\tStart bp\tContig\n");
+	
+	while(my $row = $sth->fetchrow_arrayref){
 	    $outFH->print(join("\t",@{$row}) . "\n");
 	}
 	$outFH->close();	
 }
-
-
-=head3 _createHeaderLineForCombinedOutputFile
-
-The header line consists of tab-delimited genome names over the representative data columns.
-Position columns and contigName columns do not have the names redundantly printed, but they are in the same order.
-
-=cut
-
-sub _createHeaderLineForCombinedOutputFile{
-	my $self=shift;
-
-	my $line='';
-	foreach my $name(@{$self->_orderedNames}){
-		$line .= "\t" . $name;
-	}
-	return ($line . "\n");
-}
-
 
 =head3 _getAllTempFiles
 
@@ -511,7 +523,8 @@ sub _processBlastXML {
 	my $xmlFH = IO::File->new( '<' . $blastXMLFile ) or die "$!";
 	my $xmler = Modules::Alignment::BlastResultFactory->new($xmlFH);
 
-	while ( my $result = $xmler->nextResult) {	
+	while ( my $result = $xmler->nextResult) {
+		$counter++;
 		my $type;
 		if($self->coreGenomeThreshold == 0){
 			$type = 'accessory';
@@ -519,26 +532,30 @@ sub _processBlastXML {
 		else{
 			$type = $self->_getCoreAccessoryType($result);
 		}
-		my ($accessoryHash,$coreHash)=$self->_processResult($result, $type,$counter);
-		$self->_insertIntoDb('binary',$accessoryHash);
-		$self->_insertIntoDb('snp',$coreHash);
+		$self->_processResult($result, $type,$counter);
+		
 	}	
 	$xmlFH->close();
 
-	#process any remaining sql
-	if($self->_sqlString->{'binary'} ne ''){
-		$self->_sqliteDb->do($self->_sqlString->{'binary'}) or $self->logger->logdie("$!");
+	#process any remaining sql that didn't fill up the 500 select buffer
+	if(defined $self->_sqlString->{'binary'}->[0]){
+		my $sqlString = join('',@{$self->_sqlString->{'binary'}});
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
 	}
-
-	if($self->_sqlString->{'snp'} ne ''){
-		$self->_sqliteDb->do($self->_sqlString->{'snp'}) or $self->logger->logdie("$!");
+	
+	if(defined $self->_sqlString->{'snp'}->[0]){
+		my $sqlString = join('',@{$self->_sqlString->{'snp'}});
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
 	}
 }
 
 sub _insertIntoDb{
 	my $self = shift;
 	my $table = shift;
-	my $dataHash = shift;
+	my $contigId = shift;
+	my $locusId = shift;
+	my $startBp = shift;
+	my $value = shift;
 
 	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
 	# INSERT INTO 'tablename'
@@ -567,39 +584,23 @@ sub _insertIntoDb{
 	# die "Couldn't execute query: $DBI::errstr\n";
 	# my @record = $sth->fetchrow_array; #Assign result to array variable
 
-	my $sql=$self->_sqlString->{$table};
-	my $counter = $self->_sqlSelectNumber->{$table};
+	my $sql=[];
+	if(defined $self->_sqlString->{$table}->[0]){
+		$sql = $self->_sqlString->{$table};
+		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId'};
+	}
+	else{
+		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
+	}
 	
-	foreach my $contig(keys %{$dataHash}){
-		if($contig eq 'NA'){
-			next;
-		}
-
-		my $sth = $self->_sqliteDb->prepare(qq{SELECT id FROM contig WHERE name = '$contig'});
-		$sth->execute();
-		my @contigIds = $sth->fetchrow_array;
-
-		foreach my $item(@{$dataHash->{$contig}}){				
-			my $start_bp = $item->{'startBp'};
-			my $value = $item->{'value'};
-
-			$counter++;
-			if($counter ==1){
-				$sql .= qq{INSERT INTO '$table' (value,start_bp,contig_id) SELECT '$value' AS 'value', '$start_bp' AS 'start_bp', '$contigIds[0]' AS 'contig_id'};
-			}
-			else{
-				$sql .= qq{ UNION ALL SELECT '$value','$start_bp', '$contigIds[0]'};
-
-				if($counter == 500){				
-					$self->_sqliteDb->do("$sql") or $self->logger->logdie("$!");
-					$counter=0;
-					$sql='';
-				}
-			}		
-		}
-	}			
-	$self->_sqlSelectNumber->{$table}=$counter;
-	$self->_sqlString->{$table}=$sql;
+	if(scalar(@{$sql})==500){
+		my $sqlString = join('',@{$sql});
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
+		$self->_sqlString->{$table}=[];
+	}
+	else{
+		$self->_sqlString->{$table}=$sql;
+	}
 }
 
 sub _getCoreAccessoryType {
@@ -661,29 +662,46 @@ sub _processResult {
 	my $type = shift;
 	my $counter=shift;
 
-	my $resultHash={};
 	my @fastaArray;
 	my %startBpHash;
-	my $coreResultHash;
+	$counter *=1000000;
 
 	if ( defined $result->hitHash ) {
-
+	
 		#each $hit is the SequenceName::Name of the hit
-		foreach my $hit ( keys %{ $result->hitHash } ) {
-			my $hitObj = $result->hitHash->{$hit};
-			$hitObj->setSequence();    #this ensures start <  end bp
+		foreach my $name (@{$self->_orderedNames} ) {
+			my $hitObj;
+			
+			if(defined $result->hitHash->{$name}){
+				$self->logger->info("$name found in $counter hitHash");
+				$hitObj = $result->hitHash->{$name};
+				$hitObj->setSequence();    #this ensures start <  end bp
 
-			my @items;
-
-			my $sequenceCoverage = $self->_getSequenceCoverage( $hitObj, $result->query_len );
-			$self->logger->debug("Sequence coverage of $hit is $sequenceCoverage");
-			push @items, {value=> $self->_getAccessoryValue($hitObj), startBp=>$hitObj->hsp_hit_from};
-
-			$resultHash->{$hitObj->hit_def}=\@items;
-			# $resultHash->{$hit}->{'value'} = $self->_getAccessoryValue($hitObj);
-			# $resultHash->{$hit}->{'contig'}= $hitObj->hit_def;
-			# $resultHash->{$hit}->{'startBp'}=$hitObj->hsp_hit_from;
-
+				#table, contigId,locusId,startBp,value
+				$self->_insertIntoDb(
+					'binary',
+					$self->_contigIds->{$hitObj->hit_def},
+					$counter,
+					$hitObj->hsp_hit_from,
+					$self->_getAccessoryValue(
+						$self->_getSequenceCoverage( $hitObj, $result->query_len ),
+						$hitObj
+					)
+				);				
+			}
+			else{
+				$self->logger->info("$name not found in $counter hitHash");
+				#table, contigId,locusId,startBp,value
+				$self->_insertIntoDb(
+					'binary',
+					$self->_contigIds->{"NA_$name"},
+					$counter,
+					'0',
+					'0'
+				);
+				next;
+			}				
+			
 			#create a fasta-file format array if core
 			if($type eq 'core'){		
  				push @fastaArray, ( '>' . $hitObj->hit_def . "\n" . $hitObj->hsp_hseq . "\n");
@@ -691,17 +709,23 @@ sub _processResult {
 			}
 		}    #end of foreach
 		if($type eq 'core'){
-			$coreResultHash = $self->_getCoreResult(\@fastaArray, \%startBpHash,$counter++);
+			my $coreResultArray = $self->_getCoreResult(\@fastaArray, \%startBpHash,$counter,$self->_locusId->{'snp'});
+
+			foreach my $result(@{$coreResultArray}){
+				$self->_insertIntoDb(
+					'snp',
+					$self->_contigIds->{$result->{'contig'}},
+					$result->{'locusId'},
+					$result->{'startBp'},
+					$result->{'value'}
+				);
+			}
 		}
 	}#end of if
 	else{
 		$self->logger->info("Result :" . $result->name . " has no hits!");
-	}	
-
-	#return the accessory and core results
-	return($resultHash,$coreResultHash);
+	}
 }
-
 
 =head3 _getAccessoryValue
 
@@ -769,9 +793,9 @@ sub _getCoreResult {
 		 'startBpHashRef'=>$startBpHashRef,
 		 'resultNumber'=>$resultNumber,
 	 );	
-	 my $snpDataHashRef = $snpDetective->findSNPs();
+	 my $snpDataArrayRef = $snpDetective->findSNPs();
 	 #this returns undef if there are no SNPs
-	 return $snpDataHashRef;	
+	 return $snpDataArrayRef;	
 }
 
 

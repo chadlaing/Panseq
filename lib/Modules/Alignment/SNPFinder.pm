@@ -50,6 +50,11 @@ sub _dashOffset{
 	$self->{'__dashOffset'}=shift // return $self->{'__dashOffset'};
 }
 
+sub databaseHandle{
+	my $self=shift;
+	$self->{'_databaseHandle'}=shift // return $self->{'_databaseHandle'};
+}
+
 #methods
 sub _initialize{
 	my($self)=shift;
@@ -91,13 +96,14 @@ sub findSNPs{
 	
 	my ($alignmentLength,$alignedHashRef) = $self->_getHashOfFastaAlignment();
 	$self->_setOffsetHash($alignedHashRef);
-	my $resultHash = {};
+	my $resultArray=[];
 	
+	my $resultNumber = $self->resultNumber;
 	for my $position(0..($alignmentLength-1)){
-		$resultHash = $self->_getSingleBaseResult($position,$alignedHashRef,$resultHash);		
+		$resultArray = $self->_getSingleBaseResult($position,$alignedHashRef,$resultArray,$resultNumber);	
+		$resultNumber++;	
 	}	
-	
-	return $resultHash;
+	return $resultArray;
 }
 
 
@@ -121,42 +127,6 @@ sub _setOffsetHash{
 	}
 }
 
-=head3 _getFastaNamesForOutput
-
-Returns an ordered list of contig names present in the current result for each genome.
-The final output is as below:
-name:data:position:contigNames
-eg.
-	
-snp_1000000012	A 			A 			T 			A  			100004 		100004 			544 		 	100005	Acontig001 	Bcontig01004 	Ccontig0034 	Dcontig000043
-
-=cut
-
-sub _getFastaNamesForOutput{
-	my $self=shift;
-	my $alignedHashRef=shift;
-
-	my $fastaNameLine='';
-
-	# foreach my $key(keys %{$alignedHashRef}){
-	# 	$self->logger->debug("alignedHashRefName: $key");
-	# }
-
-	foreach my $sName(@{$self->orderedNames}){
-		#it could be there were no BLAST results for a given name
-		#in that case, add 'N/A'
-		if(defined $alignedHashRef->{$sName}->{'fasta'}){
-			$fastaNameLine .=("\t" . $alignedHashRef->{$sName}->{'fasta'});
-		}
-		else{
-			$self->logger->debug("$sName not found in alignedHashRef");
-			$fastaNameLine .=("\t" . 'N/A');
-		}
-	}
-	return $fastaNameLine;
-}
-
-
 =head3
 
 Given a hash of the fasta sequence alignment,
@@ -172,39 +142,31 @@ sub _getSingleBaseResult{
 	my $self = shift;
 	my $position=shift;
 	my $alignedHashRef=shift;
-	my $resultHash=shift;
+	my $resultArray=shift;
+	my $resultNumber=shift;
 
 	my %baseTypes;
+	my @currentResult=();
 	
-	#$resultHash->{contig}=[
-	#									{
-	#										value=>snp_nucleotide
-	#										startBp=>integer
-	#									}
-	#								]
-
 	foreach my $name(@{$self->orderedNames}){
 		my $base;
-		my $contig = $alignedHashRef->{$name}->{'fasta'} // 'NA';
-		my $items = $resultHash->{$contig} // undef;
+		my $contig = $alignedHashRef->{$name}->{'fasta'} // undef;
 
-		#in the case where there was no BLAST hit, there is no hash key to look up
-		#need to fill in the position as '-'
-		if(exists $alignedHashRef->{$name}->{'fasta'}){
+		my %resultHash=();
+		if(defined $contig){		
 			$base = substr($alignedHashRef->{$name}->{'sequence'},$position,1); 
 			my $dashOffset = $self->_dashOffset->{$name};
 
 			unless(defined $base){
 				$self->logger->fatal("name: $name\nfasta: " . $alignedHashRef->{$name}->{'fasta'}. "\nseq: " . $alignedHashRef->{$name}->{'sequence'} . "\npos: $position");
+				exit(1);
 			}
 
 			if(defined $self->allowableChars->{$base}){
 				#make sure base is uppercase
 				$base = uc($base);
 				$baseTypes{$base}=1;
-			}
-			
-			#$baseLine .= ("\t$base");		
+			}				
 
 			my $startBp = $self->startBpHashRef->{$alignedHashRef->{$name}->{'fasta'}};		
 
@@ -213,24 +175,36 @@ sub _getSingleBaseResult{
 			my $finalPosition;
 			if($base eq '-'){
 				$finalPosition = 0;	
-				#$self->logger->debug("Adjusting $name in " . $alignedHashRef->{$name}->{'fasta'} . " startbp $startBp position $position");
 				$dashOffset++;
 				$self->_dashOffset->{$name}=$dashOffset;
 			}
 			else{
 				$finalPosition = ($startBp + $position - $dashOffset);	
 			}
-			push @{$items}, {startBp=>$finalPosition,value=>$base};	
+			
+			%resultHash=(
+				contig=>$contig,
+				startBp=>$finalPosition,
+				value=>$base,
+				locusId=>$resultNumber
+			);			
 		}
 		else{
-			# $baseLine .= ("\t" . '-');
-			# $positionLine .= ("\t" . '-');
-			push @{$items}, {startBp=>'-',value=>'-'};
+			%resultHash=(
+				contig=>"NA_$name",
+				startBp=>'0',
+				value=>'-',
+				locusId=>$resultNumber
+			);	
 		}
-		$resultHash->{$contig}=$items;
+		push @currentResult,\%resultHash;
 	}
 
-	return $resultHash;
+	#only need the case where there is an actual snp
+	if(scalar keys %baseTypes > 1){
+		push @{$resultArray},@currentResult;
+	}
+	return $resultArray;
 }
 
 

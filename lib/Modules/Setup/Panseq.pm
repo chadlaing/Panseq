@@ -190,7 +190,7 @@ sub _launchPanseq{
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
 		my $panObj = $self->_performPanGenomeAnalyses($files,$novelIterator);
-		$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
+		#$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
 		#with File::Copy
 		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'panGenome.fasta');
 	}else{
