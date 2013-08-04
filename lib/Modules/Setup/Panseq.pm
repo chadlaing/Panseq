@@ -190,7 +190,7 @@ sub _launchPanseq{
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
 		my $panObj = $self->_performPanGenomeAnalyses($files,$novelIterator);
-		#$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
+		$self->_createTreeFiles($panObj->panGenomeOutputFile,$panObj->coreSnpsOutputFile);
 		#with File::Copy
 		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'panGenome.fasta');
 	}else{
@@ -255,8 +255,7 @@ sub _cleanUp{
 
 =head3 _createTreeFiles
 
-Using the Modules::Phylogeny::PhylogenyFileCreator, create both a core-snp
-and pan-genome +/- file for use in phylogenetic analyses.
+Create both a core-snp and pan-genome +/- file for use in phylogenetic analyses.
 If more than one processor available, make both at the same time.
 
 =cut
@@ -271,21 +270,10 @@ sub _createTreeFiles{
 	for my $num(1..2){
 		$forker->start and next;
 			if($num==1){
-				my $treeMaker=Modules::Phylogeny::PhylogenyFileCreator->new(
-					'inputFile'=>$coreSnpsFile,
-					'outputFormat'=>'phylip',
-					'outputFile'=>$self->settings->baseDirectory . 'core_snps.phylip'
-				);
-				$treeMaker->run();
+				$self->_createTree('snp');
 			}
 			elsif($num==2){
-				my $treeMaker=Modules::Phylogeny::PhylogenyFileCreator->new(
-					'inputFile'=>$panGenomeFile,
-					'outputFormat'=>'phylip',
-					'outputFile'=>$self->settings->baseDirectory . 'pan_genome.phylip',
-					'conversionFile'=>$self->settings->baseDirectory . 'phylip_name_conversion.txt'
-				);
-				$treeMaker->run();
+				$self->_createTree('binary');
 			}
 			else{
 				$self->logger->logconfess("num value is $num, should not exceed 2");
@@ -293,6 +281,48 @@ sub _createTreeFiles{
 		$forker->finish();
 	}
 	$forker->wait_all_children();
+}
+
+sub _createTree{
+	my $self=shift;
+	my $table = shift;
+	
+	#define SQLite db
+	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	my $sql = qq{
+		SELECT strain.name,$table.value 
+		FROM $table
+		JOIN contig ON $table.contig_id = contig.id
+		JOIN strain ON contig.strain_id = strain.id 
+	};
+	
+	my $sth = $dbh->prepare($sql);
+	$sth->execute();
+
+	my %results;
+	while(my $row = $sth->fetchrow_arrayref){
+	    if(defined $results{$row->[0]}){
+	    	push @{$results{$row->[0]}},$row->[1];
+	    }
+	    else{
+	    	$results{$row->[0]}=[$row->[1]];
+	    }
+	}
+
+	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $table . '.phylip') or die "$!";
+
+	my $counter=1;
+	foreach my $genome(keys %results){
+		if($counter==1){
+			$outFH->print(scalar(keys %results) . "\t" . scalar(@{$results{$genome}}) . "\n");
+			$counter=0;
+		}
+
+		$outFH->print($genome . "\t" . join('',@{$results{$genome}}) . "\n");
+	}
+
+	$outFH->close();
+	$dbh->disconnect();
 }
 
 

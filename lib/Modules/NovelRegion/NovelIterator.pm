@@ -527,12 +527,7 @@ sub _getNumberOfFilesPerComparison{
 	my $self=shift;
 	my $numberOfFiles = shift;
 
-	my $numberOfCores= $self->settings->numberOfCores;
-	if($numberOfCores==1){
-		$numberOfCores=2;
-	}
-
-	my $numFilesPerComp = int( $numberOfFiles / $numberOfCores );
+	my $numFilesPerComp = int( $numberOfFiles / $self->settings->numberOfCores );
 
 	#Must have at least 2 files per comparison
 	if($numFilesPerComp < 2){
