@@ -673,7 +673,6 @@ sub _processResult {
 			my $hitObj;
 			
 			if(defined $result->hitHash->{$name}){
-				$self->logger->info("$name found in $counter hitHash");
 				$hitObj = $result->hitHash->{$name};
 				$hitObj->setSequence();    #this ensures start <  end bp
 
@@ -690,7 +689,6 @@ sub _processResult {
 				);				
 			}
 			else{
-				$self->logger->info("$name not found in $counter hitHash");
 				#table, contigId,locusId,startBp,value
 				$self->_insertIntoDb(
 					'binary',

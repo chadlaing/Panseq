@@ -43,7 +43,6 @@ use Modules::Alignment::BlastRun;
 use Modules::Alignment::MakeBlastDB;
 use Modules::Fasta::SegmentMaker;
 use Modules::PanGenome::PanGenome;
-use Modules::Phylogeny::PhylogenyFileCreator;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
@@ -312,17 +311,47 @@ sub _createTree{
 	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $table . '.phylip') or die "$!";
 
 	my $counter=1;
+	my %nameConversion;
 	foreach my $genome(keys %results){
+		$nameConversion{$counter}=$genome;
+
 		if($counter==1){
 			$outFH->print(scalar(keys %results) . "\t" . scalar(@{$results{$genome}}) . "\n");
-			$counter=0;
 		}
 
-		$outFH->print($genome . "\t" . join('',@{$results{$genome}}) . "\n");
+		$outFH->print($counter . "\t" . join('',@{$results{$genome}}) . "\n");
+		$counter++;
 	}
-
 	$outFH->close();
 	$dbh->disconnect();
+
+	if($table eq 'binary'){
+		$self->_printConversionInformation(\%nameConversion);
+	}	
+}
+
+=head2 _printConversionInformation
+
+Phylip format is limited to a 10-character name field.
+In printing the Phylip format, we substitute numbers for names.
+This creates a tab-delimited table that lists the conversion information.
+
+=cut
+
+sub _printConversionInformation{
+	my $self=shift;
+	my $hashRef =shift;
+
+	my $conversionFH = IO::File->new('>' . $self->settings->baseDirectory . 'phylip_name_conversion.txt') or die "$!";
+	$conversionFH->print(
+		'Number' . "\t" . 'Name' . "\n"
+	);
+
+	foreach my $number(sort keys %{$hashRef}){
+		$conversionFH->print($number . "\t" . $hashRef->{$number} . "\n");
+	}
+
+	$conversionFH->close();	
 }
 
 
