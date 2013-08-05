@@ -107,10 +107,6 @@ sub _initialize{
 		$self->panGenomeOutputFile($self->outputDirectory . 'pan_genome.txt');
 	}
 
-	unless(defined $self->coreSnpsOutputFile){
-		$self->coreSnpsOutputFile($self->outputDirectory . 'core_snps.txt');
-	}
-
 	$self->_currentResult(0);
 }
 
