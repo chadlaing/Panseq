@@ -327,7 +327,7 @@ sub _processRemainingFilesWithNucmer{
 			}
 		}		
 		
-		if(scalar(@filesToRun >= $filesPerComparison)){
+		if(scalar(@filesToRun) >= $filesPerComparison){
 			$reset=1;
 			
 			$forker->start and next;
@@ -462,7 +462,8 @@ sub _getQueryReferenceFileFromList{
 	my $name=shift;
 
 	my $ref = shift @{$listOfFiles};
-
+	$self->logger->info("Reference file for nucmer run is $ref");
+	$self->logger->info("Files combined for query run: @{$listOfFiles}");
 	#with Roles::CombineFilesIntoSingleFile
 	my $queryFileName = $name . '_query';
 	$self->_combineFilesIntoSingleFile(

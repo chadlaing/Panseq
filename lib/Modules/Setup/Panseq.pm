@@ -43,7 +43,6 @@ use Modules::Alignment::BlastRun;
 use Modules::Alignment::MakeBlastDB;
 use Modules::Fasta::SegmentMaker;
 use Modules::PanGenome::PanGenome;
-use Modules::Phylogeny::PhylogenyFileCreator;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
@@ -255,8 +254,7 @@ sub _cleanUp{
 
 =head3 _createTreeFiles
 
-Using the Modules::Phylogeny::PhylogenyFileCreator, create both a core-snp
-and pan-genome +/- file for use in phylogenetic analyses.
+Create both a core-snp and pan-genome +/- file for use in phylogenetic analyses.
 If more than one processor available, make both at the same time.
 
 =cut
@@ -271,21 +269,10 @@ sub _createTreeFiles{
 	for my $num(1..2){
 		$forker->start and next;
 			if($num==1){
-				my $treeMaker=Modules::Phylogeny::PhylogenyFileCreator->new(
-					'inputFile'=>$coreSnpsFile,
-					'outputFormat'=>'phylip',
-					'outputFile'=>$self->settings->baseDirectory . 'core_snps.phylip'
-				);
-				$treeMaker->run();
+				$self->_createTree('snp');
 			}
 			elsif($num==2){
-				my $treeMaker=Modules::Phylogeny::PhylogenyFileCreator->new(
-					'inputFile'=>$panGenomeFile,
-					'outputFormat'=>'phylip',
-					'outputFile'=>$self->settings->baseDirectory . 'pan_genome.phylip',
-					'conversionFile'=>$self->settings->baseDirectory . 'phylip_name_conversion.txt'
-				);
-				$treeMaker->run();
+				$self->_createTree('binary');
 			}
 			else{
 				$self->logger->logconfess("num value is $num, should not exceed 2");
@@ -293,6 +280,78 @@ sub _createTreeFiles{
 		$forker->finish();
 	}
 	$forker->wait_all_children();
+}
+
+sub _createTree{
+	my $self=shift;
+	my $table = shift;
+	
+	#define SQLite db
+	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	my $sql = qq{
+		SELECT strain.name,$table.value 
+		FROM $table
+		JOIN contig ON $table.contig_id = contig.id
+		JOIN strain ON contig.strain_id = strain.id 
+	};
+	
+	my $sth = $dbh->prepare($sql);
+	$sth->execute();
+
+	my %results;
+	while(my $row = $sth->fetchrow_arrayref){
+	    if(defined $results{$row->[0]}){
+	    	push @{$results{$row->[0]}},$row->[1];
+	    }
+	    else{
+	    	$results{$row->[0]}=[$row->[1]];
+	    }
+	}
+
+	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $table . '.phylip') or die "$!";
+
+	my $counter=1;
+	my %nameConversion;
+	foreach my $genome(keys %results){
+		$nameConversion{$counter}=$genome;
+
+		if($counter==1){
+			$outFH->print(scalar(keys %results) . "\t" . scalar(@{$results{$genome}}) . "\n");
+		}
+
+		$outFH->print($counter . "\t" . join('',@{$results{$genome}}) . "\n");
+		$counter++;
+	}
+	$outFH->close();
+	$dbh->disconnect();
+
+	if($table eq 'binary'){
+		$self->_printConversionInformation(\%nameConversion);
+	}	
+}
+
+=head2 _printConversionInformation
+
+Phylip format is limited to a 10-character name field.
+In printing the Phylip format, we substitute numbers for names.
+This creates a tab-delimited table that lists the conversion information.
+
+=cut
+
+sub _printConversionInformation{
+	my $self=shift;
+	my $hashRef =shift;
+
+	my $conversionFH = IO::File->new('>' . $self->settings->baseDirectory . 'phylip_name_conversion.txt') or die "$!";
+	$conversionFH->print(
+		'Number' . "\t" . 'Name' . "\n"
+	);
+
+	foreach my $number(sort keys %{$hashRef}){
+		$conversionFH->print($number . "\t" . $hashRef->{$number} . "\n");
+	}
+
+	$conversionFH->close();	
 }
 
 

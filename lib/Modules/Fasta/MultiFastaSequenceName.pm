@@ -130,7 +130,7 @@ sub fileName{
 	$self->{'_fileName'}=shift // return $self->{'_fileName'};
 }
 
-=head3 _sequenceNameHash
+=head3 sequenceNameHash
 
 A hash that stores every fasta sequence in ->fileName in the following way:
 	_sequenceNameHash->{Modlues::Fasta::SequenceName->name} = Modlues::Fasta::SequenceName
