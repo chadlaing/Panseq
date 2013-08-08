@@ -245,7 +245,9 @@ sub _cleanUp{
 			($file =~ m/(accessory|core|muscle|nucmer)Temp/) ||
 			($file =~ m/\.xml/) ||
 			($file =~ m/ReferenceFile/) ||
-			($file =~ m/_withRefDirectory_temp/)
+			($file =~ m/_withRefDirectory_temp/) ||
+			($file =~ m/lastNovelRegionsFile/) ||
+			($file =~ m/temp_sql\.db/)
 		){
 			unlink $file;
 		}

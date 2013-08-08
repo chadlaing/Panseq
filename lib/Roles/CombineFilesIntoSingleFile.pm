@@ -37,8 +37,13 @@ sub _combineFilesIntoSingleFile{
      
     $self->logger->debug("Combining files:");
 	foreach my $file(@{$filesToCombine}){
-        $self->logger->debug("$file");
-        my $inFH = IO::File->new('<' . $file) or die "Cannot open $file\n $!";
+        unless(-s $file > 0){
+            $self->logger->info("Skipping $file as it has size of 0");
+            next;
+        }
+
+        $self->logger->info("Adding $file to $outputFile");
+        my $inFH = IO::File->new('<' . $file) or $self->logger->logdie("Cannot open $file $!");
         $outFH->print($inFH->getlines);
         $inFH->close();
 	}

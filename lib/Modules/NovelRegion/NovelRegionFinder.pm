@@ -251,7 +251,6 @@ sub findNovelRegions {
 	#populate the _quryNameObjectHash
 	$self->_processQueryFiles();
 
-	#build hash of all comparisons
 	$self->_buildHashOfAllComparisons();
 
 	#get the novel regions and set the class variable 
@@ -312,7 +311,7 @@ sub printNovelRegions{
 
 	my $outFH=IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not open $outputFile");
 		
-	foreach my $id(keys %{$self->novelRegionsHashRef}){
+	foreach my $id(sort keys %{$self->novelRegionsHashRef}){
 		my $coordString = $self->novelRegionsHashRef->{$id};
 			
 		while($coordString =~ /\,(\d+)\.\.(\d+)/gc){				
@@ -358,46 +357,70 @@ sub _updateComparisonHash {
 		return;
 	}
 
-	my %hit=(
-		'rStart'=>$la[0],
-		'rEnd'=>$la[1],
-		'qStart'=>$la[2],
-		'qEnd'=>$la[3],
-		'rHitLength'=>$la[4],
-		'qHitLength'=>$la[5],
-		'percentId'=>$la[6],
-		'rSeqLength'=>$la[7],
-		'qSeqLength'=>$la[8],
-		'rName'=>$la[9],
-		'qName'=>$la[10]
-	);
+	# my %hit=(
+	# 	'rStart'=>$la[0],
+	# 	'rEnd'=>$la[1],
+	# 	'qStart'=>$la[2],
+	# 	'qEnd'=>$la[3],
+	# 	'rHitLength'=>$la[4],
+	# 	'qHitLength'=>$la[5],
+	# 	'percentId'=>$la[6],
+	# 	'rSeqLength'=>$la[7],
+	# 	'qSeqLength'=>$la[8],
+	# 	'rName'=>$la[9],
+	# 	'qName'=>$la[10]
+	# );
+
+	#start,end,key,value
+	$self->_addToComparisonHash($la[2],$la[3],$la[10],$la[9]);
+
+	if($self->mode eq 'unique'){
+		$self->_addToComparisonHash($la[0],$la[1],$la[9],$la[10]);
+	}
+}
 
 
-	if($hit{'qStart'} > $hit{'qEnd'}){
-		$self->logger->debug("Swapping $hit{'qStart'} with $hit{'qEnd'}");
+=head2 _addToComparisonHash
+
+We want to be able to use query or reference as the keys to the hash.
+This allows the construction of unique regions much easier and efficient (avoiding N^2).
+
+=cut
+
+sub _addToComparisonHash{
+	my $self = shift;
+	my $start =shift;
+	my $end = shift;
+	my $keyName = shift;
+	my $valueName = shift;
+
+	if($start > $end){
+		$self->logger->debug("Swapping $start with $end");
 
 		#perl's handy swap number function
-		($hit{'qStart'},$hit{'qEnd'}) =($hit{'qEnd'},$hit{'qStart'});
+		($start,$end) =($end,$start);
 	}
 
 	my $alignmentCoords;
-	if(defined $self->_comparisonHash->{$hit{'qName'}}->{$hit{'rName'}}){
-		$self->logger->debug("Alignment coords previously exist for $hit{'qName'}:$hit{'rName'}");
-		$alignmentCoords = $self->_comparisonHash->{$hit{'qName'}}->{$hit{'rName'}};
+	if(defined $self->_comparisonHash->{$keyName}->{$valueName}){
+		$self->logger->debug("Alignment coords previously exist for $keyName:$valueName");
+		$alignmentCoords = $self->_comparisonHash->{$keyName}->{$valueName};
 	}
 
 	if(defined $alignmentCoords){
-		$self->logger->debug("Before update: $hit{'qStart'}\.\.$hit{'qEnd'} -- $alignmentCoords");
-		$self->_comparisonHash->{$hit{'qName'}}->{$hit{'rName'}}=$self->_updateAlignmentCoords($alignmentCoords, $hit{'qStart'}, $hit{'qEnd'});
+		$self->logger->debug("Before update: $start\.\.$end -- $alignmentCoords");
+		$self->_comparisonHash->{$keyName}->{$valueName}=$self->_updateAlignmentCoords($alignmentCoords, $start, $end);
 	}
 	else{
-		$alignmentCoords = ',' . $hit{'qStart'} . '..' . $hit{'qEnd'};
+		$alignmentCoords = ',' . $start . '..' . $end;
 
-		$self->logger->debug("New alignment: $hit{'qName'}:$hit{'rName'} $alignmentCoords");
+		$self->logger->debug("New alignment: $keyName:$valueName $alignmentCoords");
 
-		$self->_comparisonHash->{$hit{'qName'}}->{$hit{'rName'}}=$alignmentCoords;
+		$self->_comparisonHash->{$keyName}->{$valueName}=$alignmentCoords;
 	}
 }
+
+
 
 sub _updateAlignmentCoords {
 	my $self = shift;
@@ -488,23 +511,35 @@ sub _getNoDuplicates {
 	#C vs. A + B + refs
 	#...
 	
-	foreach my $query (sort keys %{$self->_queryFastaHeadersHash} ) {
+	foreach my $query ( sort keys %{$self->_queryFastaHeadersHash}) {
+		$self->logger->debug("query: $query");
 		my $queryName = Modules::Fasta::SequenceName->new($query);
+		my $qName = $queryName->name;
+		
+		if($qName eq '_ignore'){
+			next;
+		}
 		
 		#in case there are no hits, we want the query contig to be present in the output
-		unless($self->_comparisonHash->{$query}){
+		unless(defined $self->_comparisonHash->{$query}){
 			$nonDuplicatedCoords{$query} = ',0..0';
 		}
 		
 		foreach my $ref ( keys %{ $self->_comparisonHash->{$query} } ) {
 			
 			my $referenceName = Modules::Fasta::SequenceName->new($ref);
-
+			my $rName = $referenceName->name;
 			#the only reason the same sequence should be in the query and ref file
-			next if $queryName->name eq $referenceName->name;
+			if($qName eq $rName){
+				$self->logger->debug("query $query is the same");
+				unless(defined $nonDuplicatedCoords{$query}){
+					$nonDuplicatedCoords{$query} = ',0..0';
+				}
+				next;
+			}
 			
 			$nonDuplicatedCoords{$query} .= $self->_comparisonHash->{$query}->{$ref};
-			$self->logger->debug("query: $query ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}\n");
+			$self->logger->debug("query: $query ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}");
 		}
 	}
 	$self->logger->info("Sorting and compiling novel regions");
@@ -663,388 +698,6 @@ sub _dispatcher {
 		$self->logger->logconfess("comparisonType not defined in getNovelRegions");
 	}
 }
-
-
-# sub getCommonToAll {
-# 	my ($self) = shift;
-
-# 	my %commonCoordsHash;
-
-# 	#use one query sequence as the one from which to extract the sequence data
-# 	#common in all allows this
-# 	#for each query, check that all other queries have a hit
-# 	#using "one" as the w.r.t sequence, get all reference hits for the query
-# 	#take negative image
-
-# 	my %oneSeqHash;    #this is a hash so that it can be fed into sortAndCompileCoordsHash
-
-# 	my @queryNames = keys %{ $self->queryNameObjectHash };
-# 	my $oneSeq     = FileInteraction::Fasta::SequenceName->new( $queryNames[0] );
-
-# 	$self->logger->debug( "CTA: oneSeq: " . $oneSeq->name );
-
-# 	foreach my $query (sort keys %{ $self->comparisonHash } ) {
-# 		$self->logger->debug("CTA: query: $query");
-
-# 		my $querySeqName = FileInteraction::Fasta::SequenceName->new($query);
-# 		next unless $querySeqName->name eq $oneSeq->name;
-
-# 		#get the "oneSeq" coords
-# 		foreach my $hit ( keys %{ $self->comparisonHash->{$query} } ) {
-# 			$self->logger->debug("CTA: hit: $hit");
-
-# 			if ( defined $self->_queryFastaNamesHash->{$hit} ) {
-# 				next;
-# 				#we only want sequence matches in the reference, for the negative image
-# 			}
-# 			else {
-# 				$self->logger->debug("$hit not defined in queryFastaNamesHash");
-# 			}
-# 			$oneSeqHash{$query} .= $self->comparisonHash->{$query}->{$hit};
-
-# 			$self->logger->debug( "CTA: oneSeq: " . $oneSeq->name . " oneSeqHash{query}:" . $oneSeqHash{$query} );
-# 		}
-# 	}
-
-# 	return $self->trimOneSeqToAllQuerySequences( $self->getNegativeImageCoords( $self->sortAndCompileCoordsHash( \%oneSeqHash ) ) );
-
-# }
-
-# sub trimOneSeqToAllQuerySequences {
-# 	my ($self) = shift;
-
-# 	if (@_) {
-# 		my $hashRef = shift;    #this is the hashRef of all reference regions not found in oneSeq
-# 		my %trimmedHash;
-
-# 		$self->logger->debug( "Trim: begin trim, number of hashRef keys is: " . scalar keys %{$hashRef} );
-
-# 		#should only be one sequence name, but possibly multiple keys due to the oneSeq selection in getCommonToAll
-# 		foreach my $oneSeqQueryName ( keys %{$hashRef} ) {
-# 			my $comparisonHashRef = $self->comparisonHash->{$oneSeqQueryName};
-
-# 			#the following loop stores only query hits in the %coords hash
-# 			my %coords;
-# 			foreach my $comparisonHit ( keys %{$comparisonHashRef} ) {
-# 				$self->logger->debug("Trim: comparisonHit: $comparisonHit");
-# 				next unless defined $self->_queryFastaNamesHash->{$comparisonHit};
-# 				$self->logger->debug( "Trim: made the cut: $comparisonHit: " . $comparisonHashRef->{$comparisonHit} );
-# 				$coords{$comparisonHit} = $comparisonHashRef->{$comparisonHit};
-# 			}
-# 			$trimmedHash{$oneSeqQueryName} =
-# 			  $self->getCommonCoordsWRTinputCoords( $hashRef->{$oneSeqQueryName}, \%coords );    #input: coords as string , hashRefToCheck
-# 		}
-# 		return \%trimmedHash;
-# 	}
-# 	else {
-# 		confess "nothing sent to trimOneSeqToAllQuerySequences\n";
-# 	}
-# }
-
-# sub getCommonCoordsWRTinputCoords {
-# 	my ($self) = shift;
-
-# 	if ( scalar(@_) == 2 ) {
-# 		my $inputCoordString = shift // die "undefined inputCoordString in getCommonCoordsWRTinputCoords\n";
-# 		my $hashRef = shift;    #all the query seqs and their hits (no ref hits)
-# 		my $newString;
-
-# 		$self->logger->debug("WRT inputCoordString: $inputCoordString");
-
-# 		#algorithm
-# 		#get seqName list for each inputCoord (all query sequence matches for the given oneSeq are in the hashRef)
-# 		#cycle through seqName list, trimming as it goes
-
-# 		my $seqNameCoordsHashRef = $self->getSeqNameCoordList($hashRef);
-
-# 		my $iteration = 0;
-
-# 		while ( $inputCoordString =~ /(\,\d+\.\.\d+)/gc ) {
-# 			my $currentCoords = $1;
-
-# 			$self->logger->debug("WRT currentCoords: $currentCoords");
-
-# 			my $returnedValue = $self->getTrimmedCoords( $currentCoords, $seqNameCoordsHashRef );
-
-# 			if ( defined $returnedValue ) {
-# 				$self->logger->debug("WRT afterTrim: $returnedValue");
-# 			}
-# 			else {
-# 				$self->logger->debug("WRT afterTrim: not common to all");
-# 				next;
-# 			}
-
-# 			$newString .= $returnedValue;
-# 			$self->logger->debug("WRT newString: $newString");
-# 		}
-# 		return $newString;
-# 	}
-# 	else {
-# 		confess "nothing sent to getCommonCoordsWRTinputCoords\n";
-# 	}
-# }
-
-# sub getTrimmedCoords {
-# 	my ($self) = shift;
-
-# 	#This sub creates a string of 0s representing the length of coords sent to the sub 0000000000
-# 	#It then increments each position by 1 for every match eg. 0001111100, then 00012222200
-# 	#and outputs only the region from the original string that has numbers equal the total number of query sequences
-
-# 	if ( scalar(@_) == 2 ) {
-# 		my $coords  = shift;
-# 		my $hashRef = shift;    # $hashRef->{seqName}->{seqFastaHeader}=<coords>
-
-# 		#get start/stop coords
-# 		my $start;
-# 		my $end;
-
-# 		if ( $coords =~ /\,(\d+)\.\.(\d+)/ ) {
-# 			$start = $1;
-# 			$end   = $2;
-# 		}
-# 		else {
-# 			confess "no coords sent to getTrimmedCoords\n";
-# 		}
-
-# 		my $offset = $start - 1;
-
-# 		$self->logger->debug("GTC coords: $coords start: $start end: $end offset:$offset");
-
-# 		my $sequence = '0' . ( '0' x ( $end - $start + 1 ) );    #to account for 1 offset
-
-# 		#check that each seqName has a hit, and where it is
-# 		my $seqNameCounter = 0;
-# 		my $trigger        = 1;
-# 		my $previousName;
-
-# 		foreach my $sName ( keys %{$hashRef} ) {
-# 			if ( $trigger == 1 ) {
-# 				$seqNameCounter++;
-# 				$self->logger->info("Matching $sName");
-# 			}
-# 			else {
-# 				$self->logger->warn("Common sequence not present in getTrimmedCoords for $previousName");
-# 				last;
-# 			}
-
-# 			$trigger      = 0;
-# 			$previousName = $sName;
-
-# 			$self->logger->debug("sName: $sName seqNameCounter: $seqNameCounter");
-
-# 			foreach my $eachMatch ( keys %{ $hashRef->{$sName} } ) {
-# 				my $eachCoord = $hashRef->{$sName}->{$eachMatch};
-
-# 				$self->logger->debug("eachMatch $eachMatch");
-
-# 				while ( $eachCoord =~ /\,(\d+)\.\.(\d+)/gc ) {
-
-# 					my $eachStart = $1;
-# 					my $eachEnd   = $2;
-
-# 					$self->logger->debug("$eachMatch $eachStart:$eachEnd");
-
-# 					#check to make sure each start/end is within the range
-# 					if ( $eachStart > $end ) {
-# 						$self->logger->debug("NEXT eachStart greater than end");
-# 						next;
-# 					}
-
-# 					if ( $eachEnd < $start ) {
-# 						$self->logger->debug("NEXT eachEnd less than start");
-# 						next;
-# 					}
-# 					$self->logger->debug("MATCH eachStart: $eachStart eachEnd: $eachEnd");
-# 					$eachStart = $start if $eachStart < $start;
-# 					$eachEnd   = $end   if $eachEnd > $end;
-
-# 					my $eachLength = $eachEnd - $eachStart + 1;
-
-# 					$self->logger->debug("Before adjustment eachStart: $eachStart start:$start eachEnd: $eachEnd end:$end");
-
-# 					#account for difference between absolute and relative locations
-# 					$eachStart = $eachStart - $offset;
-# 					$eachEnd   = $eachEnd - $offset;
-
-# 					#get substring, increase count by 1, replace in sequence string
-# 					$self->logger->debug("After adjustment eachStart: $eachStart eachEnd: $eachEnd");
-
-# 					my $substring = substr( $sequence, $eachStart, ( $eachEnd - $eachStart + 1 ) );
-# 					my $prevNum = $seqNameCounter - 1;
-
-# 					$substring =~ s/$prevNum/$seqNameCounter/g;
-# 					substr( $sequence, $eachStart, $eachLength ) = $substring;
-# 					$self->logger->debug("$sequence");
-# 					$trigger = 1;
-# 				}
-# 			}
-# 		}
-# 		return $self->convertMatchedStringToCoords( $sequence, $seqNameCounter, $start );
-# 	}
-# 	else {
-# 		confess "wrong number of arguments sent to getTrimmedCoords\n";
-# 	}
-# }
-
-# sub convertMatchedStringToCoords {
-# 	my ($self) = shift;
-
-# 	if ( scalar(@_) == 3 ) {
-# 		my $sequence              = shift;
-# 		my $numberOfAllSequences  = shift;
-# 		my $absoluteStartPosition = shift;
-
-# 		my $coordsToReturn;
-# 		my $currStart = 0;
-# 		my $currEnd   = 0;
-# 		my $prevChar  = 0;
-# 		my $char      = 0;
-
-# 		for ( my $i = 1 ; $i < length($sequence) ; $i++ ) {
-# 			$char = substr( $sequence, $i, 1 );
-# 			my $toAdd = 0;
-
-# 			if ( ( $prevChar != $numberOfAllSequences ) && ( $char == $numberOfAllSequences ) ) {
-# 				$currStart = $i + $absoluteStartPosition - 1;
-# 			}
-# 			elsif ( ( $prevChar == $numberOfAllSequences ) && ( $char != $numberOfAllSequences ) ) {
-# 				$currEnd = ( $i - 1 ) + ( $absoluteStartPosition - 1 );
-# 				$toAdd = 1;
-# 			}
-# 			elsif ( ( ( $i + 1 ) == length($sequence) ) && ( $char == $numberOfAllSequences ) ) {
-# 				$currEnd = $i + $absoluteStartPosition - 1;
-# 				$toAdd   = 1;
-# 			}
-
-# 			if ($toAdd) {
-# 				my $coordToAdd = ',' . $currStart . '..' . $currEnd;
-# 				$coordsToReturn .= $coordToAdd;
-# 			}
-# 			$prevChar = $char;
-# 		}
-# 		return $coordsToReturn;
-# 	}
-# 	else {
-# 		confess "incorrect number of arguments sent to convertMatchedStringToCoords\n";
-# 	}
-# }
-
-# sub getSeqNameCoordList {
-# 	my ($self) = shift;
-
-# 	if (@_) {
-# 		my $hashRef = shift;
-
-# 		my %uniqueNames;
-# 		foreach my $query ( keys %{$hashRef} ) {
-# 			my $qSeqName = FileInteraction::Fasta::SequenceName->new($query);
-# 			$uniqueNames{ $qSeqName->name }->{$query} = $hashRef->{$query};
-# 		}
-# 		return \%uniqueNames;
-# 	}
-# 	else {
-# 		confess "nothing sent to getSeqNameCoordList\n";
-# 	}
-# }
-
-# sub isANewMatch {
-# 	my ($self) = shift;
-
-# 	if ( scalar(@_) == 3 ) {
-# 		my $match         = shift;
-# 		my $longestMatch  = shift;
-# 		my $longestLength = shift;
-
-# 		#send back as new match if longestLength is at 0
-# 		return 1 if ( $longestLength == 0 );
-
-# 		#send back 0 if no match at all
-# 		return 0 unless ( length($match) > 0 );
-
-# 		my $longStart;
-# 		my $longEnd;
-# 		my $matchStart;
-# 		my $matchEnd;
-
-# 		if ( $match =~ /\,(\d+)\.\.(\d+)/ ) {
-# 			$matchStart = $1;
-# 			$matchEnd   = $2;
-# 		}
-# 		else {
-# 			confess "match not correct: $match\n";
-# 		}
-
-# 		if ( $longestMatch =~ /\,(\d+)\.\.(\d+)/ ) {
-# 			$longStart = $1;
-# 			$longEnd   = $2;
-# 		}
-# 		else {
-# 			confess "longestMatch not correct: $longestMatch\n";
-# 		}
-
-# 		#we want the best match for each sequenceName
-# 		if ( ( $matchStart < $longStart ) || ( $matchEnd > $longEnd ) ) {
-# 			return 1;
-# 		}
-# 		else {
-# 			return 0;
-# 		}
-
-# 	}
-# 	else {
-# 		confess "incorrect number of arguments sent to isANewMatch\n";
-# 	}
-# }
-
-# sub containsAllQueryNames {
-# 	my ($self) = shift;
-
-# 	if (@_) {
-# 		my $hashRef     = shift;
-# 		my $returnValue = 1;
-# 		my %sentHashNames;
-
-# 		#get sequence names from hashRef
-# 		foreach my $name ( keys %{$hashRef} ) {
-# 			my $seqName = FileInteraction::Fasta::SequenceName->new($name);
-
-# 			$self->logger->debug( "containsAllQueryNames: sentName: " . $seqName->name );
-
-# 			$sentHashNames{ $seqName->name } = 1;
-# 		}
-
-# 		foreach my $qSeqName ( keys %{ $self->queryNameObjectHash } ) {
-# 			unless ( defined $sentHashNames{$qSeqName} ) {
-# 				$returnValue = 0;
-# 				last;
-# 			}
-# 		}
-# 		return $returnValue;
-# 	}
-# 	else {
-# 		confess "nothing sent to containsAllQueryNames\n";
-# 	}
-# }
-
-# sub getNumberOfSeqNamesFromHash {
-# 	my ($self) = shift;
-
-# 	if (@_) {
-# 		my $hashRef = shift;
-# 		my %seqNameHash;
-
-# 		foreach my $key ( keys %{$hashRef} ) {
-# 			my $seqName = FileInteraction::Fasta::SequenceName->new($key);
-# 			$seqNameHash{ $seqName->name } = 1 unless defined $seqNameHash{ $seqName->name };
-# 		}
-# 		return scalar( keys %seqNameHash );
-# 	}
-# 	else {
-# 		confess "nothing sent to getNumberOfSeqNamesFromHash\n";
-# 	}
-# }
-
 
 sub _joinAdjacentNovelRegionsHash {
 	my $self = shift;

@@ -56,6 +56,7 @@ use diagnostics;
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;
+use File::Copy;
 use Carp;
 use Modules::Alignment::NucmerRun;
 use Modules::NovelRegion::NovelRegionFinder;
@@ -104,7 +105,10 @@ sub _initialize{
 			#logconfess calls the confess of Carp package, as well as logging to Log4perl
 			$self->logger->logconfess("$key is not a valid parameter in Modules::NovelRegion::NovelRegionFinder");
 		}
-	}	
+	}
+
+	#add the filenames for the hard-coded "last files" as the information cannot escape a fork
+	$self->_lastNovelRegionsFile($self->settings->baseDirectory . 'lastNovelRegionsFile.fasta');
 }
 
 =head2 logger
@@ -177,10 +181,48 @@ sub novelRegionsFile{
 	$self->{'_novelRegionsFile'}=shift // return $self->{'_novelRegionsFile'};
 }
 
+=head2 _lastNovelRegionsFile
+
+Each iteration, the novel regions are output to this file.
+The pangenome is built up by the iterative addition of the novelRegionsFile.
+
+=cut
+
+sub _lastNovelRegionsFile{
+	my $self=shift;
+	$self->{'_lastNovelRegions'}=shift // return $self->{'_lastNovelRegions'};
+}
+
+
+sub _retriever{
+	my $self = shift;
+	$self->{'_retriever'}=shift // return $self->{'_retriever'};
+}
+
 
 =head2 run
 
 Launches the iterative novel region search.
+For the pan-genome generation see _processRemainingThreeFiles description.
+
+When running under 'unique' mode, both query and reference genomes as used for finding novel regions.
+That way when running A vs. B, we end up with A(B) and B(A) from the single comparison. We also add
+a reference genome to A(B) and B(A) so that the following comparisons will be against the totality of A + B.
+For the reference [] indicates the fasta headers have been changed to lcl|_ignore|\w+(of previous header).
+This instructs the no_duplicates method to ignore these as query, and not generate novel regions, which would
+incorrectly generate non-unique sections. However, they are still used as reference, so that a unique query must
+take into account all previous genomes.
+
+Eg. 6 genomes (A,B,C,D,E,F), split among the cores:
+A vs. B = A(B) + B(A) + [A]
+C vs. D = C(D) + D(C) + [C]
+E vs. F = E(F) + F(E) + [E]
+
+A(B) + B(A) + [A] vs. C(D) + D(C) + [C]
+	= A(BCD) + B(ACD) + C(DAB) + D(CAB) + [C(D) + D(C) + C]
+
+If we have A + B vs. C, we will never get A vs. B.
+To ensure this happens, run a self vs. self of the novel regions as a last step.
 
 =cut
 
@@ -211,16 +253,17 @@ sub run{
 	#we iterate over this list in the same manner until 3 or fewer "pan-genomes" remain, 
 	#at which point a single-core comparison of the remaining strains returns the final pan-genome.
 
-	my $retriever = Modules::Fasta::SequenceRetriever->new(
-		'inputFile'=> $self->queryFile,
-		'databaseFile'=>$self->settings->baseDirectory . 'queryfile_dbtemp'
+	$self->_retriever(Modules::Fasta::SequenceRetriever->new(
+			'inputFile'=> $self->queryFile,
+			'databaseFile'=>$self->settings->baseDirectory . 'queryfile_dbtemp'
+		)
 	);
 
 	#create a file for each genome in the baseDirectory, for use in the nucmer comparisons
-	my $allFastaFiles = $self->_createAllFastaFilesForNucmer(\@genomeNames, $multiFastaSN, $retriever);
+	my $allFastaFiles = $self->_createAllFastaFilesForNucmer(\@genomeNames, $multiFastaSN, $self->_retriever);
 	my $numberOfRemainingFiles = scalar(@{$allFastaFiles});
 
-	while($numberOfRemainingFiles > 1){
+	while($numberOfRemainingFiles > 3){
 		$self->logger->info("Remaining files: $numberOfRemainingFiles");
 		my ($filesPerComparison,$remainder) = $self->_getNumberOfFilesPerComparison($numberOfRemainingFiles);
 
@@ -234,7 +277,10 @@ sub run{
 	}
 	continue{
 		$numberOfRemainingFiles = scalar(@{$allFastaFiles});
-	}	
+	}
+
+	#need to deal with the remaining files in a one vs one basis
+	$allFastaFiles = $self->_processRemainingThreeFiles($allFastaFiles);
 
 	my $finalFile;
 
@@ -248,17 +294,27 @@ sub run{
 	}
 
 	#need to run against the referenceDirectory files if they exist
-	if($self->settings->novelRegionFinderMode eq 'unique' || $self->settings->novelRegionFinderMode eq 'common_to_all'){
-		#with Roles::CombineFilesIntoSingleFile ([files to combine],outputFile)
-		my $refFile = $self->_combineFilesIntoSingleFile(
-			[$finalFile,$self->referenceFile],
-			$self->settings->baseDirectory . 'referenceFile_unique_common.fasta'
-		);
+	if($self->settings->novelRegionFinderMode eq 'unique'){
+		$self->logger->info("Gathering unique novel regions.");
 
-		#query,reference,output file order to _processNucmerQueue
-		my $coordsFile = $self->_processNucmerQueue($self->queryFile,$refFile, $self->settings->baseDirectory . '_unique_common.coords');
-		my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $self->queryFile, ($self->queryFile . '_novelRegions'));
-		$self->panGenomeFile($novelRegionsFile);
+		my $finalReferenceFile;
+		if(defined $self->referenceFile && -s $self->referenceFile > 0){		
+			$self->logger->info("Comparing novel regions against reference file");
+			#with Roles::CombineFilesIntoSingleFile
+			$finalReferenceFile= $self->_combineFilesIntoSingleFile(
+				[$self->_lastNovelRegionsFile, $self->referenceFile],
+				$self->settings->baseDirectory . 'finalReferenceFile_unique.fasta'
+			);
+		}
+		else{
+			$self->logger->info("Using _lastNovelRegionsFile, as there is no reference file specified");
+			$finalReferenceFile = $self->_lastNovelRegionsFile();
+		}	
+
+		my $coordsFile = $self->_processNucmerQueue($self->_lastNovelRegionsFile,$finalReferenceFile, $self->settings->baseDirectory . 'unique_regions');
+		my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $self->_lastNovelRegionsFile, ($finalFile . '_novelRegions'));
+		$self->logger->info("Novel regions file $novelRegionsFile has size " . -s $novelRegionsFile);
+		$self->panGenomeFile($novelRegionsFile);	
 	}
 	elsif($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
@@ -271,6 +327,61 @@ sub run{
 		exit(1);
 	}
 }
+
+=head2 _processRemainingThreeFiles
+
+We need to ensure the pan-genome has only one seed genome. For example.
+6 genomes as query: (A,B,C,D,E,F).
+In _processRemainingFilesWithNucmer we get:
+A vs B = A(B) + B
+C vs D = C(D) + D
+E vs F = E(F) + F
+
+If we were to allow one of these files to be the reference, and the rest query we would get the following:
+A(B) + B + C(D) + D vs E(F) + F = A(BEF) + B(EF) + C(DEF) + D(EF)
+Obviously, there is redundancy and un-compared genomes.
+We need the following:
+
+A(B) + B vs C(D) + D = A(BCD) + B(CD) + C(D) + D
+A(BCD) + B(CD) + C(D) + D vs E(F) + F = A(BCDEF) + B(CDEF) + C(DEF) + D(EF) + E(F) + F
+
+Where all have been compared, and there is no redundancy in un-compared regions.
+
+8 genomes:
+A vs B = A(B) + B
+C vs D = C(D) + D
+E vs F = E(F) + F
+G vs H = G(H) + H
+
+A(B) + B vs C(D) + D = A(BCD) + B(CD) + C(D) + Din
+E(F) + F vs G(H) + H = E(FGH) + F(GH) + G(H) + H
+
+A(BCD) + B(CD) + C(D) + D vs E(FGH) + F(GH) + G(H) + H
+  = A(BCDEFGH) + B(CDEFGH) + C(DEFGH) + D(EFGH) + E(FGH) + F(GH) + G(H) + H 
+
+=cut
+
+sub _processRemainingThreeFiles{
+	my $self=shift;
+	my $finalFiles=shift;
+
+	$self->logger->info("Processing the final " . scalar(@{$finalFiles}) . " number of files");
+
+	my @firstTwo =($finalFiles->[0], $finalFiles->[1]);
+
+	#[files],filesPerComparison,remainder
+	my $combinedFiles = $self->_processRemainingFilesWithNucmer(\@firstTwo,2,0);
+	$self->logger->info("Processing the final ". scalar(@{$combinedFiles}) . " number of files");
+
+	if(defined $combinedFiles->[1]){
+		$self->logger->info("Processing the last file for pan-genome creation");
+		return $self->_processRemainingFilesWithNucmer($combinedFiles,2,0);
+	}
+	else{
+		return $combinedFiles;
+	}	
+}
+
 
 =head2
 
@@ -333,19 +444,37 @@ sub _processRemainingFilesWithNucmer{
 			$forker->start and next;
 				my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
 				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);
+				
 				my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
-				my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
+
+				my $namesFile;
+				if($self->settings->novelRegionFinderMode eq 'unique'){
+					#with Roles::CombineFilesIntoSingleFile ([files to combine],outputFile)					
+					$namesFile = $self->_combineFilesIntoSingleFile(
+						[$queryFile,$referenceFile],
+						$self->settings->baseDirectory . 'uniqueNovelRegions.fasta'
+					);					
+				}
+				else{
+					$namesFile = $queryFile;
+				}
+
+				my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_novelRegions'));	
 				
 				#combines them into the $newFileName specified above, which is added to the @filesFromNucmer array
 				#this array is returned and used to feed back into this processing sub
 				my $combinedFile = $self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
-				$self->logger->info("Combined file: $combinedFile");
-				
+				$self->logger->info("Combined file: $combinedFile");			
+
 				#remove temp files
+				unlink $coordsFile;					
+
+				#keep the last novelRegionsFile under new name
+				#with File::Copy
+				move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
 				unlink $queryFile;
-				unlink $referenceFile;
-				unlink $coordsFile;
-				unlink $novelRegionsFile;
+				unlink $referenceFile;		
+
 			$forker->finish;
 		}
 	}
@@ -391,6 +520,8 @@ sub _getPanFiles{
 Takes the novel regions file and the reference file and combines them.
 This serves as the "pan-genome" from the particular set of comparisons that were run.
 When the entire process iterates down to a single file, we have the pan-genome for all the initial genomes.
+When the mode is set to 'unique', we need the pan-genome to be built, but want to prevent the added
+reference file from being used to generate new novel regions; thus we replace the header with lcl|_ignore|\w+
 
 =cut
 
@@ -400,14 +531,49 @@ sub _combineNovelRegionsAndReferenceFile{
 	my $referenceFile = shift;
 	my $outputFile = shift;
 
+	my $refFileToAdd;
+	if($self->settings->novelRegionFinderMode eq 'unique'){
+		$refFileToAdd = $self->_setRefFileToIgnore($referenceFile);
+	}
+	else{
+		$refFileToAdd = $referenceFile;
+	}
+
 	#with Roles::CombineFilesIntoSingleFile
 	$self->_combineFilesIntoSingleFile(
-		[$novelRegionsFile, $referenceFile],
+		[$novelRegionsFile, $refFileToAdd],
 		$outputFile
 	);
 	return $outputFile;
 }
 
+
+=head2 _setRefFileToIgnore
+
+Need to ensure the reference file is not used for generating new novel regions
+under mode "unique". By setting the lcl|_ignore| flag, when used as a query, the novel
+region finder will ignore it. When used as a reference, will still show the query matches.
+
+=cut
+
+sub _setRefFileToIgnore{
+	my $self = shift;
+	my $refFileOriginal = shift;
+
+	my $fileName = $refFileOriginal . '_ignore';
+	my $refInFH = IO::File->new('<' . $refFileOriginal) or die "$!";
+	my $refOutFH = IO::File->new('>' . $fileName) or die "$!";
+	while(my $line = $refInFH->getline){
+		if($line =~ m/^>/){
+			$line =~ s/\W/_/g;
+			$line = '>lcl|_ignore|' . $line . "\n";
+		}
+		$refOutFH->print($line);
+	}
+	$refInFH->close();
+	$refOutFH->close();
+	return $fileName;
+}
 
 =head2 _printNovelRegionsFromQueue
 
@@ -432,6 +598,11 @@ sub _printNovelRegionsFromQueue{
 
 	$self->logger->info("File for db construction: $queryFile");
 	my $databaseFile = $queryFile . '_dbtemp';
+
+	#need to include reference file if $self->type eq 'unique'
+	#can't just use the $self->retriever, as it does not include the sequence (4..5000) in the headers
+	#we could do some math to account for those however, but not right now
+	#right now we just want it to function.
 
 	my $retriever = Modules::Fasta::SequenceRetriever->new(
 		'inputFile'=> $queryFile,
