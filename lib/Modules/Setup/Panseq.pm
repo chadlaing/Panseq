@@ -247,6 +247,7 @@ sub _cleanUp{
 			($file =~ m/ReferenceFile/) ||
 			($file =~ m/_withRefDirectory_temp/) ||
 			($file =~ m/lastNovelRegionsFile/) ||
+			($file =~ m/uniqueNovelRegions/) ||
 			($file =~ m/temp_sql\.db/)
 		){
 			unlink $file;
@@ -291,7 +292,7 @@ sub _createTree{
 	#define SQLite db
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
 	my $sql = qq{
-		SELECT strain.name,$table.value 
+		SELECT strain.name,$table.value, $table.locus_id
 		FROM $table
 		JOIN contig ON $table.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id 
@@ -300,7 +301,12 @@ sub _createTree{
 	my $sth = $dbh->prepare($sql);
 	$sth->execute();
 
+	my $tableFH = IO::File->new('>' . $self->settings->baseDirectory . $table . '_table.txt') or die "$!";
+
 	my %results;
+	my %loci;
+	my $locus;
+	my @genomeOrder;
 	while(my $row = $sth->fetchrow_arrayref){
 	    if(defined $results{$row->[0]}){
 	    	push @{$results{$row->[0]}},$row->[1];
@@ -308,29 +314,62 @@ sub _createTree{
 	    else{
 	    	$results{$row->[0]}=[$row->[1]];
 	    }
+
+	    if(defined $locus && ($locus ne $row->[2])){
+	    	unless(defined $genomeOrder[0]){
+	    		@genomeOrder = sort keys %loci;
+	    		$tableFH->print("\t" . join("\t",@genomeOrder) . "\n");
+	    	}
+	    	$tableFH->print($locus);
+	    	foreach my $genome(@genomeOrder){
+	    		$tableFH->print("\t" . $loci{$genome});
+	    	}
+	    	$tableFH->print("\n");
+	    }
+	    $locus = $row->[2];
+	    $loci{$row->[0]}=$row->[1];
 	}
+	$tableFH->print($locus);
+	foreach my $genome(@genomeOrder){
+		$tableFH->print("\t" . $loci{$genome});
+	}
+	$tableFH->print("\n");
+	$dbh->disconnect();
+	$tableFH->close();
+
+	my $nameConversion = $self->_printPhylipFile($table,\%results);
+	$self->_printDataTable($table,\%results);
+	
+
+	if($table eq 'binary'){
+		$self->_printConversionInformation(\$nameConversion);
+	}	
+}
+
+sub _printPhylipFile{
+	my $self=shift;
+	my $table = shift;
+	my $results = shift;
 
 	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $table . '.phylip') or die "$!";
 
 	my $counter=1;
 	my %nameConversion;
-	foreach my $genome(keys %results){
+	foreach my $genome(sort keys %{$results}){
 		$nameConversion{$counter}=$genome;
 
 		if($counter==1){
-			$outFH->print(scalar(keys %results) . "\t" . scalar(@{$results{$genome}}) . "\n");
+			$outFH->print(scalar(keys %{$results}) . "\t" . scalar(@{$results->{$genome}}) . "\n");
 		}
 
-		$outFH->print($counter . "\t" . join('',@{$results{$genome}}) . "\n");
+		$outFH->print($counter . "\t" . join('',@{$results->{$genome}}) . "\n");
 		$counter++;
 	}
 	$outFH->close();
-	$dbh->disconnect();
-
-	if($table eq 'binary'){
-		$self->_printConversionInformation(\%nameConversion);
-	}	
+	return \%nameConversion;
 }
+
+
 
 =head2 _printConversionInformation
 

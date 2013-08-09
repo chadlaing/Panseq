@@ -131,28 +131,7 @@ sub addToMissingCharsHash{
         }
 }
 
-sub getBestLoci{
-        my($self)=shift;
-        
-        if(scalar(@_) >=2){
-                my $inFile = IO::File->new('<'. $_[0]) or die "$!";
-                $self->lociNumber($_[1]);
-                
-                if($_[2]){
-                        $self->outputFilehandle($_[2]);
-                }
-                
-                $self->getAllLoci($inFile);
-                $self->runLociSelector();
-                $inFile->close();
-        }
-        else{
-                print STDERR "incorrect number of arguments to getBestLoci!\n";
-                exit(1);
-        }
-}
-
-sub runLociSelector{
+sub run{
         my($self)=shift;
         
         #takes no arguments
