@@ -64,7 +64,6 @@ use Modules::Fasta::MultiFastaSequenceName;
 use Parallel::ForkManager;
 use Log::Log4perl;
 use Role::Tiny::With;
-use DBI;
 
 with 'Roles::CombineFilesIntoSingleFile';
 

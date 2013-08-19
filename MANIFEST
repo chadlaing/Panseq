@@ -664,12 +664,8 @@ lib/Interface/Templates/userLoci.tmpl
 lib/Interface/Templates/userNovel.tmpl
 lib/Interface/Templates/userPan.tmpl
 lib/Interface/Templates/waiting.tmpl
-lib/loci_selector.pl
 lib/log4p.conf
-lib/Modules/Alignment/BlastHit.pm
-lib/Modules/Alignment/BlastResult.pm
-lib/Modules/Alignment/BlastResultFactory.pm
-lib/Modules/Alignment/BlastRun.pm
+lib/Modules/Alignment/BlastResults.pm
 lib/Modules/Alignment/MakeBlastDB.pm
 lib/Modules/Alignment/NucmerRun.pm
 lib/Modules/Alignment/SNPFinder.pm
@@ -682,8 +678,6 @@ lib/Modules/LociSelector/LociSelector.pm
 lib/Modules/NovelRegion/NovelIterator.pm
 lib/Modules/NovelRegion/NovelRegionFinder.pm
 lib/Modules/PanGenome/PanGenome.pm
-lib/Modules/PanGenome/TableExtractor.pm
-lib/Modules/Phylogeny/PhylogenyFileCreator.pm
 lib/Modules/Setup/Panseq.pm
 lib/Modules/Setup/PanseqFiles.pm
 lib/Modules/Setup/Settings.pm
@@ -691,11 +685,8 @@ lib/Modules/Stats/FET.pm
 lib/panseq.pl
 lib/Roles/CombineFilesIntoSingleFile.pm
 lib/Roles/FlexiblePrinter.pm
-lib/table_extractor.pl
+lib/Roles/GetNewIdStartEnd.pm
 lib/treeNumberToName.pl
 MANIFEST			This list of files
 README.md
-t/flexible_printer.pl
-t/NovelRegionFinder.t
-t/PanGenome.t
-t/SequenceName.t
+

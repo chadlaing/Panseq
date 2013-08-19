@@ -6,8 +6,7 @@ use lib "$FindBin::Bin/";
 
 use Modules::LociSelector::LociSelector;
 
-#_not_ready();
-
+_not_ready();
 
 unless(scalar(@ARGV)>=2){
         print STDERR "incorrect number of arguments to LociSelector\n",
