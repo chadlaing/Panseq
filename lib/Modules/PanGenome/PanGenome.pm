@@ -49,8 +49,8 @@ use IO::File;
 use Carp;
 use Log::Log4perl;
 use Parallel::ForkManager;
-use Modules::Alignment::BlastResultFactory;
 use Modules::Alignment::SNPFinder;
+use Modules::Alignment::BlastResults;
 use Modules::Fasta::MultiFastaSequenceName;
 use DBI;
 use Role::Tiny::With;
@@ -99,7 +99,6 @@ sub _initialize{
 	#construct sqlite DB
 	$self->_sqlString({});
 	$self->_sqlSelectNumber({});
-	$self->_locusId({});
 	$self->_initDb();
 
 	#default values
@@ -123,15 +122,13 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT,locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, locus_name TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT,locus_id INTEGER, locus_name TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
 
 	$dbh->disconnect();
 
 	$self->_sqlString->{'binary'}=[];
 	$self->_sqlString->{'snp'}=[];
-	$self->_locusId->{'snp'}=1;
-	$self->_locusId->{'binary'}=1;
 }
 
 =head2 _sqliteDb
@@ -215,18 +212,6 @@ The number of forks that will be made by Panseq
 sub numberOfCores{
 	my $self=shift;
 	$self->{'_numberOfCores'}=shift // return $self->{'_numberOfCores'};
-}
-
-
-=head3 resultArraySize
-
-The number of BLAST results that are processed at a time per fork
-
-=cut
-
-sub resultArraySize{
-	my $self=shift;
-	$self->{'_resultArraySize'}=shift // return $self->{'_resultArraySize'};
 }
 
 =head3 outputDirectory
@@ -454,10 +439,11 @@ sub _createOutputFile{
 	#INNER JOIN TableB
 	#ON TableA.name = TableB.name
 	my $sql = qq{
-		SELECT $table.locus_id,strain.name,$table.value,$table.start_bp,contig.name 
+		SELECT $table.locus_id,$table.locus_name,strain.name,$table.value,$table.start_bp,contig.name 
 		FROM $table
 		JOIN contig ON $table.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id 
+		JOIN strain ON contig.strain_id = strain.id
+		ORDER BY $table.locus_name,$table.locus_id,strain.name ASC
 	};
 	#my $sql = qq{SELECT locus_id,value,start_bp,contig_id FROM $table};
 	my $sth = $self->_sqliteDb->prepare($sql);
@@ -465,7 +451,7 @@ sub _createOutputFile{
 
 	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
 	#print header for output file
-	$outFH->print("Locus Id\tGenome\tAllele\tStart bp\tContig\n");
+	$outFH->print("Locus Id\tLocus Name\tGenome\tAllele\tStart bp\tContig\n");
 	
 	while(my $row = $sth->fetchrow_arrayref){
 	    $outFH->print(join("\t",@{$row}) . "\n");
@@ -510,29 +496,75 @@ sub _generateOrderedNamesArray{
 
 sub _processBlastXML {
 	my $self = shift;
-	my $blastXMLFile = shift;
+	my $blastFile = shift;
 	my $counter=shift;
 
-	$self->logger->info("Processing Blast XML file $blastXMLFile, counter: $counter");
+	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
 	$counter *=1000000000;
 
-	my $xmlFH = IO::File->new( '<' . $blastXMLFile ) or die "$!";
-	my $xmler = Modules::Alignment::BlastResultFactory->new($xmlFH);
-
-	while ( my $result = $xmler->nextResult) {
+	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->percentIdentityCutoff);
+	
+	while(my $result = $blastResult->getNextResult){
+		my @names = keys %{$result};
 		$counter++;
-		my $type;
-		if($self->coreGenomeThreshold == 0){
-			$type = 'accessory';
-		}
-		else{
-			$type = $self->_getCoreAccessoryType($result);
-		}
-		$self->_processResult($result, $type,$counter);
-		
-	}	
-	$xmlFH->close();
+		#if it is a core result, send to SNP finding
+		#get presence / absence of all
+		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
+			my $coreResults = $self->_getCoreResult($result,$counter);		
 
+			foreach my $cResult(@{$coreResults}){
+				# contig=>$contig,
+				# startBp=>$finalPosition,
+				# value=>$base,
+				# locusId=>$resultNumber
+				$self->_insertIntoDb(
+					'snp',
+					$self->_contigIds->{$cResult->{'contig'}},
+					$cResult->{'locusId'},
+					$result->{$names[0]}->[1],
+					$cResult->{'startBp'},
+					$cResult->{'value'}
+				);
+			}
+		}
+
+		#'outfmt'=>'"6 
+		# [0]sseqid 
+		# [1]qseqid 
+		# [2]sstart 
+		# [3]send 
+		# [4]qstart 
+		# [5]qend 
+		# [6]slen 
+		# [7]qlen 
+		# [8]pident 
+		# [9]length"',
+		# [10]sseq,
+		# [11]qseq
+		foreach my $name(@{$self->_orderedNames}){
+			if(defined $result->{$name}){
+				$self->_insertIntoDb(
+					'binary',
+					$self->_contigIds->{$result->{$name}->[0]},
+					$counter,
+					$result->{$names[0]}->[1],
+					$result->{$name}->[2],
+					1
+				);
+			}
+			else{
+				$self->_insertIntoDb(
+					'binary',
+					$self->_contigIds->{'NA_' . $name},
+					$counter,
+					$result->{$names[0]}->[1],
+					0,
+					0
+				);
+			}		
+		}		
+	}
+	$self->logger->info("Total results: $counter");
 	#process any remaining sql that didn't fill up the 500 select buffer
 	if(defined $self->_sqlString->{'binary'}->[0]){
 		my $sqlString = join('',@{$self->_sqlString->{'binary'}});
@@ -545,11 +577,13 @@ sub _processBlastXML {
 	}
 }
 
+
 sub _insertIntoDb{
 	my $self = shift;
 	my $table = shift;
 	my $contigId = shift;
 	my $locusId = shift;
+	my $locusName = shift;
 	my $startBp = shift;
 	my $value = shift;
 
@@ -583,10 +617,10 @@ sub _insertIntoDb{
 	my $sql=[];
 	if(defined $self->_sqlString->{$table}->[0]){
 		$sql = $self->_sqlString->{$table};
-		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId'};
+		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId','$locusName'};
 	}
 	else{
-		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
+		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id,locus_name) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id','$locusName' AS 'locus_name'};
 	}
 	
 	if(scalar(@{$sql})==500){
@@ -597,168 +631,15 @@ sub _insertIntoDb{
 	else{
 		$self->_sqlString->{$table}=$sql;
 	}
+	#my $sql = qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
+	#$self->_sqliteDb->do($sql);
+	#$self->logger->info("$sql");
 }
 
-sub _getCoreAccessoryType {
-	my ($self) = shift;
-
-	my $result = shift;
-	my $returnType;
-	my $numberOverSequenceCutoff = 0;
-
-	#if there is no blast result hit, deal with it
-	if ( !defined $result->hitHash ) {
-		$self->logger->debug("No blast result hit for result");
-		$returnType = 'accessory';
-	}
-	else {
-		foreach my $hit ( keys %{ $result->hitHash } ) {
-			my $hitObj = $result->hitHash->{$hit};
-			my $sequenceCoverage = $self->_getSequenceCoverage( $hitObj, $result->query_len );
-			$numberOverSequenceCutoff++ if ( $sequenceCoverage >= $self->percentIdentityCutoff );
-			$self->logger->debug("coverage: $sequenceCoverage" . " cutoff: " . $self->percentIdentityCutoff);
-		}
-
-		if ( $numberOverSequenceCutoff >= $self->coreGenomeThreshold ) {
-			$returnType = 'core';
-		}
-		else {
-			$returnType = 'accessory';
-		}
-	}
-	$self->logger->debug("$returnType number over cutoff: $numberOverSequenceCutoff");
-	$self->logger->debug("Returning $returnType");
-	return $returnType;
-}
-
-
-sub _getSequenceCoverage {
-	my $self = shift;
-
-	my $hit         = shift // $self->logger->logconfess('hit is required in Modules::PanGenome::_getSequenceCoverage');
-	my $queryLength = shift // $self->logger->logconfess('queryLength is required in Modules::PanGenome::_getSequenceCoverage');
-
-	my $sequenceCoverage = $hit->hsp_align_len / $queryLength * 100;
-	return $sequenceCoverage;
-}
-
-=head3 _processResult
-
-Takes a single BLAST result and extracts both the core and accessory information.
-Every result should have an accessory entry (even if all negative)
-while a core result is only calculated if the restrictions are met.
-In preparation for calculating a core result, an array of fasta sequences is produced,
-for direct use in the Muscle alignment program.
-
-=cut
-
-sub _processResult {
-	my $self = shift;
-	my $result = shift;
-	my $type = shift;
-	my $counter=shift;
-
-	my @fastaArray;
-	my %startBpHash;
-	$counter *=1000000;
-
-	if ( defined $result->hitHash ) {
-	
-		#each $hit is the SequenceName::Name of the hit
-		foreach my $name (@{$self->_orderedNames} ) {
-			my $hitObj;
-			
-			if(defined $result->hitHash->{$name}){
-				$hitObj = $result->hitHash->{$name};
-				$hitObj->setSequence();    #this ensures start <  end bp
-
-				#table, contigId,locusId,startBp,value
-				$self->_insertIntoDb(
-					'binary',
-					$self->_contigIds->{$hitObj->hit_def},
-					$counter,
-					$hitObj->hsp_hit_from,
-					$self->_getAccessoryValue(
-						$self->_getSequenceCoverage( $hitObj, $result->query_len ),
-						$hitObj
-					)
-				);				
-			}
-			else{
-				#table, contigId,locusId,startBp,value
-				$self->_insertIntoDb(
-					'binary',
-					$self->_contigIds->{"NA_$name"},
-					$counter,
-					'0',
-					'0'
-				);
-				next;
-			}				
-			
-			#create a fasta-file format array if core
-			if($type eq 'core'){		
- 				push @fastaArray, ( '>' . $hitObj->hit_def . "\n" . $hitObj->hsp_hseq . "\n");
- 				$startBpHash{ $hitObj->hit_def } = $hitObj->hsp_hit_from;
-			}
-		}    #end of foreach
-		if($type eq 'core'){
-			my $coreResultArray = $self->_getCoreResult(\@fastaArray, \%startBpHash,$counter,$self->_locusId->{'snp'});
-
-			foreach my $result(@{$coreResultArray}){
-				$self->_insertIntoDb(
-					'snp',
-					$self->_contigIds->{$result->{'contig'}},
-					$result->{'locusId'},
-					$result->{'startBp'},
-					$result->{'value'}
-				);
-			}
-		}
-	}#end of if
-	else{
-		$self->logger->info("Result :" . $result->name . " has no hits!");
-	}
-}
-
-=head3 _getAccessoryValue
-
-Returns either a 0, 1, %ID or the sequence for a particular locus in a given genome.
-Based on the sequenceCoverage and the accessoryType selected by the user.
-
-=cut
-
-sub _getAccessoryValue{
-	my $self=shift;
-	my $sequenceCoverage=shift;
-	my $hitObj=shift;
-
-	my $value;
-	if ( $self->accessoryType eq 'binary' ) {
-		if ( $sequenceCoverage >= $self->percentIdentityCutoff ) {
-			$value = 1;
-		}
-		else {
-			$value = 0;
-		}
-	}
-	elsif ( $self->accessoryType eq 'percent' ) {
-		$value = $sequenceCoverage;
-	}
-	elsif ( $self->accessoryType eq 'sequence' ) {
-		$value = $hitObj->hsp_hseq;
-	}
-	else {
-		$self->logger->fatal("incorrect accessoryType specified!");
-	}
-	return $value;
-}
 
 sub _getCoreResult {
 	my $self = shift;
-
-	my $fastaArrayRef = shift;
-	my $startBpHashRef = shift;	
+	my $result=shift;
 	my $resultNumber=shift;
 
 	#create temp files for muscle
@@ -767,11 +648,30 @@ sub _getCoreResult {
 	my $tempOutFile = $self->outputDirectory . 'muscleTemp_out' . $resultNumber;
 	my $tempOutFH = IO::File->new('+>' . $tempOutFile) or die "$!";
 
-	$tempInFH->print(@{$fastaArrayRef});	
+
+	#'outfmt'=>'"6 
+	# [0]sseqid 
+	# [1]qseqid 
+	# [2]sstart 
+	# [3]send 
+	# [4]qstart 
+	# [5]qend 
+	# [6]slen 
+	# [7]qlen 
+	# [8]pident 
+	# [9]length"',
+	# [10]sseq,
+	# [11]qseq
+	my %startBpHash;
+	foreach my $hit(sort keys %{$result}){
+		$tempInFH->print('>' . $result->{$hit}->[0] . "\n" . $result->{$hit}->[10] . "\n");
+		$startBpHash{$result->{$hit}->[0]}=$result->{$hit}->[4];
+	}
+	
 	my $systemLine = $self->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
 	system($systemLine);
 
-	# #close the open FH
+	#close the open FH
 	$tempInFH->close();	
 	my @alignedFastaSeqs = $tempOutFH->getlines();
 	$tempOutFH->close();
@@ -784,7 +684,7 @@ sub _getCoreResult {
 	my $snpDetective = Modules::Alignment::SNPFinder->new(
 		 'orderedNames'=>$self->_orderedNames,
 		 'alignedFastaSequences'=>\@alignedFastaSeqs,
-		 'startBpHashRef'=>$startBpHashRef,
+		 'startBpHashRef'=>\%startBpHash,
 		 'resultNumber'=>$resultNumber,
 	 );	
 	 my $snpDataArrayRef = $snpDetective->findSNPs();

@@ -158,7 +158,7 @@ sub _getSingleBaseResult{
 			my $dashOffset = $self->_dashOffset->{$name};
 
 			unless(defined $base){
-				$self->logger->fatal("name: $name\nfasta: " . $alignedHashRef->{$name}->{'fasta'}. "\nseq: " . $alignedHashRef->{$name}->{'sequence'} . "\npos: $position");
+				$self->logger->fatal("name: $name\nfasta: " . $contig. "\nseq: " . $alignedHashRef->{$name}->{'sequence'} . "\npos: $position");
 				exit(1);
 			}
 
@@ -168,8 +168,7 @@ sub _getSingleBaseResult{
 				$baseTypes{$base}=1;
 			}				
 
-			my $startBp = $self->startBpHashRef->{$alignedHashRef->{$name}->{'fasta'}};		
-
+			my $startBp = $self->startBpHashRef->{$contig};		
 			#update _dashOffset if need be
 			#if the char is a '-', there is no position information for the original sequence, so report a 0
 			my $finalPosition;
