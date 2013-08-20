@@ -234,7 +234,7 @@ sub run{
 	);
 
 	#get all names of genomes from the queryFile
-	my @genomeNames = map {$_} (keys %{$multiFastaSN->sequenceNameHash});
+	my @genomeNames = map {$_} (sort keys %{$multiFastaSN->sequenceNameHash});
 
 	my $numberOfGenomes = scalar(@genomeNames);
 	$self->logger->info("We have " . $numberOfGenomes . " genomes this run");
@@ -264,14 +264,13 @@ sub run{
 
 	while($numberOfRemainingFiles > 3){
 		$self->logger->info("Remaining files: $numberOfRemainingFiles");
-		my ($filesPerComparison,$remainder) = $self->_getNumberOfFilesPerComparison($numberOfRemainingFiles);
+		my ($filesPerComparison) = $self->_getNumberOfFilesPerComparison($numberOfRemainingFiles);
 
-		$self->logger->info("Files per: $filesPerComparison, remainder: $remainder");
+		$self->logger->info("Files per: $filesPerComparison");
 
 		$allFastaFiles = $self->_processRemainingFilesWithNucmer(
 			$allFastaFiles,
-			$filesPerComparison,
-			$remainder
+			$filesPerComparison
 		);
 	}
 	continue{
@@ -366,14 +365,18 @@ sub _processRemainingThreeFiles{
 
 	$self->logger->info("Processing the final " . scalar(@{$finalFiles}) . " number of files");
 
-	my @firstTwo =($finalFiles->[0], $finalFiles->[1]);
+	my @sortedNames = sort@{$finalFiles};
+	my @firstTwo =($sortedNames[0],$sortedNames[1]);
 
-	#[files],filesPerComparison,remainder
+	#[files],filesPerComparison
+	$self->logger->info("Sending @firstTwo to Nucmer");
 	my $combinedFiles = $self->_processRemainingFilesWithNucmer(\@firstTwo,2,0);
 	$self->logger->info("Processing the final ". scalar(@{$combinedFiles}) . " number of files");
 
-	if(defined $combinedFiles->[1]){
+	if(defined $sortedNames[2]){
+		push @{$combinedFiles}, $sortedNames[2];
 		$self->logger->info("Processing the last file for pan-genome creation");
+		$self->logger->info("Sending @{$combinedFiles} to nucmer");
 		return $self->_processRemainingFilesWithNucmer($combinedFiles,2,0);
 	}
 	else{
@@ -404,7 +407,7 @@ sub _performFinalNucmer{
 =head2 _processRemainingFilesWithNucmer
 
 Takes in a list of fasta files that need to be compared among each other for novel regions.
-Given the computed number of filesPerComparison and the remainder, cycle through the files and
+Given the computed number of filesPerComparison, cycle through the files and
 perform one round of nucmer comparisons. Return the generated "pan-genomes" from each set of comparisons,
 which will be fed back into this sub until only one file is returned, which is the non-redundant pan-genome
 for the original files.
@@ -416,32 +419,28 @@ sub _processRemainingFilesWithNucmer{
 	my $self=shift;
 	my $allFastaFiles = shift;
 	my $filesPerComparison = shift;
-	my $remainder = shift;
 
-	$self->logger->info("In _processRemainingFilesWithNucmer. filesPerComparison: $filesPerComparison remainder: $remainder");
+	$self->logger->info("In _processRemainingFilesWithNucmer. filesPerComparison: $filesPerComparison");
 
 	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
-	#my $forker = Parallel::ForkManager->new(1);
 
 	my @filesToRun;
 	
 	my $counter=1;
 	my $reset=0;
-	foreach my $fastaFile (@{$allFastaFiles}){
-		push @filesToRun, $fastaFile;
+	my @outputFileNames;
+	my $lastFile=undef;
 
-		if(scalar(@filesToRun) == $filesPerComparison){
-			if($remainder > 0){
-				$remainder--;
-				next;
-			}
-		}		
-		
+	foreach my $fastaFile (@{$allFastaFiles}){
+		$lastFile = $fastaFile;
+		push @filesToRun, $fastaFile;		
+
 		if(scalar(@filesToRun) >= $filesPerComparison){
+			$lastFile = undef;
 			$reset=1;
-			
-			$forker->start and next;
-				my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
+			my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
+			push @outputFileNames, $newFileName;
+			$forker->start and next;				
 				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);
 				
 				my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
@@ -473,7 +472,6 @@ sub _processRemainingFilesWithNucmer{
 				move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
 				unlink $queryFile;
 				unlink $referenceFile;		
-
 			$forker->finish;
 		}
 	}
@@ -486,33 +484,14 @@ sub _processRemainingFilesWithNucmer{
 		}
 	}
 	$forker->wait_all_children;
-	return $self->_getPanFiles();
-}
-
-
-=head2
-
-The collects the temporary _pan filenames from the baseDirectory and returns them as
-an arrayRef. This list of names is then fed back into the _processRemainingFilesWithNucmer sub.
-
-=cut
-
-sub _getPanFiles{
-	my $self=shift;
-
-	#with Roles::CombineFilesIntoSingleFile
-	my $files = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
-	my @panFiles;
-
-	foreach my $file(@{$files}){
-		if($file =~ m/_pan$/){
-			push @panFiles,$file;
-			$self->logger->info("Pan file: $file");
-		}
+	
+	#if a file hasn't been compared, return in list
+	if(defined $lastFile){
+		$self->logger->info("Adding $lastFile to the list of returned files");
+		push @outputFileNames, $lastFile;
 	}
-	return \@panFiles;
+	return \@outputFileNames;
 }
-
 
 =head2 _combineNovelRegionsAndReferenceFile
 
@@ -689,8 +668,7 @@ sub _processNucmerQueue{
 
 Based on the number of cores and number of remaining files to process,
 determines how many files should be processed per concurrent mummer instance, given that we
-need at least 2 files per comparison. Returns the number of files that are the
-"remainder" and must be added to a group.
+need at least 2 files per comparison. 
 
 =cut
 
@@ -705,9 +683,7 @@ sub _getNumberOfFilesPerComparison{
 		$numFilesPerComp = 2;
 	}
 
-	my $remainder = $numberOfFiles % $numFilesPerComp;
-
-	return ($numFilesPerComp,$remainder);
+	return ($numFilesPerComp);
 }
 
 
