@@ -630,19 +630,20 @@ sub _getQueryReferenceFileFromList{
 	my $self = shift;
 	my $listOfFiles = shift;
 	my $name=shift;
+	my @allFiles = sort @{$listOfFiles};
 
-	my $ref = shift @{$listOfFiles};
+	my $ref = shift @allFiles;
 	$self->logger->info("Reference file for nucmer run is $ref");
 	$self->logger->info("Files combined for query run: @{$listOfFiles}");
 	#with Roles::CombineFilesIntoSingleFile
 	my $queryFileName = $name . '_query';
 	$self->_combineFilesIntoSingleFile(
-		$listOfFiles,
+		\@allFiles,
 		$queryFileName
 	); 
 
 	#remove the non-combined query files
-	foreach my $file(@{$listOfFiles}){
+	foreach my $file(@allFiles){
 		unlink $file;
 	}
 	return ($queryFileName,$ref);
