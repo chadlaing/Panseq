@@ -5,7 +5,7 @@
 	<h2>How do I retrieve my results?</h2>
 	<p>
 	Visit the link provided after clicking "Analyze!" any time in the subsequent month to download a .zip file
-	of you results.
+	of your results.
 	</p>
 
 	<h2>How do I compare my own sequences?</h2>
@@ -90,18 +90,19 @@
 	Single nucleotide polymorphisms (SNPs) in these alignments are determined and used to generate a 
 	<a href="http://evolution.genetics.washington.edu/phylip.html">Phylip</a> formatted file of all SNPs for use in downstream
 	phylogenetic analyses. A phylip formatted file of pan-genome fragment presence / absence is also created, as are tab-delimited
-	tables for both SNP and pan-genome fragment presence / absence.
+	tables for both SNP and pan-genome fragment presence / absence (snp_table.txt and binary_table.txt, respectively), 
+	and a detailed result file listing the names, positions and values of the SNP and binary data (core_snps.txt and pan_genome.txt). 
 	</p>
 
 	<p>
-	The tab-delimited tables provide three sets of data, organized in three columnar groups. The first row of the file lists
-	the genomes that were analyzed. The first column lists the loci; these will have names such as "locus_381000000001", or
-	"snp_410000000367". As these names are of themselves not very informative, additional information designating the contig and
-	nucleotide position of each locus are provided. The first set of columns list the actual data for the comparison. For pan-genome
-	fragment presence / absence this is binary "0" or "1" data. For the SNP table, this is "A", "C", "T", "G" or "-". The second set of
-	columns denote the nucleotide position of the locus in base pairs, for example "45933". The third set of columns give the name of
-	the contig that the locus is found on, for example "gi|56384585|gb|AE005174.2". Please note that the nucleotide position information
-	is for the start of the fragment for the pan-genome table.
+	The detailed results file provides data in six columns: Locus Id, Locus Name, Genome, Allele, Start bp and Contig.
+	Locus Id will be a 10-digit number that is a unique identifier for the locus; this number is used in the tabular output
+	for both the SNP and binary data, and can be used for cross-referencing. Locus Name and Genome provide the human-readable names
+	for the locus and the Genome. The Allele columns lists the actual data for the comparison. For pan-genome
+	fragment presence / absence this is binary "0" or "1" data. For the SNP table, this is "A", "C", "T", "G" or "-". Start bp refers
+	to the nucleotide position of the locus in base pairs, for example "45933"; the nucleotide position information
+	is for the start of the fragment for the binary data. Lastly, the Contig column lists the name of the contig the locus is found
+	on, which may differ than the Genome column, for genomes comprised of multi-fasta files.
 	</p>
 	
 </div>
