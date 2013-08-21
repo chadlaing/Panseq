@@ -3,10 +3,9 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/";
-
 use Modules::LociSelector::LociSelector;
-
-_not_ready();
+use Log::Log4perl qw/:easy/;
+Log::Log4perl->easy_init($DEBUG);
 
 unless(scalar(@ARGV)>=2){
         print STDERR "incorrect number of arguments to LociSelector\n",
@@ -15,16 +14,10 @@ unless(scalar(@ARGV)>=2){
         exit(1);
 }
 
-my $fileName=shift;
-my $lociNumber=shift;
-
-my $finder = LociSelector::LociSelector->new();
-$finder->getBestLoci(
-        $fileName,
-        $lociNumber
+my $finder = Modules::LociSelector::LociSelector->new(
+	fileName=>$ARGV[0],
+	lociNumber=>$ARGV[1]
 );
 
-sub _not_ready{
-	print STDERR "Still porting loci selector. It is currently non-functional\n";
-	exit;
-}
+$finder->run();
+

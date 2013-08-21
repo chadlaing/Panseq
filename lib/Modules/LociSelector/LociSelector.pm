@@ -38,6 +38,11 @@ sub _initialize{
     $self->setMissingChars('-','?');
 }
 
+sub logger{
+    my $self=shift;
+    $self->{'_logger'}=shift // return $self->{'_logger'};
+}
+
 
 sub lociNumber{
     my $self=shift;
@@ -131,6 +136,12 @@ sub addToMissingCharsHash{
         }
 }
 
+sub run2{
+    my $self=shift;
+
+
+}
+
 sub run{
         my($self)=shift;
         
@@ -199,8 +210,8 @@ sub printResults{
                 my $outputLine = $locus . "\t" .
                          'POD: ' . $self->outputLociHash->{$locus}->{'POD'} . "\t";
                 
-                for(my $i=1; $i <  scalar (@{$self->outputLociHash->{$locus}->{'characters'}->lineArray}); $i++){
-                        $outputLine .= $self->outputLociHash->{$locus}->{'characters'}->lineArray->[$i];
+                for(my $i=1; $i <  scalar (@{$self->outputLociHash->{$locus}->{'characters'}}); $i++){
+                        $outputLine .= $self->outputLociHash->{$locus}->{'characters'}->[$i];
                 }
                 $outputHash{$self->outputLociHash->{$locus}->{'order'}}=$outputLine;
         }
@@ -348,7 +359,6 @@ sub addToOutputLociHash{
         my($self)=shift;
         
         #takes in an array, not a ref, of [0]=locus, [1]=POD
-        #automatically adds the lineArray object for the locus into the hash for output as {'characters'}
         #POD in hash is {'POD'} for each locus
         
         if(@_){
@@ -382,14 +392,14 @@ sub updateFingerprintHash{
         if(@_){
                 my $locus=shift;
                 
-                for(my $i=1; $i< scalar(@{$self->characterHash->{$locus}->lineArray});$i++){
+                for(my $i=1; $i< scalar(@{$self->characterHash->{$locus}});$i++){
                         my $currentFingerprint;
 
                         if(defined $self->fingerprintHash && defined $self->fingerprintHash->{$i}){
-                                $currentFingerprint=$self->fingerprintHash->{$i} . $self->characterHash->{$locus}->lineArray->[$i];
+                                $currentFingerprint=$self->fingerprintHash->{$i} . $self->characterHash->{$locus}->[$i];
                         }
                         else{
-                                $currentFingerprint=$self->characterHash->{$locus}->lineArray->[$i];
+                                $currentFingerprint=$self->characterHash->{$locus}->[$i];
                         }       
                         #make sure that any missing chars are converted to '.' in the string
                         foreach my $missingChar(keys %{$self->missingCharsHash}){
@@ -457,8 +467,7 @@ sub getBestLociForFingerprint{
                 return \@bestFingerprintLoci;
         }
         else{
-                @bestFingerprintLoci=(0);
-                return \@bestFingerprintLoci;
+                return([0]);
         }
 }
 
@@ -479,8 +488,8 @@ sub calculateFingerprint{
                         }
                 }               
 
-                for(my $i=1; $i< scalar(@{$self->characterHash->{$newLocus}->lineArray});$i++){
-                        my $char = $self->characterHash->{$newLocus}->lineArray->[$i];
+                for(my $i=1; $i< scalar(@{$self->characterHash->{$newLocus}});$i++){
+                        my $char = $self->characterHash->{$newLocus}->[$i];
                         my @tempArray=($char);
                         $char = '.' unless $self->isValidChars(\@tempArray);
                         if(defined $fingerArray[$i]){
@@ -525,19 +534,21 @@ sub getAllLoci{
                 my $inFile=shift;
                 
                 while(my $line = $inFile->getline){
-                        my $la = LinePackage->new($line);
-                        my $locusName = $la->lineArray->[0];
+                        $line =~ s/\R//g;
+                        my @la = split('\t',$line);
+                        
+                        my $locusName = $la[0];
                         
                         if($.==1){
                                 #initialize the fingerprint hash on first line
-                                $self->strainNames($la);
+                                $self->strainNames(\@la);
                         }
                         else{
                                 #add the character values for the locus to the characterHash
-                                $self->addToCharacterHash($locusName,$la);
+                                $self->addToCharacterHash($locusName,\@la);
                                 
                                 #calculate the POD
-                                my $allLociRef = $self->calculatePOD($la);                              
+                                my $allLociRef = $self->calculatePOD(\@la);                              
                                 foreach my $differentPair(@{$allLociRef}){
                                         $self->addToPODHash($differentPair,$locusName);
                                 }                               
@@ -600,11 +611,11 @@ sub calculatePOD{
                 my $la=shift;           
                 my @differencesArray;
                 
-                for(my $i=1; ($i+1)< scalar(@{$la->lineArray});$i++){                   
-                        my $firstChar=$la->lineArray->[$i];
+                for(my $i=1; ($i+1)< scalar(@{$la});$i++){                   
+                        my $firstChar=$la[$i];
                         
-                        for(my $j=($i+1); $j < scalar(@{$la->lineArray});$j++){
-                                my $secondChar=$la->lineArray->[$j];                            
+                        for(my $j=($i+1); $j < scalar(@{$la});$j++){
+                                my $secondChar=$la[$j];                            
                                 if($self->isDifferentChars($firstChar,$secondChar)){
                                         push @differencesArray, "${i}vs${j}";
                                 }
