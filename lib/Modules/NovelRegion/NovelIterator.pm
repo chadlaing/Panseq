@@ -261,12 +261,10 @@ sub run{
 	#create a file for each genome in the baseDirectory, for use in the nucmer comparisons
 	my $allFastaFiles = $self->_createAllFastaFilesForNucmer(\@genomeNames, $multiFastaSN, $self->_retriever);
 	my $numberOfRemainingFiles = scalar(@{$allFastaFiles});
+	my $filesPerComparison=2;
 
-	while($numberOfRemainingFiles > 3){
+	while($numberOfRemainingFiles > 1){
 		$self->logger->info("Remaining files: $numberOfRemainingFiles");
-		my ($filesPerComparison) = $self->_getNumberOfFilesPerComparison($numberOfRemainingFiles);
-
-		$self->logger->info("Files per: $filesPerComparison");
 
 		$allFastaFiles = $self->_processRemainingFilesWithNucmer(
 			$allFastaFiles,
@@ -277,11 +275,7 @@ sub run{
 		$numberOfRemainingFiles = scalar(@{$allFastaFiles});
 	}
 
-	#need to deal with the remaining files in a one vs one basis
-	$allFastaFiles = $self->_processRemainingThreeFiles($allFastaFiles);
-
 	my $finalFile;
-
 	if(scalar(@{$allFastaFiles})==1){
 		#we need to check the _pan file against the reference directory files, if it exists
 		$finalFile = $allFastaFiles->[0];
@@ -326,7 +320,32 @@ sub run{
 	}
 }
 
-=head2 _processRemainingThreeFiles
+=head2
+
+If there is a referenceFile directory, we need to perform a final novel regions comparison
+of the "pan-genome" for the "Selected Query" files against these reference files. If we don't,
+the final reference file from the iterative pan-genome generation is automatically included, even
+if it is not novel with respect to the reference directory sequences.
+
+=cut
+
+sub _performFinalNucmer{
+	my $self = shift;
+	my $queryFile = shift;
+
+	my $newFileName = $queryFile . '_final';
+	my $coordsFile = $self->_processNucmerQueue($queryFile,$self->referenceFile, $newFileName);
+	my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
+	return $novelRegionsFile;
+}
+
+=head2 _processRemainingFilesWithNucmer
+
+Takes in a list of fasta files that need to be compared among each other for novel regions.
+Given the computed number of filesPerComparison, cycle through the files and
+perform one round of nucmer comparisons. Return the generated "pan-genomes" from each set of comparisons,
+which will be fed back into this sub until only one file is returned, which is the non-redundant pan-genome
+for the original files.
 
 We need to ensure the pan-genome has only one seed genome. For example.
 6 genomes as query: (A,B,C,D,E,F).
@@ -359,68 +378,11 @@ A(BCD) + B(CD) + C(D) + D vs E(FGH) + F(GH) + G(H) + H
 
 =cut
 
-sub _processRemainingThreeFiles{
-	my $self=shift;
-	my $finalFiles=shift;
-
-	$self->logger->info("Processing the final " . scalar(@{$finalFiles}) . " number of files");
-
-	my @sortedNames = sort@{$finalFiles};
-	my @firstTwo =($sortedNames[0],$sortedNames[1]);
-
-	#[files],filesPerComparison
-	$self->logger->info("Sending @firstTwo to Nucmer");
-	my $combinedFiles = $self->_processRemainingFilesWithNucmer(\@firstTwo,2,0);
-	$self->logger->info("Processing the final ". scalar(@{$combinedFiles}) . " number of files");
-
-	if(defined $sortedNames[2]){
-		push @{$combinedFiles}, $sortedNames[2];
-		$self->logger->info("Processing the last file for pan-genome creation");
-		$self->logger->info("Sending @{$combinedFiles} to nucmer");
-		return $self->_processRemainingFilesWithNucmer($combinedFiles,2,0);
-	}
-	else{
-		return $combinedFiles;
-	}	
-}
-
-
-=head2
-
-If there is a referenceFile directory, we need to perform a final novel regions comparison
-of the "pan-genome" for the "Selected Query" files against these reference files. If we don't,
-the final reference file from the iterative pan-genome generation is automatically included, even
-if it is not novel with respect to the reference directory sequences.
-
-=cut
-
-sub _performFinalNucmer{
-	my $self = shift;
-	my $queryFile = shift;
-
-	my $newFileName = $queryFile . '_final';
-	my $coordsFile = $self->_processNucmerQueue($queryFile,$self->referenceFile, $newFileName);
-	my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
-	return $novelRegionsFile;
-}
-
-=head2 _processRemainingFilesWithNucmer
-
-Takes in a list of fasta files that need to be compared among each other for novel regions.
-Given the computed number of filesPerComparison, cycle through the files and
-perform one round of nucmer comparisons. Return the generated "pan-genomes" from each set of comparisons,
-which will be fed back into this sub until only one file is returned, which is the non-redundant pan-genome
-for the original files.
-
-=cut
-
 
 sub _processRemainingFilesWithNucmer{
 	my $self=shift;
 	my $allFastaFiles = shift;
-	my $filesPerComparison = shift;
-
-	$self->logger->info("In _processRemainingFilesWithNucmer. filesPerComparison: $filesPerComparison");
+	my $filesPerComparison = shift;	
 
 	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
 
@@ -435,14 +397,14 @@ sub _processRemainingFilesWithNucmer{
 		$lastFile = $fastaFile;
 		push @filesToRun, $fastaFile;		
 
-		if(scalar(@filesToRun) >= $filesPerComparison){
+		if(scalar(@filesToRun) == $filesPerComparison){
 			$lastFile = undef;
 			$reset=1;
 			my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
 			push @outputFileNames, $newFileName;
+
 			$forker->start and next;				
-				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);
-				
+				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);				
 				my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
 
 				my $namesFile;

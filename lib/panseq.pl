@@ -15,8 +15,8 @@ print "settings file: $ARGV[0]\n";
 #MUMmmer defaults its messages to STDERR
 #we want them logged
 #closing STDERR and associating it with Log4perl is done below
-# close STDERR;
-# tie *STDERR, "Tie::Log4perl";
+close STDERR;
+tie *STDERR, "Tie::Log4perl";
 
 my $panseq = Modules::Setup::Panseq->new($settings);
 Log::Log4perl->init("$FindBin::Bin/log4p.conf");
@@ -47,14 +47,6 @@ sub multi_fasta_sequence_name_file{
 
 sub novel_iterator_file{
 	return ($settings->baseDirectory . 'logs/NovelIterator.pm.log'); 
-}
-
-sub blast_run_file{
-	return ($settings->baseDirectory . 'logs/BlastRun.pm.log'); 
-}
-
-sub blast_result_factory_file{
-	return ($settings->baseDirectory . 'logs/BlastResultFactory.pm.log'); 
 }
 
 sub snp_finder_file{
