@@ -130,7 +130,7 @@ The loci selector takes two command line arguments, with an optional third:
 
 The number_of_loci can be any positive integer, or 'best', which will find the minimum number of loci to provide a unique fingerprint for each data column, if possible. The default value of maximize_pod is 0, but can be set to 1 to disable masking of previously used locus pairs when calculating the points of discrimination. The default is recommended. Output is to STDOUT, and can be redirected to output_file.
 
-### Detailed explanation of loci selector
+## Detailed explanation of loci selector
 
 The loci selector constructs loci sets that are maximized with respect to the unique number of fingerprints produced among the input sequences as well as the discriminatory power of the loci among the input sequences. The final loci set is iteratively built, in the following steps, given a tab-delimited table with loci names in the first column, sequence names in the first row, and single character data filling the matrix. Missing data is denoted by the characters '?', '-', or '.' :
 
