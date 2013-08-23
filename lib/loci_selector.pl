@@ -15,8 +15,9 @@ unless(scalar(@ARGV)>=2){
 }
 
 my $finder = Modules::LociSelector::LociSelector->new(
-	fileName=>$ARGV[0],
-	lociNumber=>$ARGV[1]
+	inputFile=>$ARGV[0],
+	lociNumber=>$ARGV[1],
+	maximizePod=>$ARGV[2] // 0
 );
 
 $finder->run();

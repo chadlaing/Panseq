@@ -1,17 +1,64 @@
 #!/usr/bin/env perl
 
-#written by Chad Laing; last updated April 05, 2013
+=pod
 
-#Pan-genome sequence analysis using Panseq: an online tool for the rapid analysis of core and accessory genomic regions
-#Chad Laing, Cody Buchanan, Eduardo Taboada, Yongxiang Zhang, Andrew Kropinski, Andre Villegas, James E Thomas and Victor PJ Gannon
-#BMC Bioinformatics 2010, 11:461
-#http://www.biomedcentral.com/1471-2105/11/461
+=head1 Modules::LociSelector::LociSelector
+
+Modules::LociSelector::LociSelector - Heuristically finds loci that offer maximum discrimination among data.
+
+=head1 SYNOPSIS
+
+
+    use Modules::LociSelector::LociSelector;
+
+    my $finder = Modules::LociSelector::LociSelector->new(
+        inpurFile=>'filename',
+        lociNumver=>'best' | number,
+        maximizePod => 0  #optional, default is 0 
+    );
+    $finder->run();
+
+=head1 DESCRIPTION
+
+Modules::LociSelector::LociSelector constructs loci sets that are maximized with respect to the unique number of fingerprints produced among the input sequences as well as the discriminatory power of the loci among the input sequences. The final loci set is iteratively built, in the following steps, given a tab-delimited table with loci names in the first column, sequence names in the first row, and single character data filling the matrix. Missing data is denoted by the characters '?', '-', or '.' :
+
+(1) Each potential available locus is evaluated for the number of unique fingerprints that would result from its addition to the final loci set. All loci that would generate the maximum number of unique fingerprints in this respect are evaluated in step (2).
+
+(2) All loci from step (1) are evaluated for their discriminatory power among the sequences, which is given as points of discrimination (POD). The POD for a locus is calculated as follows.
+
+A listing of all possible pair-wise comparisons is constructed; for example, if the input table consisted of three sequences, A, B and C, the list would consist of A-B, A-C and B-C. Next, it is determined whether or not the sequences in each pair-wise comparison contain the same single character denoting the locus state. If they do, a value of 0 is assigned; if they differ a value of 1 is assigned. The POD is then the summation of all pair-wise comparisons that differ for that locus. With our previous example, if A-B = 1, A-C = 1 and B-C = 0, the POD for that locus would be 2.
+
+(3) The locus with the highest value from step (2) is selected for addition to the final loci set and removed from the pool of candidate loci. If two or more loci tie in value, one is randomly selected. If all possible unique fingerprints have been found, the algorithm continues with (4); if additional unique fingerprints are possible, the algorithm continues with (5).
+
+(4) Sequence pairs for which the allele of the locus chosen in (3) differ are temporarily excluded from the analysis ("masked"). This ensures loci that differ between other pairs of strains are preferentially considered. Consider our A, B and C example with pair-wise comparisons of A-B = 1, A-C = 1 and B-C = 0. In the case of this locus being chosen, the sequence pairs A-B and A-C would be temporarily removed from the analysis ("masked"), leaving only loci that differed between B-C as viable options. Setting maximumPod = 1 prevents this masking step, which can be useful if one is only interested in loci that offer the most discrimination, regardless of what locus pairs offer that discrimination.
+
+(5) Once a locus has been chosen:
+
+a) the specified number of loci has been reached (all unique fingerprints in the case of 'best') and the algorithm terminates; or
+
+b) the specified number of loci has not been reached and there are remaining fingerprints possible, or sequence pairs for which differences exist. The algorithm returns to (1); or
+
+c) there are no remaining fingerprints possible and no sequence pairs for which differences exist. At such time, all sequence pairs are again considered part of the analysis ("unmasked"). If no differences among any sequence pairs exist at this point, the algorithm terminates; if differences remain, the algorithm returns to (1). 
+
+=head1 ACKNOWLEDGEMENTS
+
+Thanks.
+
+=head1 COPYRIGHT
+
+This work is released under the GNU General Public License v3  http://www.gnu.org/licenses/gpl.html
+
+=head1 AVAILABILITY
+
+The most recent version of the code may be found at: https://github.com/chadlaing/Panseq
+
+=head1 AUTHOR
+
+Chad Laing (chadlaing@gmail.com)
+
+=cut
 
 package Modules::LociSelector::LociSelector;
-
-#usage
-# my $obj = $LociSelector->new();
-# $obj->getBestLoci(<file name (mandatory)>,<loci number or 'best' (mandatory)>,<output filehandle (optional, STDOUT defualt)>);
 
 use FindBin;
 use lib "$FindBin::Bin/../../";
@@ -29,13 +76,38 @@ sub new {
 
 sub _initialize{
     my($self)=shift;
+    my %params=@_;
 
     #logging
     $self->logger(Log::Log4perl->get_logger());    
     $self->logger->info("Logger initialized in Modules::LociSelector::LociSelector");  
 
-    #default missing chars
-    $self->setMissingChars('-','?');
+   #on object construction set all parameters
+    foreach my $key(keys %params){
+        if($self->can($key)){
+            $self->$key($params{$key});
+        }
+        else{
+            $self->logger->fatal("$key is not a valid parameter in Modules::LociSelector::LociSelector");
+            exit(1);
+        }
+    }   
+
+    #init data structurs
+    $self->_missingChars({});
+    $self->_matchedPairs({});
+    $self->_data({});
+    $self->_selectedLoci({});
+    $self->_currentFingerprints([]);
+    $self->_dataHeader([]);
+
+    #defaults
+    $self->_setMissingChars(['-','?','.']);
+    $self->_exhaustedFingerprints(0);
+    $self->_numberOfFingerprints(0);
+    unless(defined $self->maximizePod){
+        $self->maximizePod(0);
+    }
 }
 
 sub logger{
@@ -43,667 +115,443 @@ sub logger{
     $self->{'_logger'}=shift // return $self->{'_logger'};
 }
 
+sub _missingChars{
+    my $self=shift;
+    $self->{'__missingChars'}=shift // return $self->{'__missingChars'};
+}
+
+sub _matchedPairs{
+    my $self=shift;
+    $self->{'__matchedPairs'}=shift // return $self->{'__matchedPairs'};
+}
+
+
+sub inputFile{
+    my $self=shift;
+    $self->{'_inputFile'}=shift // return $self->{'_inputFile'};
+}
 
 sub lociNumber{
     my $self=shift;
     $self->{'_lociNumber'}=shift // return $self->{'_lociNumber'};
 }
 
-sub PODHash{
+sub _fileHandle{
     my $self=shift;
-    $self->{'_PODHash'}=shift // return $self->{'_PODHash'};
+    $self->{'__fileHandle'}=shift // return $self->{'__fileHandle'};
 }
 
-sub characterHash{
+sub _data{
     my $self=shift;
-    $self->{'_characterHash'}=shift // return $self->{'_characterHash'};
+    $self->{'__data'}=shift // return $self->{'__data'};
 }
 
-sub fingerprintHash{
+sub _currentFingerprints{
     my $self=shift;
-    $self->{'_fingerprintHash'}=shift // return $self->{'_fingerprintHash'};
+    $self->{'__currentFingerprints'}=shift // return $self->{'__currentFingerprints'};
 }
 
-sub missingCharsHash{
+sub _selectedLoci{
     my $self=shift;
-    $self->{'_missingCharsHash'}=shift // return $self->{'_missingCharsHash'};
+    $self->{'__selectedLoci'}=shift // return $self->{'__selectedLoci'};
 }
 
-sub orderedLociHash{
+sub _exhaustedFingerprints{
     my $self=shift;
-    $self->{'_orderedLociHash'}=shift // return $self->{'_orderedLociHash'};
+    $self->{'__exhaustedFingerprints'}=shift // return $self->{'__exhaustedFingerprints'};
 }
 
-sub outputLociHash{
+sub _dataHeader{
     my $self=shift;
-    $self->{'_outputLociHash'}=shift // return $self->{'_outputLociHash'};
+    $self->{'__dataHeader'}=shift // return $self->{'__dataHeader'};
 }
 
-sub toContinue{
+sub _numberOfFingerprints{
     my $self=shift;
-    $self->{'_toContinue'}=shift // return $self->{'_toContinue'};
+    $self->{'__numberOfFingerprints'}=shift // return $self->{'__numberOfFingerprints'};
 }
 
-sub currentFingerprints{
+sub maximizePod{
     my $self=shift;
-    $self->{'_currentFingerprints'}=shift // return $self->{'_currentFingerprints'};
-}
-
-sub strainNames{
-    my $self=shift;
-    $self->{'_strainNames'}=shift // return $self->{'_strainNames'};
-}
-
-sub maskedPODLociHash{
-    my $self=shift;
-    $self->{'_maskedPODLociHash'}=shift // return $self->{'_maskedPODLociHash'};
-}
-
-
-#methods
-sub setMissingChars{
-        my($self)=shift;
-        
-        if(@_){
-                foreach(@_){
-                        $self->addToMissingCharsHash($_);
-                }
-        }
-        else{
-                print STDERR "nothing sent to setMissingChars\n";
-                exit(1);
-        }
-}
-
-sub addToMissingCharsHash{
-        my($self)=shift;
-        
-        #takes arguments as key
-        
-        if(scalar(@_)==1){
-                if(defined $self->missingCharsHash){
-                        $self->missingCharsHash->{$_[0]}=1;
-                }
-                else{
-                        my %tempHash;
-                        $tempHash{$_[0]}=1;
-                        $self->missingCharsHash(\%tempHash);
-                }
-        }
-        else{
-                print STDERR "wrong number of arguments to addToMissingCharsHash\n";
-                exit(1);
-        }
-}
-
-sub run2{
-    my $self=shift;
-
-
+    $self->{'_maximizePod'}=shift // return $self->{'_maximizePod'};
 }
 
 sub run{
-        my($self)=shift;
-        
-        #takes no arguments
-        #algorithm:
-        #choose best seed locus based on #fingerprints, then #POD
-        #add subsequent loci until:
-        #       a)all unique fingerprints have been exhausted or
-        #       b)the # of fingerprints specified by the user has been reached
-        #create fingerprints for each strain
-        
-        my $toContinue=1;
-        my $exhaustedFingerprints=0;
-        while($toContinue==1){
-                my @locusInfo; #stores [0]=locus, [1]=POD
-                
-                if($exhaustedFingerprints){
-                        $locusInfo[0]=0;
-                }
-                else{
-                        @locusInfo=$self->chooseNextBestFingerprintLocus();
-                        $self->updateFingerprintHash($locusInfo[0]) if $locusInfo[0] ne '0';
-                        #if $locus eq 0, then unique fingerprints have been exhausted
-                }
-                
-                #throw switches
-                if($locusInfo[0] eq '0'){
-                        $exhaustedFingerprints=1;
-                        $toContinue = 0 if $self->lociNumber eq 'best';
-                }
-                
-                #get next best POD if unique fingerprints exhausted
-                if($toContinue && ($locusInfo[0] eq '0')){
-                        @locusInfo = $self->chooseNextBestPODLocus(); #this returns [0]=locus, [1]=POD  
-                        $toContinue =0 if $locusInfo[0] eq '0';
-                        $self->maskLociPair($locusInfo[0]);             
-                }
-                #update the output
-                $self->addToOutputLociHash(@locusInfo) if $locusInfo[0] ne '0';
-                
-                #stop once the required loci have been gathered
-                $toContinue = 0 if($self->lociNumber ne 'best' && defined $self->outputLociHash && scalar(keys %{$self->outputLociHash})==$self->lociNumber);
-                
-                #check to ensure that after the current locus is removed, there are still loci available
-                $toContinue = 0 if(scalar(keys %{$self->characterHash}) ==1);
-                
-                #remove loci from future possible choices
-                if($toContinue){                
-                        $self->removeLocusFromCharacterHash($locusInfo[0]);                     
-                }               
+    my $self =shift;
+
+    $self->_storeDataInMemory($self->inputFile);
+
+    while(my $locus = $self->_getNextLocus()){
+        $self->logger->info("Selected locus $locus");
+        $self->_selectedLoci->{$locus}=1;
+        $self->_addLocusToCurrentFingerprint($self->_data->{$locus});
+
+        unless($self->maximizePod){
+            $self->_updateMatchedPairs($self->_data->{$locus});
         }
-        $self->printResults();
+    }
+    continue{
+        if(($self->lociNumber eq 'best') && ($self->_exhaustedFingerprints == 1) ){
+            $self->logger->info("Stopping as no new fingerprints are possible. Best number of loci reached.");
+            last;
+        }
+        elsif(scalar(keys %{$self->_selectedLoci}) == $self->lociNumber){
+            $self->logger->info("Stopping as user-specified loci number " . $self->lociNumber . " reached");
+            last;
+        }
+    }
+
+    #do the output
+    $self->_printResults([sort keys %{$self->_selectedLoci}]);
 }
 
-sub printResults{
-        my($self)=shift;
-        
-        $self->printOut(localtime() . "\n",
-        'FINAL VALUES' . "\n" . "==========" . "\n",
-        'Target Loci Number:' . $self->lociNumber . "\n");
-        $self->printOut('No. Of Loci Selected: ' . scalar(keys %{$self->outputLociHash}) . "\n") if $self->lociNumber eq 'best';
-        $self->printOut('Fingerprints: ' . $self->currentFingerprints . "\n");
-        
-        my %outputHash;
-        foreach my $locus(keys %{$self->outputLociHash}){
-                my $outputLine = $locus . "\t" .
-                         'POD: ' . $self->outputLociHash->{$locus}->{'POD'} . "\t";
-                
-                for(my $i=1; $i <  scalar (@{$self->outputLociHash->{$locus}->{'characters'}}); $i++){
-                        $outputLine .= $self->outputLociHash->{$locus}->{'characters'}->[$i];
-                }
-                $outputHash{$self->outputLociHash->{$locus}->{'order'}}=$outputLine;
+=head2 _updateMatchedPairs
+
+We need to mask the locus pairs that have previously provided discrimination.
+This only affects the calculation of the POD for a locus, not the unique fingerprint.
+If maximizePod = 1, this step is skipped, and no locus pairs are masked.
+Masking the pairs ensures that differences between all columns ("strains") are incorporated.
+If one wished to retrieve the loci with the highest POD, regardless of whether locus pairs have
+previously been used, the masking can be skipped.
+
+=cut
+
+sub _updateMatchedPairs{
+    my $self=shift;
+    my $locus=shift;
+
+    my $numberOfLoci=scalar(@{$locus});
+
+    for my $i(0..($numberOfLoci-2)){
+        for my $j(($i+1)..($numberOfLoci-1)){           
+            unless(defined $self->_missingChars->{$locus->[$i]} || defined $self->_missingChars->{$locus->[$j]}){
+                if($locus->[$i] ne $locus->[$j]){
+                    $self->_matchedPairs->{$i}->{$j}=1;
+                }                              
+            }
         }
-        
-        #print out ordered output
-        for(my $i=1; $i <= scalar(keys %outputHash); $i++){
-                $self->printOut($outputHash{$i} . "\n");
-        }       
+    }
 }
 
-sub maskLociPair{
-        my($self)=shift;
-        
-        if(@_){
-                my $locus=shift;
-                
-                foreach my $pair(%{$self->PODHash}){
-                        foreach my $pairLocus(%{$self->PODHash->{$pair}}){
-                                if($locus eq $pairLocus){
-                                        $self->addToMaskedPODLociHash($pair);
-                                        last;
-                                }
-                        }
-                }
+=head2 _addLocusToCurrentFingerprint
+
+Need to add the values from the current locus to the growing fingerprints
+
+=cut
+
+sub _addLocusToCurrentFingerprint{
+    my $self=shift;
+    my $locus=shift;
+
+    $locus = $self->_substituteMissingChars($locus);
+    for my $i(0..(scalar(@{$locus})-1)){
+        $self->_currentFingerprints->[$i] = $self->_currentFingerprints->[$i] . $locus->[$i];
+    }
+}
+
+
+sub _printResults{
+    my $self = shift;
+    my $loci = shift;
+
+    $self->logger->info('Printing results');
+
+    foreach my $header(@{$self->_dataHeader}){
+        print "\t" . $header;
+    }
+    print "\n";
+
+    foreach my $locus(@{$loci}){
+        print $locus . "\t" . "@{$self->_data->{$locus}}" . "\n";
+    }
+}
+
+=head2 _setMissingChars
+
+Sets the characters to be ignored when calculating POD and fingerprints.
+
+=cut
+
+sub _setMissingChars{
+    my $self=shift;
+    my $chars=shift;
+
+    foreach my $char(@{$chars}){
+        $self->logger->debug("Setting missing char " . $char);
+         $self->_missingChars->{$char}=1;
+    }
+}
+
+
+=head2 _getNextLocus
+
+Iterates through the remaining loci until the lociNumber has been hit.
+
+=cut
+
+sub _getNextLocus{
+    my $self=shift;
+
+    my $loci;
+    unless($self->_exhaustedFingerprints == 1){
+        $loci = $self->_getAllBestFingerprintLoci();
+    }  
+
+    if(!defined $loci->[0]){
+        $self->_exhaustedFingerprints(1);
+        $self->logger->info("Fingerprints exhausted");
+
+        if($self->lociNumber eq 'best'){
+            return undef;
+        }
+
+        $loci = [sort keys %{$self->_data}];
+    }
+   
+    $self->logger->info("Sending " . scalar(@{$loci} . " to _getAllBestPodLoci"));
+    my $podLoci = $self->_getAllBestPodLoci($loci);      
+
+    unless(defined $podLoci->[0]){
+        $self->logger->info("Resetting matched pairs");
+        $self->logger->info("Sending " . scalar(@{$loci} . " to _getAllBestPodLoci"));
+        $self->_matchedPairs({});
+        $podLoci = $self->_getAllBestPodLoci($loci);
+    }
+    return $podLoci->[0] // undef;
+}
+
+
+=head2 _getAllBestPodLoci
+
+Given a list of input loci, return all that have the maximum POD,
+taking into account those that have already been matched in $self->_matchedPairs
+
+=cut
+
+sub _getAllBestPodLoci{
+    my $self=shift;
+    my $loci = shift;
+
+    my @bestLoci;
+    my $topPod=0;
+    foreach my $locus(@{$loci}){
+
+        if(defined $self->_selectedLoci->{$locus}){
+            next;
+        }    
+            
+        my $pod = $self->_calculatePod($self->_data->{$locus});
+       # $self->logger->debug("Pod locus: $locus pod: $pod");
+        if($pod > $topPod){
+            @bestLoci=($locus);
+            $topPod=$pod;
+        }
+        elsif($pod == $topPod && $pod !=0){
+            push @bestLoci, $locus;
+        }
+    }
+    $self->logger->debug("Top pod: $topPod: numberOfLoci: " . scalar(@bestLoci));
+    return \@bestLoci;
+}
+
+=head2 _calculatePod
+
+We only need to compare each set once, not bi-directionally.
+Thus {i}->{j} is sufficient, we don't need {j}->{i}.
+eg. [0][1][2]
+The outer loop starts at [0] and goes to [1].
+The inner loop starts at [1] and goes to [2].
+This gives us:
+[0]->[1], [0]->[2]
+[1]->[2]
+Which is all we need, and saves the needless duplication if both
+loops were to run through everything.
+
+=cut
+
+sub _calculatePod{
+    my $self=shift;
+    my $locus=shift;
+
+    my $pod=0;
+    my $numberOfLoci = scalar(@{$locus});
+    #$self->logger->debug("Number of pod loci: $numberOfLoci");
+    for my $i(0..($numberOfLoci-2)){
+        for my $j(($i+1)..($numberOfLoci-1)){
+            if(defined $self->_matchedPairs->{$i}->{$j}){
+                #$self->logger->debug("Matched pair defined: $i:$j");
+                next;
+            }
+            else{
+               # $self->logger->debug("Incrementing pod");
+                unless(defined $self->_missingChars->{$locus->[$i]} || defined $self->_missingChars->{$locus->[$j]}){
+                    if($locus->[$i] ne $locus->[$j]){
+                        $pod++;
+                    }
+                }                
+            }
+        }
+    }
+    #$self->logger->debug("locus: @{$locus} pod: $pod");
+    return $pod;  
+}
+
+=head2 _getAllBestFingerprintLoci
+
+Looks at all available loci, and returns all that create the most fingerprints from the data.
+We want to choose loci that do not contain "missingCharacters" if possible, which is accomplished
+by calculating the POD for any set with more than one locus upon return.
+
+=cut
+
+sub _getAllBestFingerprintLoci{
+    my $self=shift;  
+
+    $self->logger->info("Getting best fingerprints");
+
+    my @chosenLoci;
+    my $initialValue = $self->_numberOfFingerprints;
+    my $topValue=$initialValue;
+
+    foreach my $locus(sort keys %{$self->_data}){
+        #$self->logger->debug("Next locus: $locus");
+        if(defined $self->_selectedLoci->{$locus}){
+            next;
+        }
+
+        my $fingerprintValue = $self->_calculateFingerprint($self->_data->{$locus});
+
+        if($fingerprintValue > $topValue){
+            @chosenLoci=($locus);
+            $topValue=$fingerprintValue;
+            #$self->logger->debug("New best locus: $locus value: $fingerprintValue");
+        }
+        elsif($fingerprintValue == $topValue && $topValue != $initialValue){
+            push @chosenLoci, $locus;
+        }    
+    }
+    $self->logger->info("Best fingerprint value of $topValue");
+    $self->logger->info("initialValue: $initialValue topValue: $topValue");
+    $self->_numberOfFingerprints($topValue);
+    return \@chosenLoci;
+}
+
+
+=head2 _substituteMissingChars
+
+Determines whether or not a locus contains a missing char.
+Replaces with a '.' if present.
+
+=cut
+
+sub _substituteMissingChars{
+    my $self=shift;
+    my $locus=shift;
+  
+    for my $i(0..scalar(@{$locus})-1){           
+        if(defined $self->_missingChars->{$locus->[$i]}){
+            $locus->[$i]='.';
+        }
+    }
+    return $locus;
+}
+
+=head2
+
+Returns the number of unique fingerprints, if the current locus is chosen.
+
+=cut
+
+sub _calculateFingerprint{
+    my $self = shift;
+    my $locus = shift;
+
+    my %tempData;
+    foreach my $i(0..(scalar(@{$locus})-1)){
+        my $locusValue = $locus->[$i];
+        my $value;
+
+        if(defined $self->_missingChars->{$locusValue}){
+            $value='.';
+            #$self->logger->debug("Missing $value");
         }
         else{
-                print STDERR "nothing sent to maskLocus\n";
-                exit(1);
-        }       
+            $value = $locusValue;
+        }
+        my $key = $self->_currentFingerprints->[$i] . $value;
+        $tempData{$key} = 1;
+    }
+    return $self->_accountForMissingChararcters([keys %tempData]);
 }
 
-sub chooseNextBestPODLocus{
-        my($self)=shift;
-        
-        #if send an arrayRef of loci, only choose those, otherwise, use all loci
-        my $lociToTestRef;
-        if(@_){
-                $lociToTestRef=shift;
-        }
-        else{
-                my @remainingLoci = keys %{$self->characterHash};
-                $lociToTestRef = \@remainingLoci;
-        }
-        
-        my @bestLocusWithPOD = $self->getHighestNonMaskedPODLocus($lociToTestRef);
+=head2 _accountForMissingCharacters
 
-        #if everything is masked, reset and try again
-        if($bestLocusWithPOD[0] eq '0'){
-                $self->resetMaskedPODLoci();
-                @bestLocusWithPOD = $self->getHighestNonMaskedPODLocus($lociToTestRef);
-        }
-        else{
-                return @bestLocusWithPOD;
-        }
-        
-        
-}
+We need to ensure that the 'missing characters' are not
+seen as unique values, which will give an incorrect, inflated number of
+fingerprints.
 
-sub getHighestNonMaskedPODLocus{
-        my($self)=shift;
-        
-        if(@_){
-                my $arrayRef=shift;             
-                my $highestPOD=0;
-                my $highestLocus=0;
-                
-                #get top POD locus      
-                my $PODRef = $self->calculateCurrentPOD($arrayRef);
-                foreach my $locus(keys %{$PODRef}){
-                        if($PODRef->{$locus} > $highestPOD){
-                                $highestPOD = $PODRef->{$locus};
-                                $highestLocus = $locus;
-                        }
-                }               
-                return($highestLocus, $highestPOD);
-        }
-        else{
-                print STDERR "nothing sent to getHighestNonMaskedPODLocus\n";
-                exit(1);
-        }
-}
+=cut
 
-sub calculateCurrentPOD{
-        my($self)=shift;
-        
-        #sent an arrayRef of loci we would like POD for, given the current masking parameters   
-        #returns a hashRef for $hash{locus}=POD
-        if(scalar(@_)==1){
-                my $arrayRef=shift;
-                my %PODHash;
+sub _accountForMissingChararcters{
+    my $self=shift;
+    my $prints = shift;
 
-                #create a hash of loci we are interested in
-                my %lociWeCareAbout;
-                foreach(@{$arrayRef}){
-                        $lociWeCareAbout{$_}=1;
-                }
-                
-                
-                #generate a count of POD for each allowable locus we care about
-                foreach my $locusPair(keys %{$self->PODHash}){
-                        next if((defined $self->maskedPODLociHash) && (defined $self->maskedPODLociHash->{$locusPair}));
-                        
-                        foreach my $locus(keys %{$self->PODHash->{$locusPair}}){
-                                next unless defined $lociWeCareAbout{$locus};
-                        
-                                if(defined $PODHash{$locus}){
-                                        $PODHash{$locus}++;
-                                }
-                                else{
-                                        $PODHash{$locus}=1;
-                                }
-                        }
-                }
-                
-                #if there are no allowable hits for any of the loci, return 0 for POD
-                unless (%PODHash){
-                        foreach(keys %lociWeCareAbout){
-                                $PODHash{$_}=0;
-                        }
-                }
-        
-                return \%PODHash;
+    my $numberOfFingerprints = scalar @{$prints};
+    #$self->logger->debug("Accounting for missing chars: number of fingerprints: $numberOfFingerprints");
+
+    for my $i(0..($numberOfFingerprints-2)){
+        my $iPrint = $prints->[$i];
+        #$self->logger->debug("iprint: $iPrint");
+        for my $j(($i+1)..($numberOfFingerprints-1)){
+            my $jPrint = $prints->[$j];
+            #$self->logger->debug("jPrint: $jPrint");
+            if($jPrint =~ m/$iPrint/ || $iPrint =~ m/$jPrint/){
+                #$self->logger->debug("Decreasing number of fingerprints from $numberOfFingerprints");
+                $numberOfFingerprints--;
+            }
+            else{
+                #$self->logger->debug("$jPrint not equal to $iPrint");
+            }          
         }
-        else{
-                print STDERR "nothing sent to calculateCurrentPOD\n";
-                exit(1);
-        }
+    }
+    return $numberOfFingerprints;
 }
 
 
-sub removeLocusFromCharacterHash{
-        my($self)=shift;
-        
-        if(@_){
-                my $locus=shift;
-                delete $self->characterHash->{$locus};
+=head2 _storeDataInMemory
+
+Stores the input file as a hash, with the locus name as the key,
+and the data as an array reference.
+Stores the column headers as an arrayref in $self->_dataHeader
+for use in output.
+
+=cut
+
+sub _storeDataInMemory{
+    my $self=shift;
+    my $file =shift;
+
+    my $inFH=IO::File->new('<' . $file) or die "$!";
+    $self->logger->info("Collecting data from $file");
+
+    while(my $line = $inFH->getline){ 
+        $line =~ s/\R//g;
+        my @la = split('\t',$line);
+
+         if($inFH->input_line_number == 1){
+            foreach my $head(@la){
+                if($head eq ''){
+                    next;
+                }
+                push @{$self->_dataHeader},$head;
+            }
+            next;
         }
-        else{
-                print STDERR "nothing sent to removeLocusFromCharacterHash\n";
-                exit(1);
-        }
+
+        my $locus = shift(@la);
+        $self->_data->{$locus}=\@la;
+    }
+    $inFH->close();
 }
 
-sub addToOutputLociHash{
-        my($self)=shift;
-        
-        #takes in an array, not a ref, of [0]=locus, [1]=POD
-        #POD in hash is {'POD'} for each locus
-        
-        if(@_){
-                my $newLocus=shift;
-                my $POD=shift;
-                
-                if(!defined $self->outputLociHash){
-                        my %tempHash;
-                        $tempHash{$newLocus}->{'characters'}=$self->characterHash->{$newLocus};
-                        $tempHash{$newLocus}->{'POD'}=$POD;
-                        $tempHash{$newLocus}->{'order'}=1;
-                        $self->outputLociHash(\%tempHash);
-                }
-                else{
-                        die "cannot find locus: $newLocus!\n" if !defined $self->characterHash->{$newLocus};
-                        die "cannot find POD: $POD!\n" if !defined $POD;
-                        $self->outputLociHash->{$newLocus}->{'characters'}=$self->characterHash->{$newLocus};
-                        $self->outputLociHash->{$newLocus}->{'POD'}=$POD;
-                        $self->outputLociHash->{$newLocus}->{'order'}= scalar(keys %{$self->outputLociHash});
-                }
-        }
-        else{
-                print STDERR "nothing sent to addToOutputLociHash\n";
-                exit(1);
-        }
-}
-
-sub updateFingerprintHash{
-        my($self)=shift;
-        
-        if(@_){
-                my $locus=shift;
-                
-                for(my $i=1; $i< scalar(@{$self->characterHash->{$locus}});$i++){
-                        my $currentFingerprint;
-
-                        if(defined $self->fingerprintHash && defined $self->fingerprintHash->{$i}){
-                                $currentFingerprint=$self->fingerprintHash->{$i} . $self->characterHash->{$locus}->[$i];
-                        }
-                        else{
-                                $currentFingerprint=$self->characterHash->{$locus}->[$i];
-                        }       
-                        #make sure that any missing chars are converted to '.' in the string
-                        foreach my $missingChar(keys %{$self->missingCharsHash}){
-                                $currentFingerprint =~ s/\Q$missingChar/./;
-                        }
-                                        
-                        $self->addToFingerprintHash($i,$currentFingerprint);
-                }               
-        }
-        else{
-                print STDERR "no locus sent for updating!\n";
-                exit(1);
-        }
-}
-
-sub chooseNextBestFingerprintLocus{
-        my($self)=shift;
-        
-        my $bestLociForFingerprintRef = $self->getBestLociForFingerprint;
-        
-        my @locusToReturnInfo;
-        
-        if((scalar @{$bestLociForFingerprintRef}) > 1){
-                @locusToReturnInfo = $self->chooseNextBestPODLocus($bestLociForFingerprintRef);
-        }
-        elsif((scalar @{$bestLociForFingerprintRef}) == 1){
-                $locusToReturnInfo[0] = $bestLociForFingerprintRef->[0];
-                my $PODHashRef = $self->calculateCurrentPOD($bestLociForFingerprintRef);
-                $locusToReturnInfo[1]=$PODHashRef->{$locusToReturnInfo[0]};
-        }
-        else{
-                $locusToReturnInfo[0]=0;
-        }       
-        return @locusToReturnInfo;
-}
-
-sub resetMaskedPODLoci{
-        my($self)=shift;
-        my %emptyHash;
-        $self->maskedPODLociHash(\%emptyHash);
-}
-
-sub getBestLociForFingerprint{
-        my($self)=shift;
-        
-        if(defined $self->characterHash){
-                my $currentFingerprints= ($self->currentFingerprints || 0);
-                my @bestFingerprintLoci=(0);
-                my $doesItMakeThingsBetter=0; #switch so that we only return loci which increase the current # of fingerprints
-                
-                foreach my $locus(keys %{$self->characterHash}){
-                        my $returnedNumFingerprints = $self->calculateFingerprint($locus);
-                        
-                        if($returnedNumFingerprints > $currentFingerprints){
-                                $doesItMakeThingsBetter=1;
-                                @bestFingerprintLoci=();
-                                push @bestFingerprintLoci, $locus;
-                                $currentFingerprints = $returnedNumFingerprints;
-                                $self->currentFingerprints($currentFingerprints);
-                        }
-                        elsif(($returnedNumFingerprints == $currentFingerprints) && ($doesItMakeThingsBetter==1)){
-                                push @bestFingerprintLoci, $locus;
-                        }
-                }
-                return \@bestFingerprintLoci;
-        }
-        else{
-                return([0]);
-        }
-}
-
-sub calculateFingerprint{
-        my($self)=shift;
-        
-        if(@_){
-                my $newLocus=shift;
-                my @fingerArray;
-                my $numberOfUniqueFingerprints=0;
-                my @observedPrints;
-        
-                #build an array of fingerprints based on the selected loci
-                #initialize with current fingerprint values
-                if(defined $self->fingerprintHash){
-                        foreach(keys %{$self->fingerprintHash}){
-                                $fingerArray[$_]=$self->fingerprintHash->{$_};
-                        }
-                }               
-
-                for(my $i=1; $i< scalar(@{$self->characterHash->{$newLocus}});$i++){
-                        my $char = $self->characterHash->{$newLocus}->[$i];
-                        my @tempArray=($char);
-                        $char = '.' unless $self->isValidChars(\@tempArray);
-                        if(defined $fingerArray[$i]){
-                                $fingerArray[$i].=$char;
-                        }
-                        else{
-                                $fingerArray[$i]=$char;
-                        } 
-                }       
-                
-                #count unique fingerprints
-                ALLPRINTS: for(my $i=1; $i< scalar(@fingerArray); $i++){
-                        my $aPrint = $fingerArray[$i];
-                        unless(@observedPrints){
-                                push @observedPrints, $aPrint;
-                                $numberOfUniqueFingerprints++;
-                                next ALLPRINTS;
-                        }
-                        
-                        OBSERVEDPRINTS: foreach my $oPrint(@observedPrints){
-                                if(($aPrint =~ m/$oPrint/) || ($oPrint =~ m/$aPrint/)){
-                                        next ALLPRINTS;
-                                }
-                                
-                        }
-                        $numberOfUniqueFingerprints++;
-                        push @observedPrints, $aPrint;                  
-                }
-                
-                return $numberOfUniqueFingerprints;
-        }
-        else{
-                print STDERR "nothing sent to calculateFingerprints\n";
-                exit(1);
-        }
-}
-
-sub getAllLoci{
-        my($self)=shift;
-        
-        if(@_){
-                my $inFile=shift;
-                
-                while(my $line = $inFile->getline){
-                        $line =~ s/\R//g;
-                        my @la = split('\t',$line);
-                        
-                        my $locusName = $la[0];
-                        
-                        if($.==1){
-                                #initialize the fingerprint hash on first line
-                                $self->strainNames(\@la);
-                        }
-                        else{
-                                #add the character values for the locus to the characterHash
-                                $self->addToCharacterHash($locusName,\@la);
-                                
-                                #calculate the POD
-                                my $allLociRef = $self->calculatePOD(\@la);                              
-                                foreach my $differentPair(@{$allLociRef}){
-                                        $self->addToPODHash($differentPair,$locusName);
-                                }                               
-                        }
-                }
-        }
-        else{
-                print STDERR "nothing sent to getPODofAllLoci\n";
-                exit(1);
-        }
-}
-
-sub addToCharacterHash{
-        my($self)=shift;
-        
-        #takes arguments as key,value
-        
-        if(scalar(@_)==2){
-                if(defined $self->characterHash){
-                        $self->characterHash->{$_[0]}=$_[1];
-                }
-                else{
-                        my %tempHash;
-                        $tempHash{$_[0]}=$_[1];
-                        $self->characterHash(\%tempHash);
-                }
-        }
-        else{
-                print STDERR "wrong number of arguments to addToCharacterHash\n";
-                exit(1);
-        }
-}
-
-sub addToMaskedPODLociHash{
-        my($self)=shift;
-        
-        #takes argument as the locus pair ($i$j) to mask
-        
-        if(scalar(@_)==1){
-                my $maskedPair=shift;
-                if(defined $self->maskedPODLociHash){
-                        $self->maskedPODLociHash->{$maskedPair}=1;
-                }
-                else{
-                        my %tempHash;
-                        $tempHash{$maskedPair}=1;
-                        $self->maskedPODLociHash(\%tempHash);
-                }
-        }
-        else{
-                print STDERR "wrong number of arguments to addToMaskedPODLociHash\n";
-                exit(1);
-        }
-}
-
-sub calculatePOD{
-        my($self)=shift;
-        
-        if(@_){
-                my $la=shift;           
-                my @differencesArray;
-                
-                for(my $i=1; ($i+1)< scalar(@{$la});$i++){                   
-                        my $firstChar=$la[$i];
-                        
-                        for(my $j=($i+1); $j < scalar(@{$la});$j++){
-                                my $secondChar=$la[$j];                            
-                                if($self->isDifferentChars($firstChar,$secondChar)){
-                                        push @differencesArray, "${i}vs${j}";
-                                }
-                        }               
-                }
-                return \@differencesArray;
-        }
-        else{
-                print STDERR "nothing sent to calculatePOD\n";
-                exit(1);
-        }
-}
-
-sub addToPODHash{
-        my($self)=shift;
-        
-        #takes arguments as key,value
-        
-        if(scalar(@_)==2){
-                if(defined $self->PODHash){
-                        $self->PODHash->{$_[0]}->{$_[1]}=1;
-                }
-                else{
-                        my %tempHash;
-                        $tempHash{$_[0]}->{$_[1]}=1;
-                        $self->PODHash(\%tempHash);
-                }
-        }
-        else{
-                print STDERR "wrong number of arguments to addToPODHash\n";
-                exit(1);
-        }
-}
-
-
-sub isDifferentChars{
-        my($self)=shift;
-        
-        if(scalar(@_)==2){
-                
-                if($self->isValidChars(\@_) && ($_[0] ne $_[1])){
-                        return 1;
-                }
-                else{
-                        return 0;
-                }
-        }
-        else{
-                print STDERR "incorrect number of arguments sent to isDifferentChars\n";
-                exit(1);
-        }
-}
-
-sub isValidChars{
-        my($self)=shift;
-        
-        if(@_){
-                my $arrayRef=shift;
-                foreach(@{$arrayRef}){
-                        return 0 if defined $self->missingCharsHash->{$_};
-                }
-                return 1;
-        }
-        else{
-                print STDERR "nothing sent to isValidChars\n";
-                exit(1);
-        }
-}
-
-sub addToFingerprintHash{
-        my($self)=shift;
-        
-        #takes arguments as key,value
-        
-        if(scalar(@_)==2){
-                if(defined $self->fingerprintHash){
-                        $self->fingerprintHash->{$_[0]}=$_[1];
-                }
-                else{
-                        my %tempHash;
-                        $tempHash{$_[0]}=$_[1];
-                        $self->fingerprintHash(\%tempHash);
-                }
-        }
-        else{
-                print STDERR "wrong number of arguments to addToFingerprintHash\n";
-                exit(1);
-        }
-}
-
-1;
+1; #this sentence is not false
