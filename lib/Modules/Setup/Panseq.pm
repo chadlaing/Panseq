@@ -431,7 +431,6 @@ sub _performPanGenomeAnalyses{
 	my $files=shift;
 	my $novelIterator=shift;
 
-	#fragmentationSize defaults to 0 if no fragmentation is to be done
 	my $panGenomeFile = $novelIterator->panGenomeFile;
 	my $segmenter;
 
@@ -443,7 +442,7 @@ sub _performPanGenomeAnalyses{
 		);
 		$segmenter->segmentTheSequence;
 		$panGenomeFile = $segmenter->outputFile;
-	}
+	}	
 
 	my $dbCreator = Modules::Alignment::MakeBlastDB->new(
 		'dbtype'=>'nucl',
