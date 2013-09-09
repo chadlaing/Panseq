@@ -431,6 +431,7 @@ sub _performPanGenomeAnalyses{
 	my $files=shift;
 	my $novelIterator=shift;
 
+	#fragmentationSize defaults to 0 if no fragmentation is to be done
 	my $panGenomeFile = $novelIterator->panGenomeFile;
 	my $segmenter;
 
