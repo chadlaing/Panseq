@@ -119,12 +119,14 @@ sub _initDb{
 	$dbh->do("DROP TABLE IF EXISTS binary");
 	$dbh->do("DROP TABLE IF EXISTS strain");
 	$dbh->do("DROP TABLE IF EXISTS contig");
+	$dbh->do("DROP TABLE IF EXISTS locus");
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
-	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, allele TEXT strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, locus_name TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT,locus_id INTEGER, locus_name TEXT, contig_id INTEGER, FOREIGN KEY(contig_id) REFERENCES contig(id))");
-
+	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, locus_name TEXT, locus_allele TEXT, contig_id INTEGER, FOREIGN KEY(locus_name) REFERENCES locus(name), FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(locus_allele) REFERENCES locus(allele), FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, locus_name TEXT, locus_allele TEXT, contig_id INTEGER, FOREIGN KEY(locus_name) REFERENCES locus(name), FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(locus_allele) REFERENCES locus(allele), FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY, name TEXT, allele TEXT");
+	
 	$dbh->disconnect();
 
 	$self->_sqlString->{'binary'}=[];
