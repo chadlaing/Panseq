@@ -407,12 +407,13 @@ sub run{
 	for my $count(1..2){
 		$forker->start and next;
 		#reopen database handle that has been closed from the forking above
-		$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+		$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 		if($count==1){
 			$self->_createOutputFile('snp',$self->outputDirectory . 'core_snps.txt');
 		}
 		elsif($count==2){
 			$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
+			$self->_createAlleleFiles();
 		}
 		else{
 			$self->logger->logconfess("Count is $count, but should not be greater than 2");
@@ -422,6 +423,48 @@ sub run{
 	$forker->wait_all_children;
 	$self->logger->info("Pan-genome generation complete");
 }
+
+=head2 _createAlleleFiles
+
+Given each input locus, create a file with the allele for each genome if present
+
+=cut
+
+sub _createAlleleFiles{
+	my $self=shift;
+	
+	$self->logger->info("Creating allele files");
+	my $sql=qq{
+		SELECT strain.name,binary.locus_allele,binary.locus_name
+		FROM binary
+		JOIN contig ON binary.contig_id = contig.id
+		JOIN strain ON contig.strain_id = strain.id
+		ORDER BY binary.locus_name,strain.name ASC
+	};
+	
+	my $sth = $self->_sqliteDb->prepare($sql);
+	$sth->execute();
+	
+	my $outFH = IO::File->new('>' . $self->outputDirectory . 'locus_alleles.fasta') or die "Could not open file locus_alleles.fasta";
+	my $nextRow;
+	my @outputBuffer;
+	
+	my $row = $sth->fetchrow_arrayref;	
+	while($row){
+		$nextRow = $sth->fetchrow_arrayref;
+	    if((!defined $nextRow) || ($row->[2] ne $nextRow->[2])){   
+	    	$outFH->print("\nLocus\t". $row->[2] ."\n"); 	
+	    	$outFH->print(@outputBuffer);    	
+	    	@outputBuffer=();
+	    }
+	    
+	    $self->logger->info("Adding " . $row->[2]);
+	    push @outputBuffer,('>' . $row->[0] . "\n" . $row->[1] . "\n");
+	    $row=$nextRow;
+	}
+	$outFH->close();
+}
+
 
 =head3 _createOutputFile
 
@@ -441,7 +484,7 @@ sub _createOutputFile{
 	#INNER JOIN TableB
 	#ON TableA.name = TableB.name
 	my $sql = qq{
-		SELECT $table.locus_id,$table.locus_name,strain.name,$table.value,$table.start_bp,contig.name 
+		SELECT $table.locus_id,$table.locus_name,strain.name,$table.value,$table.start_bp,contig.name
 		FROM $table
 		JOIN contig ON $table.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
