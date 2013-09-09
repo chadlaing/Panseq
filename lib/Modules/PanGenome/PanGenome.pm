@@ -402,7 +402,7 @@ sub run{
 		$forker->finish;
 	}
 	$forker->wait_all_children;
-	$self->logger->info("Procssing XML files complete");
+	$self->logger->info("Procssing blast output files complete");
 
 	for my $count(1..2){
 		$forker->start and next;
@@ -551,7 +551,8 @@ sub _processBlastXML {
 					$counter,
 					$result->{$names[0]}->[1],
 					$result->{$name}->[2],
-					1
+					1,
+					$result->{$name}->[10]
 				);
 			}
 			else{
@@ -561,7 +562,8 @@ sub _processBlastXML {
 					$counter,
 					$result->{$names[0]}->[1],
 					0,
-					0
+					0,
+					'NA'
 				);
 			}		
 		}		
@@ -588,6 +590,7 @@ sub _insertIntoDb{
 	my $locusName = shift;
 	my $startBp = shift;
 	my $value = shift;
+	my $locusAllele = shift;
 
 	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
 	# INSERT INTO 'tablename'
@@ -619,10 +622,10 @@ sub _insertIntoDb{
 	my $sql=[];
 	if(defined $self->_sqlString->{$table}->[0]){
 		$sql = $self->_sqlString->{$table};
-		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId','$locusName'};
+		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId','$locusName','$locusAllele'};
 	}
 	else{
-		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id,locus_name) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id','$locusName' AS 'locus_name'};
+		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id,locus_name,locus_allele) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id','$locusName' AS 'locus_name','$locusAllele' AS 'locus_allele'};
 	}
 	
 	if(scalar(@{$sql})==500){
