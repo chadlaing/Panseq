@@ -457,8 +457,6 @@ sub _createAlleleFiles{
 	    	$outFH->print(@outputBuffer);    	
 	    	@outputBuffer=();
 	    }
-	    
-	    $self->logger->info("Adding " . $row->[2]);
 	    push @outputBuffer,('>' . $row->[0] . "\n" . $row->[1] . "\n");
 	    $row=$nextRow;
 	}
@@ -557,18 +555,13 @@ sub _processBlastXML {
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
 			my $coreResults = $self->_getCoreResult($result,$counter);		
 
-			foreach my $cResult(@{$coreResults}){
-				# contig=>$contig,
-				# startBp=>$finalPosition,
-				# value=>$base,
-				# locusId=>$resultNumber
+			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
-					'snp',
-					$self->_contigIds->{$cResult->{'contig'}},
-					$cResult->{'locusId'},
-					$result->{$names[0]}->[1],
-					$cResult->{'startBp'},
-					$cResult->{'value'}
+					table=>'snp',
+					contigId=>$self->_contigIds->{$cResult->{'contig'}},
+					locusId=>$cResult->{'locusId'},
+					startBp=>$cResult->{'startBp'},
+					value=>$cResult->{'value'}
 				);
 			}
 		}
@@ -589,24 +582,20 @@ sub _processBlastXML {
 		foreach my $name(@{$self->_orderedNames}){
 			if(defined $result->{$name}){
 				$self->_insertIntoDb(
-					'binary',
-					$self->_contigIds->{$result->{$name}->[0]},
-					$counter,
-					$result->{$names[0]}->[1],
-					$result->{$name}->[2],
-					1,
-					$result->{$name}->[10]
+					table=>'binary',
+					contigId=>$self->_contigIds->{$result->{$name}->[0]},
+					locusId=>$counter,
+					startBp=>$result->{$name}->[2],
+					value=>1
 				);
 			}
 			else{
 				$self->_insertIntoDb(
-					'binary',
-					$self->_contigIds->{'NA_' . $name},
-					$counter,
-					$result->{$names[0]}->[1],
-					0,
-					0,
-					'NA'
+					table=>'binary',
+					contigId=>$self->_contigIds->{'NA_' . $name},
+					locusId=>$counter,
+					startBp=>0,
+					value=>'NA'
 				);
 			}		
 		}		
@@ -627,13 +616,13 @@ sub _processBlastXML {
 
 sub _insertIntoDb{
 	my $self = shift;
-	my $table = shift;
-	my $contigId = shift;
-	my $locusId = shift;
-	my $locusName = shift;
-	my $startBp = shift;
-	my $value = shift;
-	my $locusAllele = shift;
+	my %params = @_;
+	
+	my $table = $params{'table'} // $self->logger->logdie("table required in _insertIntoDb");
+	my $contigId = $params{'contigId'} // $self->logger->logdie("contigId required in _insertIntoDb");
+	my $locusId = $params{'locusId'} // $self->logger->logdie("locusId required in _insertIntoDb");
+	my $startBp = $params{'startBp'} // $self->logger->logdie("startBp required in _insertIntoDb");
+	my $value = $params{'value'} // $self->logger->logdie("value required in _insertIntoDb");
 
 	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
 	# INSERT INTO 'tablename'
@@ -665,10 +654,10 @@ sub _insertIntoDb{
 	my $sql=[];
 	if(defined $self->_sqlString->{$table}->[0]){
 		$sql = $self->_sqlString->{$table};
-		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId','$locusName','$locusAllele'};
+		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId'};
 	}
 	else{
-		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id,locus_name,locus_allele) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id','$locusName' AS 'locus_name','$locusAllele' AS 'locus_allele'};
+		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
 	}
 	
 	if(scalar(@{$sql})==500){
