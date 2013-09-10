@@ -123,9 +123,9 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, locus_name TEXT, locus_allele TEXT, contig_id INTEGER, FOREIGN KEY(locus_name) REFERENCES locus(name), FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(locus_allele) REFERENCES locus(allele), FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, locus_name TEXT, locus_allele TEXT, contig_id INTEGER, FOREIGN KEY(locus_name) REFERENCES locus(name), FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(locus_allele) REFERENCES locus(allele), FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY, name TEXT, allele TEXT");
+	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))");
+	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY, panseqId INTEGER, name TEXT");
 	
 	$dbh->disconnect();
 
@@ -550,11 +550,50 @@ sub _processBlastXML {
 	while(my $result = $blastResult->getNextResult){
 		my @names = keys %{$result};
 		$counter++;
-		#if it is a core result, send to SNP finding
+		
+		my $locusId = $self->_insertIntoLocusTable(
+			panseqId=>$counter,
+			name=>$result->{$names[0]}->[1]
+		);	
+		
 		#get presence / absence of all
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
-			my $coreResults = $self->_getCoreResult($result,$counter);		
+			#'outfmt'=>'"6 
+			# [0]sseqid 
+			# [1]qseqid 
+			# [2]sstart 
+			# [3]send 
+			# [4]qstart 
+			# [5]qend 
+			# [6]slen 
+			# [7]qlen 
+			# [8]pident 
+			# [9]length"',
+			# [10]sseq,
+			# [11]qseq
+			foreach my $name(@{$self->_orderedNames}){							
+				if(defined $result->{$name}){						
+					$self->_insertIntoDb(
+						table=>'binary',
+						contigId=>$self->_contigIds->{$result->{$name}->[0]},
+						locusId=>$locusId,
+						startBp=>$result->{$name}->[2],
+						value=>1
+					);
+				}
+				else{
+					$self->_insertIntoDb(
+						table=>'binary',
+						contigId=>$self->_contigIds->{'NA_' . $name},
+						locusId=>$locusId,
+						startBp=>0,
+						value=>'NA'
+					);
+				}		
+			}			
 
+			#if it is a core result, send to SNP finding
+			my $coreResults = $self->_getCoreResult($result,$counter);		
 			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
 					table=>'snp',
@@ -565,43 +604,14 @@ sub _processBlastXML {
 				);
 			}
 		}
-
-		#'outfmt'=>'"6 
-		# [0]sseqid 
-		# [1]qseqid 
-		# [2]sstart 
-		# [3]send 
-		# [4]qstart 
-		# [5]qend 
-		# [6]slen 
-		# [7]qlen 
-		# [8]pident 
-		# [9]length"',
-		# [10]sseq,
-		# [11]qseq
-		foreach my $name(@{$self->_orderedNames}){
-			if(defined $result->{$name}){
-				$self->_insertIntoDb(
-					table=>'binary',
-					contigId=>$self->_contigIds->{$result->{$name}->[0]},
-					locusId=>$counter,
-					startBp=>$result->{$name}->[2],
-					value=>1
-				);
-			}
-			else{
-				$self->_insertIntoDb(
-					table=>'binary',
-					contigId=>$self->_contigIds->{'NA_' . $name},
-					locusId=>$counter,
-					startBp=>0,
-					value=>'NA'
-				);
-			}		
-		}		
 	}
 	$self->logger->info("Total results: $counter");
 	#process any remaining sql that didn't fill up the 500 select buffer
+	if(defined $self->_sqlString->{'locus'}->[0]){
+		my $sqlString = join('',@{$self->_sqlString->{'locus'}});
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
+	}
+	
 	if(defined $self->_sqlString->{'binary'}->[0]){
 		my $sqlString = join('',@{$self->_sqlString->{'binary'}});
 		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
@@ -611,6 +621,31 @@ sub _processBlastXML {
 		my $sqlString = join('',@{$self->_sqlString->{'snp'}});
 		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
 	}
+}
+
+sub _insertIntoLocusTable{
+	my $self=shift;
+	my $panseqId=shift;
+	my $name=shift;
+	
+	my $sql=[];
+	if(defined $self->_sqlString->{'locus'}->[0]){
+		$sql = $self->_sqlString->{'locus'};
+		push @{$sql}, qq{UNION ALL SELECT '$panseqId','$name'};
+	}
+	else{
+		push @{$sql}, qq{INSERT INTO 'locus' (panseqId,name) SELECT '$panseqId' AS 'panseqId', '$name' AS 'name'};
+	}
+	
+	if(scalar(@{$sql})==500){
+		my $sqlString = join('',@{$sql});
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
+		$self->_sqlString->{'locus'}=[];
+	}
+	else{
+		$self->_sqlString->{'locus'}=$sql;
+	}
+	
 }
 
 
