@@ -471,7 +471,7 @@ Takes output filename and database table name from function call.
 
 sub _createOutputFile{
 	my $self = shift;
-	my $table = shift;
+	my $type = shift;
 	my $outputFile = shift;
 
 	$self->logger->info("Creating output file $outputFile");
@@ -481,15 +481,17 @@ sub _createOutputFile{
 	#INNER JOIN TableB
 	#ON TableA.name = TableB.name
 	my $sql = qq{
-		SELECT $table.locus_id,$table.locus_name,strain.name,$table.value,$table.start_bp,contig.name
-		FROM $table
-		JOIN contig ON $table.contig_id = contig.id
+		SELECT results.locus_id,locus.name,strain.name,results.value,results.start_bp,contig.name
+		FROM results
+		JOIN locus ON results.locus_id = locus.id
+		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
-		ORDER BY $table.locus_name,$table.locus_id,strain.name ASC
+		ORDER BY locus.name,results.locus_id,strain.name ASC
 	};
+
 	#my $sql = qq{SELECT locus_id,value,start_bp,contig_id FROM $table};
-	my $sth = $self->_sqliteDb->prepare($sql);
-	$sth->execute();
+	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
+	$sth->execute() or $self->logger->logdie($self->_sqliteDb->errstr);
 
 	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
 	#print header for output file
