@@ -111,26 +111,24 @@ sub _initialize{
 
 sub _initDb{
 	my $self = shift;
-
+	
+	$self->logger->info("Initializing SQL DB");
 	#define SQLite db
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
 	
-	$dbh->do("DROP TABLE IF EXISTS snp");
-	$dbh->do("DROP TABLE IF EXISTS binary");
+	$dbh->do("DROP TABLE IF EXISTS results");
 	$dbh->do("DROP TABLE IF EXISTS strain");
 	$dbh->do("DROP TABLE IF EXISTS contig");
 	$dbh->do("DROP TABLE IF EXISTS locus");
 
-	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY, name TEXT)");
-	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))");
-	$dbh->do("CREATE TABLE snp(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE binary(id INTEGER PRIMARY KEY, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))");
-	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY, panseqId INTEGER, name TEXT");
+	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT)");
 	
 	$dbh->disconnect();
-
-	$self->_sqlString->{'binary'}=[];
-	$self->_sqlString->{'snp'}=[];
+	$self->_sqlString->{'results'}=[];
+	$self->_sqlString->{'locus'}=[];
 }
 
 =head2 _sqliteDb
@@ -395,7 +393,7 @@ sub run{
 	foreach my $xml(@{$self->xmlFiles}){
 		$counter++;
 		$forker->start and next;
-			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not vreate SQLite DB");
+			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
 			unlink $xml;
 			$self->_sqliteDb->disconnect();
@@ -417,7 +415,8 @@ sub run{
 		}
 		else{
 			$self->logger->logconfess("Count is $count, but should not be greater than 2");
-		}	
+		}
+		$self->_sqliteDb->disconnect();
 		$forker->finish;
 	}
 	$forker->wait_all_children;
@@ -549,12 +548,13 @@ sub _processBlastXML {
 	
 	while(my $result = $blastResult->getNextResult){
 		my @names = keys %{$result};
-		$counter++;
+		$counter++;		
 		
-		my $locusId = $self->_insertIntoLocusTable(
-			panseqId=>$counter,
+		$self->_insertIntoDb(
+			table=>'locus',
+			id=>$counter,
 			name=>$result->{$names[0]}->[1]
-		);	
+		);
 		
 		#get presence / absence of all
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
@@ -574,19 +574,21 @@ sub _processBlastXML {
 			foreach my $name(@{$self->_orderedNames}){							
 				if(defined $result->{$name}){						
 					$self->_insertIntoDb(
-						table=>'binary',
-						contigId=>$self->_contigIds->{$result->{$name}->[0]},
-						locusId=>$locusId,
-						startBp=>$result->{$name}->[2],
+						table=>'results',
+						type=>'binary',
+						contig_id=>$self->_contigIds->{$result->{$name}->[0]},
+						locus_id=>$counter,
+						start_bp=>$result->{$name}->[2],
 						value=>1
 					);
 				}
 				else{
 					$self->_insertIntoDb(
-						table=>'binary',
-						contigId=>$self->_contigIds->{'NA_' . $name},
-						locusId=>$locusId,
-						startBp=>0,
+						table=>'results',
+						type=>'binary',
+						contig_id=>$self->_contigIds->{'NA_' . $name},
+						locus_id=>$counter,
+						start_bp=>0,
 						value=>'NA'
 					);
 				}		
@@ -596,69 +598,62 @@ sub _processBlastXML {
 			my $coreResults = $self->_getCoreResult($result,$counter);		
 			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
-					table=>'snp',
-					contigId=>$self->_contigIds->{$cResult->{'contig'}},
-					locusId=>$cResult->{'locusId'},
-					startBp=>$cResult->{'startBp'},
+					table=>'results',
+					type=>'snp',
+					contig_id=>$self->_contigIds->{$cResult->{'contig'}},
+					locus_id=>$cResult->{'locusId'},
+					start_bp=>$cResult->{'startBp'},
 					value=>$cResult->{'value'}
 				);
 			}
 		}
 	}
 	$self->logger->info("Total results: $counter");
-	#process any remaining sql that didn't fill up the 500 select buffer
-	if(defined $self->_sqlString->{'locus'}->[0]){
-		my $sqlString = join('',@{$self->_sqlString->{'locus'}});
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
-	}
-	
-	if(defined $self->_sqlString->{'binary'}->[0]){
-		my $sqlString = join('',@{$self->_sqlString->{'binary'}});
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
-	}
-	
-	if(defined $self->_sqlString->{'snp'}->[0]){
-		my $sqlString = join('',@{$self->_sqlString->{'snp'}});
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
-	}
+	$self->_emptySqlBuffers(['locus','results']);
 }
 
-sub _insertIntoLocusTable{
+=head 2 _emptySqlBuffers
+
+We store the SQL statements to do 500 INSERT at a time.
+If any are left in the buffer, add them to the DB.
+
+=cut
+
+sub _emptySqlBuffers{
 	my $self=shift;
-	my $panseqId=shift;
-	my $name=shift;
+	my $tables=shift;
 	
-	my $sql=[];
-	if(defined $self->_sqlString->{'locus'}->[0]){
-		$sql = $self->_sqlString->{'locus'};
-		push @{$sql}, qq{UNION ALL SELECT '$panseqId','$name'};
-	}
-	else{
-		push @{$sql}, qq{INSERT INTO 'locus' (panseqId,name) SELECT '$panseqId' AS 'panseqId', '$name' AS 'name'};
-	}
-	
-	if(scalar(@{$sql})==500){
-		my $sqlString = join('',@{$sql});
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
-		$self->_sqlString->{'locus'}=[];
-	}
-	else{
-		$self->_sqlString->{'locus'}=$sql;
-	}
-	
+	foreach my $table(@{$tables}){
+		if(defined $self->_sqlString->{$table}->[0]){
+			my $sqlString = join('',@{$self->_sqlString->{$table}});
+			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
+		}
+	}	
 }
+
+=head2 _insertIntoDb
+
+Take in a table name and any key/value pairs for DB entry.
+This is a generalized function that will not check anything beyond the fact
+that a parameter named 'table' exists.
+Stores all the entries in @keys, without 'table'.
+
+=cut
 
 
 sub _insertIntoDb{
 	my $self = shift;
 	my %params = @_;
 	
+	my @keys;
+	foreach my $key(sort keys %params){
+		if($key eq 'table'){
+			next;
+		}
+		push @keys, $key;
+	}
 	my $table = $params{'table'} // $self->logger->logdie("table required in _insertIntoDb");
-	my $contigId = $params{'contigId'} // $self->logger->logdie("contigId required in _insertIntoDb");
-	my $locusId = $params{'locusId'} // $self->logger->logdie("locusId required in _insertIntoDb");
-	my $startBp = $params{'startBp'} // $self->logger->logdie("startBp required in _insertIntoDb");
-	my $value = $params{'value'} // $self->logger->logdie("value required in _insertIntoDb");
-
+	
 	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
 	# INSERT INTO 'tablename'
  	# SELECT 'data1' AS 'column1', 'data2' AS 'column2'
@@ -689,23 +684,57 @@ sub _insertIntoDb{
 	my $sql=[];
 	if(defined $self->_sqlString->{$table}->[0]){
 		$sql = $self->_sqlString->{$table};
-		push @{$sql}, qq{ UNION ALL SELECT '$value','$startBp', '$contigId','$locusId'};
+		my $currentSql = "UNION ALL SELECT ";
+		
+		my $counter=0;
+		foreach my $key(@keys){
+			if($counter > 0){
+				$currentSql .= ", ";
+			}
+			
+			$currentSql .= "'$params{$key}'";
+			$counter++;
+		}
+		$currentSql .="\n";
+		push @{$sql},$currentSql;
 	}
-	else{
-		push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
+	else{		
+		my $currentSql = "INSERT INTO '$table' (";
+		my $counter=0;
+		foreach my $key(@keys){
+			if($counter > 0){
+				$currentSql .= ", ";
+			}
+			$currentSql .= "$key";
+			$counter++;
+		}
+		$currentSql .= ")\n";
+		
+		$currentSql .= "SELECT ";
+		
+		$counter=0;
+		foreach my $key(@keys){
+			if($counter > 0){
+				$currentSql .= ", ";
+			}
+			
+			$currentSql .= "'$params{$key}' AS '$key'";
+			$counter++;
+		}
+		$currentSql .="\n";
+		push @{$sql}, $currentSql;
+		#push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
 	}
 	
 	if(scalar(@{$sql})==500){
 		my $sqlString = join('',@{$sql});
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("$!");
+		$self->logger->info("$sqlString");
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
 		$self->_sqlString->{$table}=[];
 	}
 	else{
 		$self->_sqlString->{$table}=$sql;
 	}
-	#my $sql = qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
-	#$self->_sqliteDb->do($sql);
-	#$self->logger->info("$sql");
 }
 
 
