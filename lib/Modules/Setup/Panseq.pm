@@ -119,7 +119,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	#$self->_cleanUp();
+	$self->_cleanUp();
 	$self->_createZipFile();
 }
 

@@ -486,6 +486,7 @@ sub _createOutputFile{
 		JOIN locus ON results.locus_id = locus.id
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
+		WHERE results.type = '$type'
 		ORDER BY locus.name,results.locus_id,strain.name ASC
 	};
 
