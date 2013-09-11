@@ -427,13 +427,16 @@ sub _processRemainingFilesWithNucmer{
 				$self->logger->info("Combined file: $combinedFile");			
 
 				#remove temp files
-				unlink $coordsFile;					
+				unlink $coordsFile;
+				unlink $newFileName . '_filtered.delta';
+				unlink $newFileName . '_query_dbtemp.index';				
 
 				#keep the last novelRegionsFile under new name
 				#with File::Copy
 				move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
 				unlink $queryFile;
-				unlink $referenceFile;		
+				unlink $referenceFile;	
+					
 			$forker->finish;
 		}
 	}
@@ -621,6 +624,8 @@ sub _processNucmerQueue{
 	);	
 	$self->logger->info("Nucmer query file: $queryFile");
 	$nucmer->run();	
+	unlink $outputFile . '.delta';
+	unlink $outputFile . '.index';
 	return $nucmer->coordsFile;	
 }
 

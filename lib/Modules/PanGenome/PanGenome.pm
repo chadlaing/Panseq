@@ -728,7 +728,7 @@ sub _insertIntoDb{
 	
 	if(scalar(@{$sql})==500){
 		my $sqlString = join('',@{$sql});
-		$self->logger->info("$sqlString");
+		#$self->logger->info("$sqlString");
 		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
 		$self->_sqlString->{$table}=[];
 	}
