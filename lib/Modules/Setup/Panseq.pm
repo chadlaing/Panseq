@@ -286,38 +286,29 @@ sub _createTreeFiles{
 
 sub _createTree{
 	my $self=shift;
-	my $table = shift;
+	my $type = shift;
 	
+	$self->logger->info("Creating tree $type");
 	#define SQLite db
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
 	my $sql = qq{
-		SELECT strain.name,$table.value, $table.locus_id
-		FROM $table
-		JOIN contig ON $table.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id 
-		ORDER BY $table.locus_id ASC
+		SELECT strain.name,results.value, locus.id
+		FROM results
+		JOIN contig ON results.contig_id = contig.id
+		JOIN strain ON contig.strain_id = strain.id
+		JOIN locus ON results.locus_id = locus.id
+		WHERE results.type = '$type'
+		ORDER BY locus.id ASC
 	};
-	# my $sql =qq{
-	# 	SELECT $table.value, $table.locus_id
-	#  	FROM $table
-	# };
-	# my $sql = qq{
-	# 	SELECT contig.id, $table.contig_id,strain.name,$table.value, $table.locus_id
-	# 	FROM $table
-	# 	JOIN contig 
-	# 	JOIN strain ON contig.strain_id =strain.id
-	# };
 
 	my $sth = $dbh->prepare($sql);
 	my $didSucceed = $sth->execute();
 
 	unless($didSucceed){
-		$self->logger->fatal("DBI failed");
-		exit;
+		$self->logger->fatal($self->logger->logdie($dbh->errstr . "\n$sql"));
 	}
-	#good
-	my $tableFH = IO::File->new('>' . $self->settings->baseDirectory . $table . '_table.txt') or $self->logger->logdie("$!");
 	
+	my $tableFH = IO::File->new('>' . $self->settings->baseDirectory . $type . '_table.txt') or $self->logger->logdie("$!");
 	my %results;
 	my %loci;
 	my $locus;
@@ -344,10 +335,7 @@ sub _createTree{
 	    $locus = $row->[2];
 	    $loci{$row->[0]}=$row->[1];
 	}
-	# unless(defined $locus){
-	# 	$self->logger->info("locus undefined no fetchrow_array");
-	# 	exit;
-	# }
+	
 	$tableFH->print($locus);
 	foreach my $genome(@genomeOrder){
 		$tableFH->print("\t" . $loci{$genome});
@@ -356,9 +344,9 @@ sub _createTree{
 	$dbh->disconnect();
 	$tableFH->close();	
 
-	my $nameConversion = $self->_printPhylipFile($table,\%results);
+	my $nameConversion = $self->_printPhylipFile($type,\%results);
 	
-	if($table eq 'binary'){
+	if($type eq 'binary'){
 		$self->_printConversionInformation($nameConversion);
 	}	
 }

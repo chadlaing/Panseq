@@ -403,7 +403,7 @@ sub run{
 		$forker->finish;
 	}
 	$forker->wait_all_children;
-	$self->logger->info("Procssing blast output files complete");
+	$self->logger->info("Processing blast output files complete");
 
 	for my $count(1..2){
 		$forker->start and next;
@@ -414,7 +414,9 @@ sub run{
 		}
 		elsif($count==2){
 			$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
-			$self->_createAlleleFiles();
+			if($self->useSuppliedLabels){
+				$self->_createAlleleFiles();
+			}
 		}
 		else{
 			$self->logger->logconfess("Count is $count, but should not be greater than 2");
