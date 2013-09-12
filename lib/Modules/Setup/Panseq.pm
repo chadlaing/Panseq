@@ -336,11 +336,14 @@ sub _createTree{
 	    $loci{$row->[0]}=$row->[1];
 	}
 	
-	$tableFH->print($locus);
-	foreach my $genome(@genomeOrder){
-		$tableFH->print("\t" . $loci{$genome});
+	if(defined $locus){
+		$tableFH->print($locus);
+		foreach my $genome(@genomeOrder){
+			$tableFH->print("\t" . $loci{$genome});
+		}
+		$tableFH->print("\n");
 	}
-	$tableFH->print("\n");
+	
 	$dbh->disconnect();
 	$tableFH->close();	
 

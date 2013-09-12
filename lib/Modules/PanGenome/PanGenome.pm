@@ -548,23 +548,8 @@ sub _processBlastXML {
 			name=>$result->{$names[0]}->[1]
 		);
 		
-		#get presence / absence of all
-		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
-			#'outfmt'=>'"6 
-			# [0]sseqid 
-			# [1]qseqid 
-			# [2]sstart 
-			# [3]send 
-			# [4]qstart 
-			# [5]qend 
-			# [6]slen 
-			# [7]qlen 
-			# [8]pident 
-			# [9]length"',
-			# [10]sseq,
-			# [11]qseq
-			foreach my $name(@{$self->_orderedNames}){							
-				if(defined $result->{$name}){
+		foreach my $name(@{$self->_orderedNames}){							
+			if(defined $result->{$name}){
 					#currently, we only store the alleles if using an input file
 					#if we generate a pan-genome, no alleles are stored
 					if($self->useSuppliedLabels){
@@ -595,7 +580,23 @@ sub _processBlastXML {
 						value=>'-'
 					);
 				}		
-			}			
+			}	
+		
+		#get presence / absence of all
+		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
+			#'outfmt'=>'"6 
+			# [0]sseqid 
+			# [1]qseqid 
+			# [2]sstart 
+			# [3]send 
+			# [4]qstart 
+			# [5]qend 
+			# [6]slen 
+			# [7]qlen 
+			# [8]pident 
+			# [9]length"',
+			# [10]sseq,
+			# [11]qseq		
 
 			#if it is a core result, send to SNP finding
 			my $coreResults = $self->_getCoreResult($result,$counter);		
