@@ -612,7 +612,7 @@ sub _processBlastXML {
 		}
 	}
 	$self->logger->info("Total results: $counter");
-	$self->_emptySqlBuffers(['locus','results']);
+	$self->_emptySqlBuffers();
 }
 
 =head 2 _emptySqlBuffers
@@ -624,9 +624,8 @@ If any are left in the buffer, add them to the DB.
 
 sub _emptySqlBuffers{
 	my $self=shift;
-	my $tables=shift;
 	
-	foreach my $table(@{$tables}){
+	foreach my $table(keys %{$self->_sqlString}){
 		if(defined $self->_sqlString->{$table}->[0]){
 			my $sqlString = join('',@{$self->_sqlString->{$table}});
 			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
