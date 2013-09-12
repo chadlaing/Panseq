@@ -305,7 +305,7 @@ sub _createTree{
 	my $didSucceed = $sth->execute();
 
 	unless($didSucceed){
-		$self->logger->fatal($self->logger->logdie($dbh->errstr . "\n$sql"));
+		$self->logger->fatal($self->logger->logdie("sth->execute fail" . $dbh->errstr . "\n$sql"));
 	}
 	
 	my $tableFH = IO::File->new('>' . $self->settings->baseDirectory . $type . '_table.txt') or $self->logger->logdie("$!");
