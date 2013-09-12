@@ -120,15 +120,18 @@ sub _initDb{
 	$dbh->do("DROP TABLE IF EXISTS strain");
 	$dbh->do("DROP TABLE IF EXISTS contig");
 	$dbh->do("DROP TABLE IF EXISTS locus");
+	$dbh->do("DROP TABLE IF EXISTS allele");
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, start_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT)");
+	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
 	$self->_sqlString->{'results'}=[];
 	$self->_sqlString->{'locus'}=[];
+	$self->_sqlString->{'allele'}=[];
 }
 
 =head2 _sqliteDb
@@ -425,7 +428,9 @@ sub run{
 
 =head2 _createAlleleFiles
 
-Given each input locus, create a file with the allele for each genome if present
+Given each input locus, create a file with the allele for each genome if present.
+Note that we use fetchrow_array rather than fethcrow_arrayref, as the same arrayref is returned each time.
+This results in row and nextRow being identical, and things fall apart.
 
 =cut
 
@@ -434,30 +439,33 @@ sub _createAlleleFiles{
 	
 	$self->logger->info("Creating allele files");
 	my $sql=qq{
-		SELECT strain.name,binary.locus_allele,binary.locus_name
-		FROM binary
-		JOIN contig ON binary.contig_id = contig.id
+		SELECT strain.name,locus.name,allele.sequence
+		FROM allele
+		JOIN contig ON allele.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
-		ORDER BY binary.locus_name,strain.name ASC
+		JOIN locus ON allele.locus_id = locus.id
+		ORDER BY locus.name,strain.name ASC
 	};
 	
 	my $sth = $self->_sqliteDb->prepare($sql);
 	$sth->execute();
 	
 	my $outFH = IO::File->new('>' . $self->outputDirectory . 'locus_alleles.fasta') or die "Could not open file locus_alleles.fasta";
-	my $nextRow;
+	my @nextRow;
 	my @outputBuffer;
 	
-	my $row = $sth->fetchrow_arrayref;	
-	while($row){
-		$nextRow = $sth->fetchrow_arrayref;
-	    if((!defined $nextRow) || ($row->[2] ne $nextRow->[2])){   
-	    	$outFH->print("\nLocus\t". $row->[2] ."\n"); 	
+	my @row = $sth->fetchrow_array;	
+	while($row[0]){		
+		@nextRow = $sth->fetchrow_array;
+		
+	    if((!defined $nextRow[0]) || ($row[1] ne $nextRow[1])){   
+	    	$outFH->print("Locus ". $row[1] ."\n"); 	
 	    	$outFH->print(@outputBuffer);    	
 	    	@outputBuffer=();
 	    }
-	    push @outputBuffer,('>' . $row->[0] . "\n" . $row->[1] . "\n");
-	    $row=$nextRow;
+	   
+	    push @outputBuffer,('>' . $row[0] . "\n" . $row[2] . "\n");
+	    @row=@nextRow;
 	}
 	$outFH->close();
 }
@@ -504,27 +512,6 @@ sub _createOutputFile{
 	$outFH->close();	
 }
 
-=head3 _getAllTempFiles
-
-Return a list of names that match the first argument passed to the sub.
-This allows the gathering of all temp files of a particular type.
-The match is conducted against a list of file names passed as the second argument.
-
-=cut
-
-sub _getAllTempFiles{
-	my $self=shift;
-	my $term = shift;
-	my $filesRef=shift;
-
-	my @matchedFiles;
-	foreach my $file(@{$filesRef}){
-		if($file =~ m/\Q$term\E/){
-			push @matchedFiles, $file;
-		}
-	}
-	return \@matchedFiles;
-}
 
 sub _generateOrderedNamesArray{
 	my $self=shift;
@@ -575,7 +562,18 @@ sub _processBlastXML {
 			# [10]sseq,
 			# [11]qseq
 			foreach my $name(@{$self->_orderedNames}){							
-				if(defined $result->{$name}){						
+				if(defined $result->{$name}){
+					#currently, we only store the alleles if using an input file
+					#if we generate a pan-genome, no alleles are stored
+					if($self->useSuppliedLabels){
+						$self->_insertIntoDb(
+							table=>'allele',
+							locus_id=>$counter,
+							contig_id=>$self->_contigIds->{$result->{$name}->[0]},
+							sequence=>$result->{$name}->[10]
+						);
+					}					
+										
 					$self->_insertIntoDb(
 						table=>'results',
 						type=>'binary',
@@ -592,7 +590,7 @@ sub _processBlastXML {
 						contig_id=>$self->_contigIds->{'NA_' . $name},
 						locus_id=>$counter,
 						start_bp=>0,
-						value=>'NA'
+						value=>'-'
 					);
 				}		
 			}			
@@ -731,7 +729,7 @@ sub _insertIntoDb{
 	if(scalar(@{$sql})==500){
 		my $sqlString = join('',@{$sql});
 		#$self->logger->info("$sqlString");
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
+		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
 		$self->_sqlString->{$table}=[];
 	}
 	else{

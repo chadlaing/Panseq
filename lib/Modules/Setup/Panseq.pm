@@ -476,6 +476,7 @@ sub _performPanGenomeAnalyses{
 				. ' -max_target_seqs 100000';
 			$self->logger->info("Running blast with the following: $blastLine");
 			system($blastLine);
+			unlink $splitFile;
 		$forker->finish;
 	}
 	$forker->wait_all_children();	
