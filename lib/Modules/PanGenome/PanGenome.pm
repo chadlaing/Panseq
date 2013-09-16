@@ -398,7 +398,7 @@ sub run{
 		$forker->start and next;
 			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
-			unlink $xml;
+			#unlink $xml;
 			$self->_sqliteDb->disconnect();
 		$forker->finish;
 	}
@@ -459,14 +459,14 @@ sub _createAlleleFiles{
 	my @row = $sth->fetchrow_array;	
 	while($row[0]){		
 		@nextRow = $sth->fetchrow_array;
+		push @outputBuffer,('>' . $row[0] . "\n" . $row[2] . "\n");
 		
 	    if((!defined $nextRow[0]) || ($row[1] ne $nextRow[1])){   
 	    	$outFH->print("Locus ". $row[1] ."\n"); 	
 	    	$outFH->print(@outputBuffer);    	
 	    	@outputBuffer=();
-	    }
+	    }  
 	   
-	    push @outputBuffer,('>' . $row[0] . "\n" . $row[2] . "\n");
 	    @row=@nextRow;
 	}
 	$outFH->close();
@@ -577,7 +577,7 @@ sub _processBlastXML {
 						contig_id=>$self->_contigIds->{'NA_' . $name},
 						locus_id=>$counter,
 						start_bp=>0,
-						value=>'-'
+						value=>'0'
 					);
 				}		
 			}	
