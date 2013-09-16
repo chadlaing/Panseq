@@ -291,8 +291,15 @@ sub _createTree{
 	$self->logger->info("Creating tree $type");
 	#define SQLite db
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
-	my $sql = qq{
-		SELECT strain.name,results.value, locus.id
+	
+	my $sql;
+	if(defined $self->settings->queryFile){
+		$sql = "SELECT strain.name,results.value, locus.name";
+	}
+	else{
+		$sql = "SELECT strain.name,results.value, locus.id";
+	}
+	$sql .= qq{
 		FROM results
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
