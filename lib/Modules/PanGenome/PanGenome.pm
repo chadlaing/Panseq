@@ -398,7 +398,7 @@ sub run{
 		$forker->start and next;
 			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
-			#unlink $xml;
+			unlink $xml;
 			$self->_sqliteDb->disconnect();
 		$forker->finish;
 	}
