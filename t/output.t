@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test::More tests=>7;
+use Test::More tests=>13;
 use Test::Pretty;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
