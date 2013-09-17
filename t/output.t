@@ -144,7 +144,7 @@ sub _getMD5{
     	$inFH->binmode();   	
  
         my $md5sum = $digester->addfile($inFH)->hexdigest;
-      	print "File: $fileName md5sum: $md5sum\n";
+     
         if($fileName eq 'core_snps.txt'){
         	$md5Hash{'coreSnps'}=$md5sum;
         }
@@ -170,17 +170,6 @@ sub _getMD5{
     }
     return \%md5Hash;	
 }
-
-
-
-
-
-
-
-
-
-
-
 
 sub _removeRun{
 	my $t=shift;

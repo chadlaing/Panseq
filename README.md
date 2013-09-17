@@ -68,7 +68,7 @@ If your system setup is different, edit the t/output.t file, beginning at line 1
 
 All the adjustments to Panseq are made by modifying a tab-delimited configuration file, which is specified as the only argument to the script.
 
-	perl panseq.pl settings.txt
+	perl lib/panseq.pl settings.txt
 
 Below is an example configuration file for panseq.pl:
 
