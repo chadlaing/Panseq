@@ -51,6 +51,19 @@ The following free, external programs must also be installed:
 * [BLAST+:](http://blast.ncbi.nlm.nih.gov/Blast.cgi)
 * [Muscle:](www.drive5.com/muscle)
 
+## Testing your installation
+
+	perl t/output.t
+
+This will run a test suite against the included test data to ensure that Panseq is configured and working correctly. All tests should pass. The default location for the external programs used by the test suite are as follows:
+
+	#program locations
+	my $blastDirectory = '/usr/bin/';
+	my $mummerDirectory = '/usr/bin/';
+	my $muscleExecutable = '/usr/bin/muscle';
+
+If your system setup is different, edit the t/output.t file, beginning at line 16 to change the directories where Blast+ and MUMmer reside, as well as the executable location for Muscle.
+
 ## Running Panseq
 
 All the adjustments to Panseq are made by modifying a tab-delimited configuration file, which is specified as the only argument to the script.

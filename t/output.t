@@ -12,7 +12,7 @@ use IO::File;
 
 my $type = $ARGV[0] // 'genomes';
 
-#locations
+#program locations
 my $blastDirectory = '/usr/bin/';
 my $mummerDirectory = '/usr/bin/';
 my $muscleExecutable = '/usr/bin/muscle';
