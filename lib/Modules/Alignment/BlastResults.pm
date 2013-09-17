@@ -124,8 +124,8 @@ sub getNextResult{
 	}
 
 	#the sub will keep iterating as long as the filehandle has unseen lines
-	#when called with no remaining lines, return 0 to stop the iterating of while(getNextResult)
-	return 0;
+	#when called with no remaining lines, return undef to stop the iterating of while(getNextResult)
+	return undef;
 }
 
 sub _isOverCutoff{
