@@ -87,16 +87,24 @@ my %md5Sum=(
 
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
-_createBatchFile(\%plasmidsConfig,'plasmids');
-_runPanseq('plasmids');
-
-_createBatchFile(\%queryConfig,'query');
-_runPanseq('query');
-
-
-if($type eq 'genomes'){
-	_createBatchFile(\%genomesConfig,'genomes');
-	_runPanseq('genomes');
+#generate data first, so all tests are at the bottom of the output
+foreach my $test(@{['plasmids','query','genomes']}){
+	if($type ne 'genomes' and $test eq 'genomes'){
+		next;
+	}
+	my %config;
+	if($test eq 'genomes'){
+		%config = %genomesConfig;
+	}
+	elsif($test eq 'query'){
+		%config = %queryConfig;
+	}
+	elsif($test eq 'plasmids'){
+		%config = %plasmidsConfig;
+	}	
+	
+	_createBatchFile(\%config,$test);
+	_runPanseq($test);
 }
 
 #compare the digests of the files for correctness
@@ -116,14 +124,8 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	if($test eq 'query'){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
 	}
+	_removeRun($test);
 }
-_removeRun('query');
-_removeRun('plasmids');
-
-if($type eq 'genomes'){
-	_removeRun('genomes');
-}
-
 
 sub _getMD5{
 	my $directory=shift;
