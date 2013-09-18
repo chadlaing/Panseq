@@ -30,9 +30,9 @@ sub orderedNames{
 	$self->{'_queryNameOrderHash'}=shift // return $self->{'_queryNameOrderHash'};
 }
 
-sub alignedFastaSequences{
+sub alignedFastaHash{
 	my $self=shift;
-	$self->{'_alignedFastaSequences'}=shift // return $self->{'_alignedFastaSequences'};
+	$self->{'_alignedFastaHash'}=shift // return $self->{'_alignedFastaHash'};
 }
 
 sub resultNumber{
@@ -91,16 +91,36 @@ sub _initialize{
 	$self->_dashOffset({});
 }
 
+
+=head2 _getAlignmentLength
+
+Takes in the aligned fasta hash, takes the first key and returns the length of the aligned sequence based on the first key.
+
+=cut
+
+sub _getAlignmentLength{
+	my $self=shift;
+	my $alignedFastaHash=shift;
+	
+	my $length;
+	foreach my $key(keys %{$alignedFastaHash}){
+		$length=length($alignedFastaHash->{$key}->{'sequence'});
+		last;
+	}
+	return $length;
+}
+
+
 sub findSNPs{
 	my($self)=shift;
 	
-	my ($alignmentLength,$alignedHashRef) = $self->_getHashOfFastaAlignment();
-	$self->_setOffsetHash($alignedHashRef);
+	my $alignmentLength = $self->_getAlignmentLength($self->alignedFastaHash);
+	$self->_setOffsetHash($self->alignedFastaHash);
 	my $resultArray=[];
 	
 	my $resultNumber = $self->resultNumber;
 	for my $position(0..($alignmentLength-1)){
-		$resultArray = $self->_getSingleBaseResult($position,$alignedHashRef,$resultArray,$resultNumber);	
+		$resultArray = $self->_getSingleBaseResult($position,$self->alignedFastaHash,$resultArray,$resultNumber);	
 		$resultNumber++;	
 	}	
 	return $resultArray;
@@ -207,53 +227,5 @@ sub _getSingleBaseResult{
 }
 
 
-=head3
 
-Given the FASTA alignment produced by Muscle, create a hash where the
-name is based on the Modules::Fasta::SequenceName->name and
-$hashRef->{'name'}->{'fasta'}="fasta header"
-$hashRef->{'name'}->{'sequence'}="DNA sequence"
-the {'fasta'} key contains the fasta header,
-and the {'sequence'} key contains the DNA sequence.
-Also compute the alignment length and return it as the first argument of the two argument return.
-
-=cut
-
-sub _getHashOfFastaAlignment{
-	my $self = shift;
-
-	my $results={};
-	my $name;
-	my $alignmentLength;
-
-	my $numberOfLines = scalar @{$self->alignedFastaSequences};
-
-	foreach my $line(@{$self->alignedFastaSequences}){
-		$line =~ s/\R//g;
-		
-		if($line =~ /^>(.+)/){		
-			$line =~ s/>//;
-			my $sn = Modules::Fasta::SequenceName->new($line);
-			$name = $sn->name;
-			$self->logger->debug("New name: $name");
-			#we don't need or want the '>'; all names are stored without the fasta header signifier
-			$results->{$name}->{'fasta'}=$line;
-		}
-		else{
-			$self->logger->debug("Not a header in SNPFinder");
-			if(defined $results->{$name}->{'sequence'}){
-			#	$self->logger->debug("Sequence already present, adding to it:\n$line");
-				$results->{$name}->{'sequence'}=$results->{$name}->{'sequence'} . $line;	
-			}
-			else{
-				#$self->logger->debug("New sequence, adding:\n$line");
-				$results->{$name}->{'sequence'}=$line;
-			}
-					
-		}
-	}
-	$alignmentLength=length($results->{$name}->{'sequence'});
-	#$self->logger->debug("Alignment length of core is: $alignmentLength");
-	return ($alignmentLength,$results);
-}
 1;

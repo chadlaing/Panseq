@@ -82,7 +82,7 @@ my %md5Sum=(
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
 	queryBinaryPhylip=>'75058ee0a94f9edbd20c7fe1cb2f0f8c',
 	querySnpPhylip=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryAlleles=>'7cf30ab8f2368a37b26672f8de5ecb82'
+	queryAlleles=>'0281a6770ff31fb4037435bc7f3a2ee2'
 );
 
 
@@ -117,7 +117,7 @@ foreach my $test(@{['plasmids','query','genomes']}){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
 	}
 }
-_removeRun('query');
+#_removeRun('query');
 _removeRun('plasmids');
 
 if($type eq 'genomes'){

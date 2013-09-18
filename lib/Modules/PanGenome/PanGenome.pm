@@ -51,6 +51,7 @@ use Log::Log4perl;
 use Parallel::ForkManager;
 use Modules::Alignment::SNPFinder;
 use Modules::Alignment::BlastResults;
+use Modules::Fasta::SequenceName;
 use Modules::Fasta::MultiFastaSequenceName;
 use DBI;
 use Role::Tiny::With;
@@ -548,6 +549,12 @@ sub _processBlastXML {
 			name=>$result->{$names[0]}->[1]
 		);
 		
+		#generate a MSA of all strains that contain sequence
+		#if the locus is core, we will send this MSA to the SNPFinder
+		my $msaHash = $self->_getHashOfFastaAlignment(
+			$self->_getMsa($result,$counter)
+		);
+		
 		foreach my $name(@{$self->_orderedNames}){							
 			if(defined $result->{$name}){
 					#currently, we only store the alleles if using an input file
@@ -557,7 +564,7 @@ sub _processBlastXML {
 							table=>'allele',
 							locus_id=>$counter,
 							contig_id=>$self->_contigIds->{$result->{$name}->[0]},
-							sequence=>$result->{$name}->[10]
+							sequence=>$msaHash->{$name}->{'sequence'}
 						);
 					}					
 										
@@ -581,8 +588,7 @@ sub _processBlastXML {
 					);
 				}		
 			}	
-		
-		#get presence / absence of all
+	
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
 			#'outfmt'=>'"6 
 			# [0]sseqid 
@@ -599,7 +605,7 @@ sub _processBlastXML {
 			# [11]qseq		
 
 			#if it is a core result, send to SNP finding
-			my $coreResults = $self->_getCoreResult($result,$counter);		
+			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
 			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
 					table=>'results',
@@ -615,6 +621,99 @@ sub _processBlastXML {
 	$self->logger->info("Total results: $counter");
 	$self->_emptySqlBuffers();
 }
+
+=head2 _getMsa
+
+Take in a Modules::Alignment::BlastResult and generate a MSA of all hit sequences.
+
+=cut
+
+sub _getMsa{
+	my $self=shift;
+	my $result=shift;	
+	my $resultNumber=shift;
+
+	#create temp files for muscle
+	my $tempInFile = $self->outputDirectory . 'muscleTemp_in' . $resultNumber;
+	my $tempInFH = IO::File->new('>'. $tempInFile) or die "$!";
+	my $tempOutFile = $self->outputDirectory . 'muscleTemp_out' . $resultNumber;
+	my $tempOutFH = IO::File->new('+>' . $tempOutFile) or die "$!";
+	
+	#'outfmt'=>'"6 
+	# [0]sseqid 
+	# [1]qseqid 
+	# [2]sstart 
+	# [3]send 
+	# [4]qstart 
+	# [5]qend 
+	# [6]slen 
+	# [7]qlen 
+	# [8]pident 
+	# [9]length"',
+	# [10]sseq,
+	# [11]qseq
+	foreach my $hit(sort keys %{$result}){
+		$tempInFH->print('>' . $result->{$hit}->[0] . "\n" . $result->{$hit}->[10] . "\n");
+	}
+	
+	my $systemLine = $self->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
+	system($systemLine);
+
+	#close the open FH
+	$tempInFH->close();	
+	my @alignedFastaSeqs = $tempOutFH->getlines();
+	$tempOutFH->close();
+
+	# #delete temp files
+	unlink $tempInFile;
+	unlink $tempOutFile;
+	return \@alignedFastaSeqs;
+}
+
+=head2 _getHashOfFastaAlignment
+
+Given the FASTA alignment produced by Muscle, create a hash where the
+name is based on the Modules::Fasta::SequenceName->name and
+$hashRef->{'name'}->{'fasta'}="fasta header"
+$hashRef->{'name'}->{'sequence'}="DNA sequence"
+the {'fasta'} key contains the fasta header,
+and the {'sequence'} key contains the DNA sequence.
+
+=cut
+
+sub _getHashOfFastaAlignment{
+	my $self = shift;
+	my $alignedFastaSequences=shift;
+	
+	my $results={};
+	my $name;
+	my $alignmentLength;
+
+	foreach my $line(@{$alignedFastaSequences}){
+		$line =~ s/\R//g;
+		
+		if($line =~ /^>(.+)/){		
+			$line =~ s/>//;
+			my $sn = Modules::Fasta::SequenceName->new($line);
+			$name = $sn->name;
+			$self->logger->debug("New name: $name");
+			#we don't need or want the '>'; all names are stored without the fasta header signifier
+			$results->{$name}->{'fasta'}=$line;
+		}
+		else{
+			if(defined $results->{$name}->{'sequence'}){
+			#	$self->logger->debug("Sequence already present, adding to it:\n$line");
+				$results->{$name}->{'sequence'}=$results->{$name}->{'sequence'} . $line;	
+			}
+			else{
+				#$self->logger->debug("New sequence, adding:\n$line");
+				$results->{$name}->{'sequence'}=$line;
+			}					
+		}
+	}
+	return ($results);
+}
+
 
 =head 2 _emptySqlBuffers
 
@@ -744,15 +843,9 @@ sub _insertIntoDb{
 sub _getCoreResult {
 	my $self = shift;
 	my $result=shift;
+	my $msaHash=shift;
 	my $resultNumber=shift;
-
-	#create temp files for muscle
-	my $tempInFile = $self->outputDirectory . 'muscleTemp_in' . $resultNumber;
-	my $tempInFH = IO::File->new('>'. $tempInFile) or die "$!";
-	my $tempOutFile = $self->outputDirectory . 'muscleTemp_out' . $resultNumber;
-	my $tempOutFH = IO::File->new('+>' . $tempOutFile) or die "$!";
-
-
+	
 	#'outfmt'=>'"6 
 	# [0]sseqid 
 	# [1]qseqid 
@@ -768,26 +861,13 @@ sub _getCoreResult {
 	# [11]qseq
 	my %startBpHash;
 	foreach my $hit(sort keys %{$result}){
-		$tempInFH->print('>' . $result->{$hit}->[0] . "\n" . $result->{$hit}->[10] . "\n");
 		$startBpHash{$result->{$hit}->[0]}=$result->{$hit}->[4];
 	}
 	
-	my $systemLine = $self->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
-	system($systemLine);
-
-	#close the open FH
-	$tempInFH->close();	
-	my @alignedFastaSeqs = $tempOutFH->getlines();
-	$tempOutFH->close();
-
-	# #delete temp files
-	unlink $tempInFile;
-	unlink $tempOutFile;
-
 	#add SNP information to the return
 	my $snpDetective = Modules::Alignment::SNPFinder->new(
 		 'orderedNames'=>$self->_orderedNames,
-		 'alignedFastaSequences'=>\@alignedFastaSeqs,
+		 'alignedFastaHash'=>$msaHash,
 		 'startBpHashRef'=>\%startBpHash,
 		 'resultNumber'=>$resultNumber,
 	 );	
