@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test::More tests=>13;
+use Test::More tests=>19;
 use Test::Pretty;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
@@ -117,7 +117,7 @@ foreach my $test(@{['plasmids','query','genomes']}){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
 	}
 }
-#_removeRun('query');
+_removeRun('query');
 _removeRun('plasmids');
 
 if($type eq 'genomes'){
