@@ -20,7 +20,7 @@ my $muscleExecutable = '/usr/bin/muscle';
 my %plasmidsConfig=(
 	queryDirectory=>"$FindBin::Bin/data/plasmids/",
 	baseDirectory=>"$FindBin::Bin/plasmids/",
-	numberOfCores=>"4",
+	numberOfCores=>"1",
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"500",
@@ -36,7 +36,7 @@ my %queryConfig=(
 	queryDirectory=>"$FindBin::Bin/data/genomes/",
 	queryFile=>"$FindBin::Bin/data/testfragments.fasta",
 	baseDirectory=>"$FindBin::Bin/query/",
-	numberOfCores=>"4",
+	numberOfCores=>"1",
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"500",
@@ -51,7 +51,7 @@ my %queryConfig=(
 my %genomesConfig=(
 	queryDirectory=>"$FindBin::Bin/data/genomes/",
 	baseDirectory=>"$FindBin::Bin/genomes/",
-	numberOfCores=>"4",
+	numberOfCores=>"1",
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"1000",
@@ -64,27 +64,26 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'dd7231bfcf77ea3c7883bbfb3818d4fe',
-	plasmidsPanGenome=>'61742e5586810d22ce66fc7b9587a8a7',
-	plasmidsBinaryTable=>'2f686ed44db1809e22aa2e76f6bce984',
-	plasmidsSnpTable=>'ae80bc872dcde45839329e7bd165145e',
-	plasmidsBinaryPhylip=>'ba4bb0049b6d592755cd52853d05f89c',
-	plasmidsSnpPhylip=>'a9a66896db1800f9cfafafa2913804e6',
-	genomesCoreSnps=>'30c1123981af005875348fee9223c402',
-	genomesPanGenome=>'894765f4508cea9f8358da582f93ef65',
-	genomesBinaryTable=>'30a955b59b67ee7a8550169ae56e0f51',
-	genomesSnpTable=>'b2dcbf4a6e09b5ba870e678556228560',
-	genomesBinaryPhylip=>'f7dd22ffc7736219298f668933b6caa6',
-	genomesSnpPhylip=>'6c8524ec1478aa5a929ded90096ee99f',
+	plasmidsCoreSnps=>'9326d222a11c74d4e5953508e2cddb7e',
+	plasmidsPanGenome=>'816bfb46884c81b39c615aab507e0d19',
+	plasmidsBinaryTable=>'a42ac19fd24b06d92cda1a9cfea8112a',
+	plasmidsSnpTable=>'e29f54adc12c207b523f8a8c02109b1a',
+	plasmidsBinaryPhylip=>'a033883cc4bcf457fefca7da76d942e6',
+	plasmidsSnpPhylip=>'eedf538b1f01a8afa53bc813c26eb03b',
+	genomesCoreSnps=>'15a3176321cd9588bce78e1e509a48a2',
+	genomesPanGenome=>'586040591eb4ae94a6d4949f970fe601',
+	genomesBinaryTable=>'c1002e14a5da5dad544ce53d8e93a2e2',
+	genomesSnpTable=>'2ec5fe0256aa273c46c69a6ca7364c76',
+	genomesBinaryPhylip=>'2e126c05a39fc00eb54c5a74fb2879fc',
+	genomesSnpPhylip=>'e0041d87a497056b7934b9fa181820a7',
 	queryCoreSnps=>'fbf65d84b2416ee35629f2d53f67fc8a',
-	queryPanGenome=>'1a2cbde5f3ef098c3ccf4daae35bad0d',
-	queryBinaryTable=>'f7d06debab36e48c823de151d6a62401',
+	queryPanGenome=>'70801f20e9529fdcfec50c2a111755a1',
+	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryBinaryPhylip=>'75058ee0a94f9edbd20c7fe1cb2f0f8c',
+	queryBinaryPhylip=>'f6f265f9eb02e876e04b4f5eac8c1e41',
 	querySnpPhylip=>'d41d8cd98f00b204e9800998ecf8427e',
 	queryAlleles=>'0281a6770ff31fb4037435bc7f3a2ee2'
 );
-
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
 #generate data first, so all tests are at the bottom of the output
