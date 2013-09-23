@@ -119,7 +119,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	$self->_cleanUp();
+	#$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -499,7 +499,35 @@ sub _performPanGenomeAnalyses{
 		'useSuppliedLabels'=>$useSuppliedLabels
 	);
 	$panAnalyzer->run();
+	
+	#add the functional assignment of pan-genome loci based of blastx of the genbank NR database
+	#only if nrDatabase is defined
+	if(defined $self->settings->nrDatabase){
+		$self->_assignFunction($panGenomeFile);
+	}
+	
 	return 1;
+}
+
+
+=head2 _assignFunction
+
+Using blastx and the NR database, assign a function to each query locus.
+
+=cut
+
+sub _assignFunction{
+	my $self=shift;
+	my $queryFile=shift;	
+	
+	my $blastLine = $self->settings->blastDirectory . 'blastx -query ' . $queryFile . ' -out ' . $self->settings->baseDirectory . 'blastx_nr.out'
+		. ' -db ' . $self->settings->nrDatabase
+		. ' -outfmt "6 sseqid qseqid sstart send qstart qend slen qlen pident length sseq qseq"' 
+		. ' -evalue 0.001 -word_size 3 -num_threads ' . $self->settings->numberOfCores
+		. ' -max_target_seqs 1 -gilist ' . "$FindBin::Bin/bacteria_gi_list";
+	$self->logger->info("Running blastx with the following: $blastLine");
+	system($blastLine);
+
 }
 
 

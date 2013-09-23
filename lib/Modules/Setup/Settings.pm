@@ -190,6 +190,12 @@ sub accessoryType{
 	$self->{'_accessoryType'}=shift // return $self->{'_accessoryType'};
 }
 
+sub nrDatabase{
+	my $self=shift;
+	$self->{'_nrDatabase'} = shift // return $self->{'_nrDatabase'};	
+}
+
+
 #methods
 sub _getSettingsFromConfigurationFile {
 	my ($self) = shift;
