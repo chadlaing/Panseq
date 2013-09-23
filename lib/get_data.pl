@@ -33,7 +33,16 @@ sub _createTree{
 	my %loci;
 	my $locus;
 	my @genomeOrder;
+	my $counter=0;
 	while(my $row = $sth->fetchrow_arrayref){
+		$counter++;
+		if($counter % 100){
+			
+		}
+		else{
+			print '.';
+		}	
+		
 	    if(defined $results{$row->[0]}){
 	    	push @{$results{$row->[0]}},$row->[1];
 	    }
