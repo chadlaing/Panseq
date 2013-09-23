@@ -36,12 +36,10 @@ sub _createTree{
 	my $counter=0;
 	while(my $row = $sth->fetchrow_arrayref){
 		$counter++;
-		if($counter % 100){
-			
-		}
-		else{
+		if($counter % 10000 == 0){
 			print '.';
-		}	
+		}
+		
 		
 	    if(defined $results{$row->[0]}){
 	    	push @{$results{$row->[0]}},$row->[1];
