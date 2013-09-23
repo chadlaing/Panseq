@@ -288,6 +288,7 @@ sub _createTree{
 	my $self=shift;
 	my $type = shift;
 	
+	#TODO: Add the tree generation here to avoid duplicate database calls
 	$self->logger->info("Creating tree $type");
 	#define SQLite db
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
