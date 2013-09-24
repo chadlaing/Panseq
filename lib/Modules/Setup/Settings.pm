@@ -214,8 +214,8 @@ sub _getSettingsFromConfigurationFile {
 			$line =~ s/\R//g;
 			my @la = split(/\t/,$line);
 
-			my $setting = $la[0] // undef;
-			my $value   = $la[1] // undef;
+			my $setting = $la[0] // $self->_noValueSet('name');
+			my $value   = $la[1] // $self->_noValueSet($la[0]);
 			
 			$self->_setSettingValue($setting,$value);
 		}
@@ -226,6 +226,22 @@ sub _getSettingsFromConfigurationFile {
 		exit(1);
 	}
 }
+
+=head2 _noValueSet
+
+Sets an undefined value to 0.
+
+=cut
+
+sub _noValueSet{
+	my $self=shift;
+	my $name=shift;
+	
+	$self->logger->info("$name has an undefined value, setting to 0");
+	return 0;
+}
+
+
 
 sub _setSettingValue{
 	my $self = shift;

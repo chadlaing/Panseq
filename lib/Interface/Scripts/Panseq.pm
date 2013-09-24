@@ -105,12 +105,12 @@ sub submit{
     	close STDOUT;
     	my $q=$self->query();
     	
-    	if($q->param('runMode') eq 'loci'){
-    		$self->_launchLociSelector();
-    	}
-    	else{
+#    	if($q->param('runMode') eq 'loci'){
+#    		$self->_launchLociSelector($q);
+#    	}
+#    	else{
     		$self->_launchPanseq();
-    	}
+#    	}
 	}
 }
 
@@ -127,7 +127,20 @@ sub _calculateWaitTime{
 	return $waitTime;
 }
 
+=head2 _launchLociSelector
 
+loci_selector.pl requires a different launch than panseq.pl.
+
+=cut
+
+sub _launchLociSelector{
+	my $self=shift;
+	my $q =shift;
+	
+	my $systemLine = "perl $FindBin::Bin/../../loci_selector.pl " . $q->param('');
+	system($systemLine);
+	return 1;	
+}
 
 sub _launchPanseq{
 	my $self=shift;
