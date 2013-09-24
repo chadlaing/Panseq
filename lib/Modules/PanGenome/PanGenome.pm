@@ -157,21 +157,6 @@ sub logger{
 	$self->{'_logger'} = shift // return $self->{'_logger'};
 }
 
-=head2 useSuppliedLabels
-
-If the user supplied their own input file, instead of using a generated pan-genome,
-we want to keep the supplied loci names.
-If this is set to 1, it uses supplied labels. Default is 0.
-
-=cut
-
-
-sub useSuppliedLabels{
-	my $self=shift;
-	$self->{'_useSuppliedLabels'}=shift // return $self->{'_useSuppliedLabels'};
-}
-
-
 =head3 xmlFiles
 
 The BLAST-output XML files used for core/accessory processing.
@@ -322,6 +307,12 @@ This number is multiplied by a billion in _processQueue.
 
 =cut
 
+sub storeAlleles{
+	my $self=shift;
+	$self->{'_storeAlleles'} = shift // return $self->{'_storeAlleles'};	
+}
+
+
 sub _currentResult{
 	my $self=shift;
 	$self->{'__currentResult'}=shift // return $self->{'__currentResult'};
@@ -415,7 +406,7 @@ sub run{
 		}
 		elsif($count==2){
 			$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
-			if($self->useSuppliedLabels){
+			if($self->storeAlleles){
 				$self->_createAlleleFiles();
 			}
 		}
@@ -498,7 +489,7 @@ sub _createOutputFile{
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
 		WHERE results.type = '$type'
-		ORDER BY locus.name,results.locus_id,strain.name,results.start_bp,results.end_bp,contig.name ASC
+		ORDER BY locus.name,strain.name,results.start_bp ASC
 	};
 
 	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
@@ -558,7 +549,7 @@ sub _processBlastXML {
 			if(defined $result->{$name}){
 					#currently, we only store the alleles if using an input file
 					#if we generate a pan-genome, no alleles are stored
-					if($self->useSuppliedLabels){
+					if($self->storeAlleles){
 						$self->_insertIntoDb(
 							table=>'allele',
 							locus_id=>$counter,

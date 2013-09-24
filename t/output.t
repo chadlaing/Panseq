@@ -45,7 +45,8 @@ my %queryConfig=(
 	fragmentationSize=>'0',
 	percentIdentityCutoff=>'90',
 	coreGenomeThreshold=>'3',
-	runMode=>'pan'
+	runMode=>'pan',
+	storeAlleles=>1
 );
 
 my %genomesConfig=(

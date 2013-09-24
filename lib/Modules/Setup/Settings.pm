@@ -195,6 +195,10 @@ sub nrDatabase{
 	$self->{'_nrDatabase'} = shift // return $self->{'_nrDatabase'};	
 }
 
+sub storeAlleles{
+	my $self=shift;
+	$self->{'_storeAlleles'} = shift // return $self->{'_storeAlleles'};	
+}
 
 #methods
 sub _getSettingsFromConfigurationFile {

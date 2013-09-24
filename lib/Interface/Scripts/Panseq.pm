@@ -101,8 +101,8 @@ sub submit{
     }
     else{
     	#launch the panseq program
-    	close STDERR;
-    	close STDOUT;
+#    	close STDERR;
+#    	close STDOUT;
     	$self->_launchPanseq();
 	}
 }

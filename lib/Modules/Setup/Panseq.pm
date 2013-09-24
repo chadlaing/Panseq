@@ -43,6 +43,7 @@ use Modules::Alignment::MakeBlastDB;
 use Modules::Fasta::SegmentMaker;
 use Modules::Fasta::FastaFileSplitter;
 use Modules::PanGenome::PanGenome;
+use Modules::LociSelector::LociSelector;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
@@ -119,7 +120,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	#$self->_cleanUp();
+	$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -131,7 +132,19 @@ Runs the loci_finder.pl script.
 
 sub _launchLociFinder{
 	my $self = shift;
-
+	
+	my $files = Modules::Setup::PanseqFiles->new(
+		'queryDirectory'=>$self->settings->queryDirectory,
+		'referenceDirectory'=>$self->settings->referenceDirectory // undef
+	);
+	
+	if(defined $files->[0]){
+		my $lociLine = "perl $FindBin::Bin/../../loci_selector.pl " . $self->settings->numberOfLoci . " > " . $self->baseDirectory . "selectedLoci/txt";
+		system($lociLine);
+	}
+	else{
+		$self->logger->logdie("No input file for _launchLociFinder");
+	}
 	
 }
 
@@ -220,6 +233,10 @@ sub _createDirectories{
 		#with File::Path
 		make_path($self->settings->baseDirectory);
 		make_path($self->settings->baseDirectory . 'logs/');
+	}
+	unless(-d $self->settings->baseDirectory){
+		print STDERR "Unable to create directory " . $self->settings->baseDirectory . "\n";
+		exit(1);
 	}
 }
 
@@ -480,14 +497,7 @@ sub _performPanGenomeAnalyses{
 	}
 	$forker->wait_all_children();	
 	#do the pan-genome analysis
-
-	#if the user supplied a query file, rather than generating a new 
-	#pan-genome, we want to use the supplied names of the loci
-	my $useSuppliedLabels =0;
-	if(defined $self->settings->queryFile){
-		$useSuppliedLabels=1;
-	}
-
+	
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
 		'xmlFiles'=>\@blastFiles,
 		'numberOfCores'=>$self->settings->numberOfCores,
@@ -497,7 +507,7 @@ sub _performPanGenomeAnalyses{
 		'muscleExecutable'=>$self->settings->muscleExecutable,
 		'accessoryType'=>$self->settings->accessoryType,
 		'queryFile'=>$files->singleQueryFile,
-		'useSuppliedLabels'=>$useSuppliedLabels
+		'storeAlleles'=>$self->settings->storeAlleles
 	);
 	$panAnalyzer->run();
 	
