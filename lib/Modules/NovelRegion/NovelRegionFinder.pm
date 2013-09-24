@@ -98,7 +98,7 @@ sub _initialize{
     my %params = @_;
 
     #on object construction set all parameters
-    foreach my $key(keys %params){
+    foreach my $key(sort keys %params){
 		if($self->can($key)){
 			$self->$key($params{$key});
 		}
@@ -525,7 +525,7 @@ sub _getNoDuplicates {
 			$nonDuplicatedCoords{$query} = ',0..0';
 		}
 		
-		foreach my $ref ( keys %{ $self->_comparisonHash->{$query} } ) {
+		foreach my $ref (sort keys %{ $self->_comparisonHash->{$query} } ) {
 			
 			my $referenceName = Modules::Fasta::SequenceName->new($ref);
 			my $rName = $referenceName->name;
@@ -553,7 +553,7 @@ sub _sortAndCompileCoordsHash {
 	my ($self) = shift;
 	my $hashRef = shift;
 
-	foreach my $query ( keys %{$hashRef} ) {
+	foreach my $query (sort keys %{$hashRef} ) {
 		$self->logger->debug("Sorting and compiling $query" );
 		$hashRef->{$query} = $self->_sortAndCompileCoordString($hashRef->{$query} );
 	}
@@ -624,7 +624,7 @@ sub _getNegativeImageCoords {
 	my %negativeHash;
 
 	#hash of $hash{$query}=<coords in order>
-	foreach my $key ( keys %{$hashRef} ) {
+	foreach my $key (sort keys %{$hashRef} ) {
 		my $missingCoords;
 		my $prevEnd = 0;
 		
@@ -707,7 +707,7 @@ sub _joinAdjacentNovelRegionsHash {
 
 		my %joinedHash;
 
-		foreach my $seq ( keys %{$hashRef} ) {
+		foreach my $seq (sort keys %{$hashRef} ) {
 			unless ( defined $hashRef->{$seq} ) {
 				$self->logger->debug("$seq has no novel coords");
 				next;
@@ -765,8 +765,8 @@ sub _joinAdjacentNovelRegionsString {
 sub _printComparisonHash{
 	my $self=shift;
 	
-	foreach my $key(keys %{$self->_comparisonHash}){
-		foreach my $key2 (keys %{$self->_comparisonHash->{$key}}){
+	foreach my $key(sort keys %{$self->_comparisonHash}){
+		foreach my $key2 (sort keys %{$self->_comparisonHash->{$key}}){
 			$self->logger->debug($key . ' : ' . $key2 . ' : ' . $self->_comparisonHash->{$key}->{$key2});
 		}
 	}

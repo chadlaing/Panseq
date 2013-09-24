@@ -96,7 +96,7 @@ sub _initialize{
     my %params = @_;
 
     #on object construction set all parameters
-    foreach my $key(keys %params){
+    foreach my $key(sort keys %params){
 		if($self->can($key)){
 			$self->$key($params{$key});
 		}
@@ -717,7 +717,7 @@ sub _getBestSeed{
 
 	my %numberOfContigs;
 
-	foreach my $genome (keys %{$mfsn->sequenceNameHash}){
+	foreach my $genome (sort keys %{$mfsn->sequenceNameHash}){
 		$numberOfContigs{(scalar(@{$mfsn->sequenceNameHash->{$genome}->arrayOfHeaders}))}=$genome;
 	}
 
