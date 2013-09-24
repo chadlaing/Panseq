@@ -65,8 +65,8 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'9326d222a11c74d4e5953508e2cddb7e',
-	plasmidsPanGenome=>'816bfb46884c81b39c615aab507e0d19',
+	plasmidsCoreSnps=>'8c167d9429ec18aca2c84190d97e346a',
+	plasmidsPanGenome=>'836941e2bb89f6540a36d04610fff1c9',
 	plasmidsBinaryTable=>'a42ac19fd24b06d92cda1a9cfea8112a',
 	plasmidsSnpTable=>'e29f54adc12c207b523f8a8c02109b1a',
 	plasmidsBinaryPhylip=>'a033883cc4bcf457fefca7da76d942e6',
@@ -77,8 +77,8 @@ my %md5Sum=(
 	genomesSnpTable=>'2ec5fe0256aa273c46c69a6ca7364c76',
 	genomesBinaryPhylip=>'2e126c05a39fc00eb54c5a74fb2879fc',
 	genomesSnpPhylip=>'e0041d87a497056b7934b9fa181820a7',
-	queryCoreSnps=>'fbf65d84b2416ee35629f2d53f67fc8a',
-	queryPanGenome=>'70801f20e9529fdcfec50c2a111755a1',
+	queryCoreSnps=>'665e547de347114db35fa8a813210956',
+	queryPanGenome=>'cc08c15377dfc392d3093f8c81fe984f',
 	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
 	queryBinaryPhylip=>'f6f265f9eb02e876e04b4f5eac8c1e41',

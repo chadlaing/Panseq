@@ -482,8 +482,18 @@ sub _createOutputFile{
 	#SELECT * FROM TableA
 	#INNER JOIN TableB
 	#ON TableA.name = TableB.name
-	my $sql = qq{
-		SELECT results.locus_id,locus.name,strain.name,results.value,results.start_bp,results.end_bp,contig.name
+	my $sql;
+	if($self->storeAlleles){
+		$sql= qq{
+			SELECT results.locus_id,locus.name,strain.name,results.value,results.start_bp,results.end_bp,contig.name
+		}
+	}
+	else{
+		$sql = qq{
+			SELECT results.locus_id,strain.name,results.value,results.start_bp,results.end_bp,contig.name
+		};
+	}		
+	$sql .=qq{
 		FROM results
 		JOIN locus ON results.locus_id = locus.id
 		JOIN contig ON results.contig_id = contig.id
@@ -497,14 +507,18 @@ sub _createOutputFile{
 
 	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
 	#print header for output file
-	$outFH->print("Locus Id\tLocus Name\tGenome\tAllele\tStart bp\tEnd bp\tContig\n");
+	if($self->storeAlleles){
+		$outFH->print("Locus Id\tLocus Name\tGenome\tAllele\tStart bp\tEnd bp\tContig\n");
+	}
+	else{
+		$outFH->print("Locus Id\tGenome\tAllele\tStart bp\tEnd bp\tContig\n");
+	}	
 	
 	while(my $row = $sth->fetchrow_arrayref){
 	    $outFH->print(join("\t",@{$row}) . "\n");
 	}
 	$outFH->close();	
 }
-
 
 sub _generateOrderedNamesArray{
 	my $self=shift;
