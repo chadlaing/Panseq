@@ -122,7 +122,7 @@ sub _initialize{
 
     my %params = @_;
 
-    foreach my $key(keys %params){
+    foreach my $key(sort keys %params){
         #so that reference directory can be specified without a value (undef)
         unless(defined $params{$key}){
             next;

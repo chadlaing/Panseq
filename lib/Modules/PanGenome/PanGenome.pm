@@ -87,7 +87,7 @@ sub _initialize{
     my %params = @_;
 
     #on object construction set all parameters
-    foreach my $key(keys %params){
+    foreach my $key(sort keys %params){
 		if($self->can($key)){
 			$self->$key($params{$key});
 		}
@@ -544,7 +544,7 @@ sub _processBlastXML {
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->percentIdentityCutoff);
 	
 	while(my $result = $blastResult->getNextResult){
-		my @names = keys %{$result};
+		my @names = sort keys %{$result};
 		$counter++;		
 		
 		$self->_insertIntoDb(
@@ -732,7 +732,7 @@ If any are left in the buffer, add them to the DB.
 sub _emptySqlBuffers{
 	my $self=shift;
 	
-	foreach my $table(keys %{$self->_sqlString}){
+	foreach my $table(sort keys %{$self->_sqlString}){
 		if(defined $self->_sqlString->{$table}->[0]){
 			my $sqlString = join('',@{$self->_sqlString->{$table}});
 			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
