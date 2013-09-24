@@ -121,7 +121,7 @@ sub run{
 		$self->_launchPanseq();
 	}
 	$self->_cleanUp();
-	#$self->_createZipFile();
+	$self->_createZipFile();
 }
 
 =head2 _launchLociFinder
@@ -138,9 +138,6 @@ sub _launchLociFinder{
 		'referenceDirectory'=>$self->settings->referenceDirectory // undef
 	);
 	
-	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . "loci.txt") or die "$!";
-	$outFH->print("hi\n");	
-	
 	my $numberOfLoci;
 	if($self->settings->numberOfLoci ==0){
 		$numberOfLoci='best';
@@ -148,26 +145,19 @@ sub _launchLociFinder{
 	else{
 		$numberOfLoci = $self->settings->numberOfLoci;
 	}
-	$outFH->print("number of loci: $numberOfLoci\n");
-	$outFH->print(ref($files->queryFileNames) . "\n");
-	$outFH->print("Files @{$files->queryFileNames}");
+
 	
 	if(defined $files->queryFileNames->[0]){
 		my $lociLine = "perl $FindBin::Bin/loci_selector.pl " 
 		. $files->queryFileNames->[0]
 		. ' '
 		. $numberOfLoci . ' > ' . $self->settings->baseDirectory . "selectedLoci.txt";
-		
-		$outFH->print("lociLine: $lociLine\n");
 		system($lociLine);
 		
 	}
 	else{
-		$outFH->print("no input file");
 		$self->logger->logdie("No input file for _launchLociFinder");
 	}
-	$outFH->print("DOne\n");
-	$outFH->close();
 }
 
 
