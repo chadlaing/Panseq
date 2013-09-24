@@ -262,6 +262,10 @@ sub _setDefaults{
 	unless(defined $self->runMode && $self->runMode eq 'pan' && defined $self->accessoryType){
 		$self->accessoryType('binary');
 	}
+	
+	unless(defined $self->storeAlleles){
+		$self->storeAlleles(0);
+	}
 }
 
 1;

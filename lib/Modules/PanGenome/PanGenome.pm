@@ -406,7 +406,7 @@ sub run{
 		}
 		elsif($count==2){
 			$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
-			if($self->storeAlleles){
+			if($self->storeAlleles == 1){
 				$self->_createAlleleFiles();
 			}
 		}

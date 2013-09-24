@@ -101,9 +101,16 @@ sub submit{
     }
     else{
     	#launch the panseq program
-#    	close STDERR;
-#    	close STDOUT;
-    	$self->_launchPanseq();
+    	close STDERR;
+    	close STDOUT;
+    	my $q=$self->query();
+    	
+    	if($q->param('runMode') eq 'loci'){
+    		$self->_launchLociSelector();
+    	}
+    	else{
+    		$self->_launchPanseq();
+    	}
 	}
 }
 

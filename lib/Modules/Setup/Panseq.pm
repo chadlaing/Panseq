@@ -121,7 +121,7 @@ sub run{
 		$self->_launchPanseq();
 	}
 	$self->_cleanUp();
-	$self->_createZipFile();
+	#$self->_createZipFile();
 }
 
 =head2 _launchLociFinder
