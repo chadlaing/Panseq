@@ -545,7 +545,7 @@ sub _assignFunction{
 	
 	my $blastLine = $self->settings->blastDirectory . 'blastx -query ' . $queryFile . ' -out ' . $self->settings->baseDirectory . 'blastx_nr.out'
 		. ' -db ' . $self->settings->nrDatabase
-		. ' -outfmt "6 sseqid qseqid sstart send qstart qend slen qlen pident length sseq qseq"' 
+		. ' -outfmt "6 sseqid qseqid sstart send qstart qend slen qlen pident length sseq qseq stitle"' 
 		. ' -evalue 0.001 -word_size 3 -num_threads ' . $self->settings->numberOfCores
 		. ' -max_target_seqs 1 -gilist ' . "$FindBin::Bin/bacteria_gi_list";
 	$self->logger->info("Running blastx with the following: $blastLine");

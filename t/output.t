@@ -124,7 +124,7 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	if($test eq 'query'){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
 	}
-	_removeRun($test);
+	#_removeRun($test);
 }
 
 sub _getMD5{
