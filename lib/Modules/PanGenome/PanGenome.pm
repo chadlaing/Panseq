@@ -126,7 +126,7 @@ sub _initDb{
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
@@ -385,7 +385,7 @@ sub run{
 	my $forker = Parallel::ForkManager->new($self->numberOfCores);
 	my $counter=0;
 	#process all XML files
-	foreach my $xml(@{$self->xmlFiles}){
+	foreach my $xml(sort @{$self->xmlFiles}){
 		$counter++;
 		$forker->start and next;
 			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
@@ -397,28 +397,52 @@ sub run{
 	$forker->wait_all_children;
 	$self->logger->info("Processing blast output files complete");
 
-	for my $count(1..2){
-		$forker->start and next;
-		#reopen database handle that has been closed from the forking above
-		$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
-		if($count==1){
-			$self->_createOutputFile('snp',$self->outputDirectory . 'core_snps.txt');
-		}
-		elsif($count==2){
-			$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
-			if($self->storeAlleles == 1){
-				$self->_createAlleleFiles();
-			}
-		}
-		else{
-			$self->logger->logconfess("Count is $count, but should not be greater than 2");
-		}
-		$self->_sqliteDb->disconnect();
-		$forker->finish;
+	
+	#reopen database handle that has been closed from the forking above
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+
+	$self->_createOutputFile('snp',$self->outputDirectory . 'core_snps.txt');
+	$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
+	if($self->storeAlleles == 1){
+		$self->_createAlleleFiles();
 	}
-	$forker->wait_all_children;
+	
+	#output the pan-genome with the correct locus IDs
+	$self->_outputPangenomeLocusIds();
+	$self->_sqliteDb->disconnect();
+
 	$self->logger->info("Pan-genome generation complete");
 }
+
+=head2 _outputPangenomeLocusIds
+
+Retrieves from the database the pan-geome, but outputs the locus IDs as fasta headers
+
+=cut
+
+sub _outputPangenomeLocusIds{
+	my $self=shift;
+	
+	$self->logger->info("Creating allele files");
+	my $sql=qq{
+		SELECT locus.id,locus.sequence
+		FROM locus
+		ORDER BY locus.id ASC
+	};
+	
+	my $sth = $self->_sqliteDb->prepare($sql);
+	$sth->execute();
+	
+	my $outFH = IO::File->new('>' . $self->outputDirectory . 'pan_genome_locusID.fasta') or die "Could not open file pan_genome_locusID.fasta";
+	
+	while(my $row = $sth->fetchrow_arrayref){		
+		$outFH->print('>' . $row->[0] . "\n" . $row->[1] . "\n");
+	}
+	$outFH->close();
+	
+}
+
+
 
 =head2 _createAlleleFiles
 
@@ -550,7 +574,8 @@ sub _processBlastXML {
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
-			name=>$result->{$names[0]}->[1]
+			name=>$result->{$names[0]}->[1],
+			sequence=>$result->{$names[0]}->[11]
 		);
 		
 		#generate a MSA of all strains that contain sequence
