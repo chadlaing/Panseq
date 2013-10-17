@@ -200,6 +200,11 @@ sub storeAlleles{
 	$self->{'_storeAlleles'} = shift // return $self->{'_storeAlleles'};	
 }
 
+sub nameOrId{
+	my $self=shift;
+	$self->{'_nameOrId'} = shift // return $self->{'_nameOrId'};	
+}
+
 #methods
 sub _getSettingsFromConfigurationFile {
 	my ($self) = shift;
@@ -281,6 +286,10 @@ sub _setDefaults{
 	
 	unless(defined $self->storeAlleles){
 		$self->storeAlleles(0);
+	}
+	
+	unless(defined $self->nameOrId){
+		$self->nameOrId('id');
 	}
 }
 

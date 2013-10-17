@@ -322,12 +322,16 @@ sub _createTree{
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
 	
 	my $sql;
-	if(defined $self->settings->queryFile){
+	if($self->settings->nameOrId eq 'name'){
 		$sql = "SELECT strain.name,results.value, locus.name";
 	}
-	else{
+	elsif($self->settings->nameOrId eq 'id'){
 		$sql = "SELECT strain.name,results.value, locus.id";
 	}
+	else{
+		$self->logger->logdie("Incorrect setting " . $self->settings->nameOrId . " in nameOrId. Expected name or id");
+	}
+	
 	$sql .= qq{
 		FROM results
 		JOIN contig ON results.contig_id = contig.id
@@ -549,7 +553,6 @@ sub _assignFunction{
 		. ' -max_target_seqs 1 -gilist ' . "$FindBin::Bin/bacteria_gi_list";
 	$self->logger->info("Running blastx with the following: $blastLine");
 	system($blastLine);
-
 }
 
 
@@ -570,7 +573,7 @@ sub _createZipFile{
     foreach my $fileName (@dir) {
             #dont add directories or . and .. files
             next if substr( $fileName, 0, 1 ) eq '.';
-            next if ($fileName eq 'logs');                  
+            next if ($fileName eq 'Master.log');                  
 
             #usage is: addFile( $fileName [, $newName ] ) from Archive::Zip manual
             my $fullName = $outputDir . $fileName;

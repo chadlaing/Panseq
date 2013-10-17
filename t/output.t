@@ -38,6 +38,7 @@ my %queryConfig=(
 	queryFile=>"$FindBin::Bin/data/testfragments.fasta",
 	baseDirectory=>"$FindBin::Bin/query/",
 	numberOfCores=>"1",
+	nameOrId=>'name',
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"500",
