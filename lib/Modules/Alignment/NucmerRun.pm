@@ -216,8 +216,8 @@ sub _showCoords{
 		$self->logger->logconfess("Coords file name required in _showCoords");
 	}
 
-	my $coordsLine = $self->mummerDirectory . 'show-coords ' . $deltaFile . ' -l -q -T > ' . $self->coordsFile;
-
+	my $coordsLine = $self->mummerDirectory . 'show-coords -l -q -T ' . $deltaFile . ' > ' . $self->coordsFile;
+	
 	$self->logger->info("Launching show-coords with $coordsLine");
 
 	system($coordsLine);
