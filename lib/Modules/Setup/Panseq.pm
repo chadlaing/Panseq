@@ -510,7 +510,12 @@ sub _performPanGenomeAnalyses{
 			unlink $splitFile;
 		$forker->finish;
 	}
-	$forker->wait_all_children();	
+	$forker->wait_all_children();
+	
+	if(defined $segmenter && -e $segmenter->outputFile){
+		unlink $segmenter->outputFile;
+	}
+	
 	#do the pan-genome analysis
 	
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
@@ -572,8 +577,7 @@ sub _createZipFile{
     closedir DIRECTORY;
     foreach my $fileName (@dir) {
             #dont add directories or . and .. files
-            next if substr( $fileName, 0, 1 ) eq '.';
-            next if ($fileName eq 'Master.log');                  
+            next if substr( $fileName, 0, 1 ) eq '.';                
 
             #usage is: addFile( $fileName [, $newName ] ) from Archive::Zip manual
             my $fullName = $outputDir . $fileName;

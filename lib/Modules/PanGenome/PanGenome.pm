@@ -126,7 +126,7 @@ sub _initDb{
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT)") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
@@ -409,10 +409,53 @@ sub run{
 	
 	#output the pan-genome with the correct locus IDs
 	$self->_outputPangenomeLocusIds();
+	$self->_createCoreAccessoryGenomes();
 	$self->_sqliteDb->disconnect();
 
 	$self->logger->info("Pan-genome generation complete");
 }
+
+=head2 _createCoreAccessoryGenomes
+
+Based on the user settings, output a fasta file for each
+of the core and accessory genomes.
+This is in complement to the panGenome that is output via the
+_outputPangenomeLocusIds() sub.
+
+=cut
+
+sub _createCoreAccessoryGenomes{
+	my $self=shift;
+	
+	$self->logger->info("Creating the core and accessory fasta files");
+	my $sql=qq{
+		SELECT locus.id, locus.name, locus.sequence, locus.pan
+		FROM locus
+		ORDER BY locus.id ASC
+	};
+	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
+	$sth->execute();
+	
+	my $coreFH = IO::File->new('>' . $self->outputDirectory . 'coreGenomeFragments.fasta') or die "Could not open file coreGenomeFragments.fasta";
+	my $accessoryFH = IO::File->new('>' . $self->outputDirectory . 'accessoryGenomeFragments.fasta') or die "Could not open file accessoryGenomeFragments.fasta";
+
+	while(my $row = $sth->fetchrow_arrayref){
+		my $output = '>lcl|' . $row->[0] . '|' . $row->[1] . "\n" . $row->[2] . "\n";
+		if($row->[3] eq 'core'){
+			$coreFH->print($output);
+		}
+		elsif($row->[3] eq 'accessory'){
+			$accessoryFH->print($output);
+		}
+		else{
+			$self->logger->logdie("Unknown type $row->[3]");
+		}
+	}
+	
+	$coreFH->close();
+	$accessoryFH->close();
+}
+
 
 =head2 _outputPangenomeLocusIds
 
@@ -423,23 +466,21 @@ Retrieves from the database the pan-geome, but outputs the locus IDs as fasta he
 sub _outputPangenomeLocusIds{
 	my $self=shift;
 	
-	$self->logger->info("Creating allele files");
+	$self->logger->info("Creating final panGenome output");
 	my $sql=qq{
-		SELECT locus.id,locus.sequence
+		SELECT locus.id, locus.name, locus.sequence
 		FROM locus
 		ORDER BY locus.id ASC
 	};
-	
-	my $sth = $self->_sqliteDb->prepare($sql);
+	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
 	$sth->execute();
 	
-	my $outFH = IO::File->new('>' . $self->outputDirectory . 'pan_genome_locusID.fasta') or die "Could not open file pan_genome_locusID.fasta";
+	my $outFH = IO::File->new('>' . $self->outputDirectory . 'panGenomeFragments.fasta') or die "Could not open file panGenome.fasta";
 	
 	while(my $row = $sth->fetchrow_arrayref){		
-		$outFH->print('>' . $row->[0] . "\n" . $row->[1] . "\n");
+		$outFH->print('>lcl|' . $row->[0] . '|' . $row->[1] . "\n" . $row->[2] . "\n");
 	}
-	$outFH->close();
-	
+	$outFH->close();	
 }
 
 
@@ -571,11 +612,20 @@ sub _processBlastXML {
 		my @names = sort keys %{$result};
 		$counter++;		
 		
+		my $coreOrAccessory;
+		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
+			$coreOrAccessory='core';
+		}
+		else{
+			$coreOrAccessory='accessory';
+		}
+		
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
 			name=>$result->{$names[0]}->[1],
-			sequence=>$result->{$names[0]}->[11]
+			sequence=>$result->{$names[0]}->[11],
+			pan=>$coreOrAccessory
 		);
 		
 		#generate a MSA of all strains that contain sequence
@@ -620,7 +670,7 @@ sub _processBlastXML {
 				}		
 			}	
 	
-		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
+		if($coreOrAccessory eq 'core'){
 			#'outfmt'=>'"6 
 			# [0]sseqid 
 			# [1]qseqid 
