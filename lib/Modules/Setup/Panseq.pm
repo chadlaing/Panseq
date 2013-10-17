@@ -244,7 +244,6 @@ sub _createDirectories{
 	else{
 		#with File::Path
 		make_path($self->settings->baseDirectory);
-		make_path($self->settings->baseDirectory . 'logs/');
 	}
 	unless(-d $self->settings->baseDirectory){
 		print STDERR "Unable to create directory " . $self->settings->baseDirectory . "\n";

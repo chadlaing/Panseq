@@ -26,7 +26,7 @@ $panseq->run();
 
 #HOOKS for log4p.conf
 sub panseq_master_log_file{
-	return ($settings->baseDirectory . 'logs/Master.log');
+	return ($settings->baseDirectory . 'Master.log');
 }
 
 
