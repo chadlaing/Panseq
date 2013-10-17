@@ -478,7 +478,7 @@ sub _performPanGenomeAnalyses{
 		'in'=>$files->singleQueryFile,		
 		'out'=>$self->settings->baseDirectory . 'panseq_db',
 		'title'=>'panseq_db',
-		'logfile'=>'>>'.$self->settings->baseDirectory . 'logs/FormatBlastDB.pm.log'	
+		'logfile'=>'>>'.$self->settings->baseDirectory . 'Master.log'	
 	);
 	$dbCreator->run();
 	
