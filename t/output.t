@@ -11,6 +11,7 @@ use Digest::MD5;
 use IO::File;
 
 my $type = $ARGV[0] // 'genomes';
+my $removeRun = $ARGV[1] // 1;
 
 #program locations
 my $blastDirectory = '/usr/bin/';
@@ -124,7 +125,11 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	if($test eq 'query'){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
 	}
-	#_removeRun($test);
+	
+	if($removeRun == 1){
+		_removeRun($test);
+	}
+	
 }
 
 sub _getMD5{

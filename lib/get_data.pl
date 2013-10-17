@@ -6,7 +6,7 @@ use FindBin;
 use lib "$FindBin::Bin";
 use DBI;
 
-my $baseDirectory = '/home/chad/panseq/output/genodo_db/';
+my $baseDirectory = '/home/chad/workspace/Panseq/t/plasmids/';
 
 _createTree($ARGV[0]);
 
