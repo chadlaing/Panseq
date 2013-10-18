@@ -70,15 +70,24 @@ sub percentIdentityCutoff{
 
 sub getNextResult{
 	my $self=shift;
-
-	my $results=$self->_storedResults();
-	my $qid=$self->_storedQid();
-
-	my $counter=0;
-	while(my $line = $self->_outFH->getline()){
-		$counter++;
+		
+	my $results;
+	my $line = $self->_outFH->getline();
+	while($line){
+		my $nextLine = $self->_outFH->getline();	
+		
+		if(!defined $nextLine){
+			return $results;
+		}
+		
 		$line =~ s/\R//g;
+		$nextLine =~ s/\R//g;
 		my @la = split("\t",$line);
+		my @nextLa = split("\t",$nextLine);
+		
+		if($la[1] ne $nextLa[1]){
+			return $results;
+		}
 
 		#'outfmt'=>'"6 
 		# [0]sseqid 
@@ -95,40 +104,15 @@ sub getNextResult{
 		# [11]qseq
 
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
-		my $sNameName= $sName->name;
+		my $sNameName= $sName->name;			
 
-		$self->_storedResults({});
-		$self->_storedResults->{$sNameName}=\@la;
-
-		if(defined $qid && ($qid ne $la[1])){
-			$self->_storedQid($la[1]);
-			return $results;
-		}
-		
-		$qid = $la[1];
-
-		unless(defined $results->{$sNameName}){			
-
-			unless($self->_isOverCutoff($la[7],$la[8],$la[4],$la[5])){
-				$self->logger->debug($sNameName . " is not over cutoff");
-				next;
-			}
+		$self->_getPercentId($la[7],$la[8],$la[4],$la[5]);			
 			
-			$results->{$sNameName}=\@la;
-		}			
-	}
-	continue{
-		 if(eof){
-			return $results;
-		}
-	}
-
-	#the sub will keep iterating as long as the filehandle has unseen lines
-	#when called with no remaining lines, return undef to stop the iterating of while(getNextResult)
-	return undef;
+		
+	}	
 }
 
-sub _isOverCutoff{
+sub _getPercentId{
 	my $self=shift;
 	my $qlen =shift // $self->logger->logdie("Missing qlen");
 	my $pident =shift // $self->logger->logdie("Missing pident");
@@ -142,12 +126,7 @@ sub _isOverCutoff{
 	 # $self->logger->info("qlen: $qlen");
 	 #$self->logger->info("pident: $pident");
 	 #$self->logger->info("percentId: $percentId");
-	if($percentId >= $self->percentIdentityCutoff){
-		return 1;
-	}
-	else{
-		return 0;
-	}
+	return $percentId;
 }
 
 1;
