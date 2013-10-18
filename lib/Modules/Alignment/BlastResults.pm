@@ -105,11 +105,16 @@ sub getNextResult{
 
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
 		my $sNameName= $sName->name;			
-
-		$self->_getPercentId($la[7],$la[8],$la[4],$la[5]);			
-			
 		
-	}	
+		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->percentIdentityCutoff){
+			if(defined $results && defined $results->{$sNameName}){
+				#nothing
+			}
+			else{
+				$results->{$sNameName}=\@la;
+			}				
+		}
+	}
 }
 
 sub _getPercentId{
