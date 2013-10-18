@@ -35,14 +35,9 @@ sub _outFH{
 	$self->{'__outFH'} = shift // return $self->{'__outFH'};
 }
 
-sub _storedQid{
+sub _storedLine{
 	my $self=shift;
-	$self->{'__storedQid'} = shift // return $self->{'__storedQid'};
-}
-
-sub _storedResults{
-	my $self=shift;
-	$self->{'__storedResults'} = shift // return $self->{'__storedResults'};
+	$self->{'__storedLine'} = shift // return $self->{'__storedLine'};	
 }
 
 
@@ -59,8 +54,6 @@ sub _initialize {
 
 	$self->percentIdentityCutoff($cutoff);
 	$self->_outFH(IO::File->new('<' . $outFile)) // $self->logger->logdie("$!");
-	$self->_storedResults({});
-	$self->_storedQid(undef);
 }
 
 sub percentIdentityCutoff{
@@ -72,11 +65,16 @@ sub getNextResult{
 	my $self=shift;
 		
 	my $results;
-	my $line = $self->_outFH->getline();
+	my $line = $self->_storedLine() // $self->_outFH->getline();
+	my $counter=0;
 	while($line){
-		my $nextLine = $self->_outFH->getline();	
+		$counter++;
+		$self->logger->debug("counter: $counter");
+		my $nextLine = $self->_outFH->getline();
+		$self->_storedLine($nextLine);	
 		
 		if(!defined $nextLine){
+			$self->logger->debug("nextLine undef");
 			return $results;
 		}
 		
@@ -85,10 +83,7 @@ sub getNextResult{
 		my @la = split("\t",$line);
 		my @nextLa = split("\t",$nextLine);
 		
-		if($la[1] ne $nextLa[1]){
-			return $results;
-		}
-
+		
 		#'outfmt'=>'"6 
 		# [0]sseqid 
 		# [1]qseqid 
@@ -111,9 +106,16 @@ sub getNextResult{
 				#nothing
 			}
 			else{
+				$self->logger->debug("Adding $sNameName to results");
 				$results->{$sNameName}=\@la;
 			}				
 		}
+		
+		if($la[1] ne $nextLa[1]){
+			$self->logger->debug("la1 $la[1] and nextLa1 $nextLa[1] not equal");
+			return $results;
+		}
+		$line = $nextLine;
 	}
 }
 

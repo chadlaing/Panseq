@@ -390,7 +390,7 @@ sub run{
 		$forker->start and next;
 			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
-			unlink $xml;
+			#unlink $xml;
 			$self->_sqliteDb->disconnect();
 		$forker->finish;
 	}
@@ -408,7 +408,6 @@ sub run{
 	}
 	
 	#output the pan-genome with the correct locus IDs
-	$self->_outputPangenomeLocusIds();
 	$self->_createCoreAccessoryGenomes();
 	$self->_sqliteDb->disconnect();
 
@@ -438,6 +437,7 @@ sub _createCoreAccessoryGenomes{
 	
 	my $coreFH = IO::File->new('>' . $self->outputDirectory . 'coreGenomeFragments.fasta') or die "Could not open file coreGenomeFragments.fasta";
 	my $accessoryFH = IO::File->new('>' . $self->outputDirectory . 'accessoryGenomeFragments.fasta') or die "Could not open file accessoryGenomeFragments.fasta";
+	my $panFH = IO::File->new('>' . $self->outputDirectory . 'panGenomeFragments.fasta') or die "Could not open file panGenomeFragments.fasta";
 
 	while(my $row = $sth->fetchrow_arrayref){
 		my $output = '>lcl|' . $row->[0] . '|' . $row->[1] . "\n" . $row->[2] . "\n";
@@ -450,39 +450,13 @@ sub _createCoreAccessoryGenomes{
 		else{
 			$self->logger->logdie("Unknown type $row->[3]");
 		}
+		$panFH->print($output);
 	}
 	
 	$coreFH->close();
 	$accessoryFH->close();
+	$panFH->close();
 }
-
-
-=head2 _outputPangenomeLocusIds
-
-Retrieves from the database the pan-geome, but outputs the locus IDs as fasta headers
-
-=cut
-
-sub _outputPangenomeLocusIds{
-	my $self=shift;
-	
-	$self->logger->info("Creating final panGenome output");
-	my $sql=qq{
-		SELECT locus.id, locus.name, locus.sequence
-		FROM locus
-		ORDER BY locus.id ASC
-	};
-	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
-	$sth->execute();
-	
-	my $outFH = IO::File->new('>' . $self->outputDirectory . 'panGenomeFragments.fasta') or die "Could not open file panGenome.fasta";
-	
-	while(my $row = $sth->fetchrow_arrayref){		
-		$outFH->print('>lcl|' . $row->[0] . '|' . $row->[1] . "\n" . $row->[2] . "\n");
-	}
-	$outFH->close();	
-}
-
 
 
 =head2 _createAlleleFiles
@@ -564,7 +538,7 @@ sub _createOutputFile{
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
 		WHERE results.type = '$type'
-		ORDER BY locus.name,strain.name,results.start_bp ASC
+		ORDER BY locus.id,strain.name,results.start_bp ASC
 	};
 
 	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
@@ -611,6 +585,7 @@ sub _processBlastXML {
 	while(my $result = $blastResult->getNextResult){
 		my @names = sort keys %{$result};
 		$counter++;		
+		$self->logger->debug("_processBlastXML counter: $counter");
 		
 		my $coreOrAccessory;
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
