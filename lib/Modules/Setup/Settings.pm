@@ -291,6 +291,10 @@ sub _setDefaults{
 	unless(defined $self->nameOrId){
 		$self->nameOrId('id');
 	}
+	
+	unless(defined $self->coreGenomeThreshold){
+		$self->coreGenomeThreshold(1);
+	}
 }
 
 1;

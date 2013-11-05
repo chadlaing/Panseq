@@ -263,17 +263,14 @@ sub run{
 	my $numberOfRemainingFiles = scalar(@{$allFastaFiles});
 	my $filesPerComparison=2;
 
-	while($numberOfRemainingFiles > 1){
-		$self->logger->info("Remaining files: $numberOfRemainingFiles");
+	while(scalar(@{$allFastaFiles}) > 1){
+		$self->logger->info("Remaining files: " . scalar(@{$allFastaFiles}));
 
 		$allFastaFiles = $self->_processRemainingFilesWithNucmer(
 			$allFastaFiles,
 			$filesPerComparison
 		);
-	}
-	continue{
-		$numberOfRemainingFiles = scalar(@{$allFastaFiles});
-	}
+	}	
 
 	my $finalFile;
 	if(scalar(@{$allFastaFiles})==1){
@@ -284,6 +281,9 @@ sub run{
 		$self->logger->fatal("Failed to generate a single pan-genome file. Found " . scalar(@{$allFastaFiles}) . " files");
 		exit(1);
 	}
+	
+	#run the novel regions final file against itself to remove seed-genome duplication
+	$finalFile = $self->_performFinalNucmer($finalFile,$finalFile);	
 
 	#need to run against the referenceDirectory files if they exist
 	if($self->settings->novelRegionFinderMode eq 'unique'){
@@ -310,7 +310,7 @@ sub run{
 	}
 	elsif($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
-			$finalFile = $self->_performFinalNucmer($finalFile);
+			$finalFile = $self->_performFinalNucmer($finalFile,$self->referenceFile);
 		}
 		$self->panGenomeFile($finalFile);
 	}
@@ -332,9 +332,10 @@ if it is not novel with respect to the reference directory sequences.
 sub _performFinalNucmer{
 	my $self = shift;
 	my $queryFile = shift;
+	my $referenceFile = shift;
 
 	my $newFileName = $queryFile . '_final';
-	my $coordsFile = $self->_processNucmerQueue($queryFile,$self->referenceFile, $newFileName);
+	my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
 	my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
 	return $novelRegionsFile;
 }

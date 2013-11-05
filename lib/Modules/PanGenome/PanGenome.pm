@@ -180,7 +180,7 @@ sub percentIdentityCutoff{
 	$self->{'_percentIdentityCutoff'}=shift // return $self->{'_percentIdentityCutoff'};
 }
 
-=head3 coreGenomeTheshold
+=head3 coreGenomeThreshold
 
 The number of genomes that a locus must be present in to be considered 'core'.
 Below this number the locus is considered 'accessory'
@@ -395,6 +395,10 @@ sub run{
 		$forker->finish;
 	}
 	$forker->wait_all_children;
+	
+	#add entries for query segments that have no Blast hits
+	
+	
 	$self->logger->info("Processing blast output files complete");
 
 	
