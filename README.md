@@ -85,6 +85,8 @@ Below is an example configuration file for panseq.pl:
 	percentIdentityCutoff	85
 	coreGenomeThreshold	2
 	runMode 	pan
+	storeAlleles	1
+	nameOrId	name
 
 
 * ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
@@ -112,6 +114,10 @@ Below is an example configuration file for panseq.pl:
 * 'coreGenomeThreshold' defines the number of the initial sequences that a segment must be found in to be considered part of the 'core' genome; multi-fasta files of a single sequence are treated as a single sequence.
 
 * 'runMode' can be either 'novel' or 'pan', for novel-region finding and pan-genome analyses respectively.
+
+* 'storeAlleles' if set to 1, will store the allele matching the query sequence for each of the genomes.
+
+* 'nameOrId' defaults to id and determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files: pan_genome.txt core_snps.txt, binary_table.txt and snp_table.txt
 
 ##Detailed explanation of Panseq
 
