@@ -35,14 +35,9 @@ sub _outFH{
 	$self->{'__outFH'} = shift // return $self->{'__outFH'};
 }
 
-sub _storedQid{
+sub _storedLine{
 	my $self=shift;
-	$self->{'__storedQid'} = shift // return $self->{'__storedQid'};
-}
-
-sub _storedResults{
-	my $self=shift;
-	$self->{'__storedResults'} = shift // return $self->{'__storedResults'};
+	$self->{'__storedLine'} = shift // return $self->{'__storedLine'};	
 }
 
 
@@ -59,8 +54,6 @@ sub _initialize {
 
 	$self->percentIdentityCutoff($cutoff);
 	$self->_outFH(IO::File->new('<' . $outFile)) // $self->logger->logdie("$!");
-	$self->_storedResults({});
-	$self->_storedQid(undef);
 }
 
 sub percentIdentityCutoff{
@@ -70,16 +63,27 @@ sub percentIdentityCutoff{
 
 sub getNextResult{
 	my $self=shift;
-
-	my $results=$self->_storedResults();
-	my $qid=$self->_storedQid();
-
+		
+	my $results;
+	my $line = $self->_storedLine() // $self->_outFH->getline();
 	my $counter=0;
-	while(my $line = $self->_outFH->getline()){
+	while($line){
 		$counter++;
+		$self->logger->debug("counter: $counter");
+		my $nextLine = $self->_outFH->getline();
+		$self->_storedLine($nextLine);	
+		
+		if(!defined $nextLine){
+			$self->logger->debug("nextLine undef");
+			return $results;
+		}
+		
 		$line =~ s/\R//g;
+		$nextLine =~ s/\R//g;
 		my @la = split("\t",$line);
-
+		my @nextLa = split("\t",$nextLine);
+		
+		
 		#'outfmt'=>'"6 
 		# [0]sseqid 
 		# [1]qseqid 
@@ -95,40 +99,27 @@ sub getNextResult{
 		# [11]qseq
 
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
-		my $sNameName= $sName->name;
-
-		$self->_storedResults({});
-		$self->_storedResults->{$sNameName}=\@la;
-
-		if(defined $qid && ($qid ne $la[1])){
-			$self->_storedQid($la[1]);
-			return $results;
+		my $sNameName= $sName->name;			
+		
+		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->percentIdentityCutoff){
+			if(defined $results && defined $results->{$sNameName}){
+				#nothing
+			}
+			else{
+				$self->logger->debug("Adding $sNameName to results");
+				$results->{$sNameName}=\@la;
+			}				
 		}
 		
-		$qid = $la[1];
-
-		unless(defined $results->{$sNameName}){			
-
-			unless($self->_isOverCutoff($la[7],$la[8],$la[4],$la[5])){
-				$self->logger->debug($sNameName . " is not over cutoff");
-				next;
-			}
-			
-			$results->{$sNameName}=\@la;
-		}			
-	}
-	continue{
-		 if(eof){
+		if($la[1] ne $nextLa[1]){
+			$self->logger->debug("la1 $la[1] and nextLa1 $nextLa[1] not equal");
 			return $results;
 		}
+		$line = $nextLine;
 	}
-
-	#the sub will keep iterating as long as the filehandle has unseen lines
-	#when called with no remaining lines, return undef to stop the iterating of while(getNextResult)
-	return undef;
 }
 
-sub _isOverCutoff{
+sub _getPercentId{
 	my $self=shift;
 	my $qlen =shift // $self->logger->logdie("Missing qlen");
 	my $pident =shift // $self->logger->logdie("Missing pident");
@@ -142,12 +133,7 @@ sub _isOverCutoff{
 	 # $self->logger->info("qlen: $qlen");
 	 #$self->logger->info("pident: $pident");
 	 #$self->logger->info("percentId: $percentId");
-	if($percentId >= $self->percentIdentityCutoff){
-		return 1;
-	}
-	else{
-		return 0;
-	}
+	return $percentId;
 }
 
 1;

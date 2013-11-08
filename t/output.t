@@ -21,7 +21,7 @@ my $muscleExecutable = '/usr/bin/muscle';
 my %plasmidsConfig=(
 	queryDirectory=>"$FindBin::Bin/data/plasmids/",
 	baseDirectory=>"$FindBin::Bin/plasmids/",
-	numberOfCores=>"1",
+	numberOfCores=>4,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"500",
@@ -46,7 +46,7 @@ my %queryConfig=(
 	muscleExecutable=>$muscleExecutable,
 	fragmentationSize=>'0',
 	percentIdentityCutoff=>'90',
-	coreGenomeThreshold=>'3',
+	coreGenomeThreshold=>'2',
 	runMode=>'pan',
 	storeAlleles=>1
 );
@@ -80,12 +80,12 @@ my %md5Sum=(
 	genomesBinaryPhylip=>'2e126c05a39fc00eb54c5a74fb2879fc',
 	genomesSnpPhylip=>'e0041d87a497056b7934b9fa181820a7',
 	queryCoreSnps=>'665e547de347114db35fa8a813210956',
-	queryPanGenome=>'1063c452290c4dd169339b4746fd882b',
-	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
+	queryPanGenome=>'7d429141afd723524380342c293f6a62',
+	queryBinaryTable=>'7b7505fee1407c86f5b8f75d03c9b24c',
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryBinaryPhylip=>'f6f265f9eb02e876e04b4f5eac8c1e41',
+	queryBinaryPhylip=>'14b852f4f00745ae8e8190a8fdb9dbe2',
 	querySnpPhylip=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryAlleles=>'0281a6770ff31fb4037435bc7f3a2ee2'
+	queryAlleles=>'201833090475055cd4ec9f28ce4adc70'
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
