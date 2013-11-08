@@ -608,7 +608,8 @@ sub _processBlastXML {
 	my $counter=shift;
 
 	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
-	$counter *=1000000000;
+	#this should guarantee a unique number for each result of every Panseq run on the same machine
+	$counter *=(100 * time());
 
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->percentIdentityCutoff);
 	

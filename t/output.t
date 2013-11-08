@@ -67,11 +67,11 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'8c167d9429ec18aca2c84190d97e346a',
-	plasmidsPanGenome=>'836941e2bb89f6540a36d04610fff1c9',
+	plasmidsCoreSnps=>'62a1d75c504dee92530d8a5a7f6bb706',
+	plasmidsPanGenome=>'694c40e186f6ab99e76d76f2541d8136',
 	plasmidsBinaryTable=>'a42ac19fd24b06d92cda1a9cfea8112a',
-	plasmidsSnpTable=>'e29f54adc12c207b523f8a8c02109b1a',
-	plasmidsBinaryPhylip=>'a033883cc4bcf457fefca7da76d942e6',
+	plasmidsSnpTable=>'d80f3f0a6b0484edddffa1d42a576895',
+	plasmidsBinaryPhylip=>'8c9d7e286bc718e380d8f02b5b377a2e',
 	plasmidsSnpPhylip=>'eedf538b1f01a8afa53bc813c26eb03b',
 	genomesCoreSnps=>'4c25c6ba2475f5d9cc6641131dfd05c3',
 	genomesPanGenome=>'478bbf41ec3a894b5a0a289ee6d4c132',
@@ -80,7 +80,7 @@ my %md5Sum=(
 	genomesBinaryPhylip=>'2e126c05a39fc00eb54c5a74fb2879fc',
 	genomesSnpPhylip=>'e0041d87a497056b7934b9fa181820a7',
 	queryCoreSnps=>'665e547de347114db35fa8a813210956',
-	queryPanGenome=>'cc08c15377dfc392d3093f8c81fe984f',
+	queryPanGenome=>'1063c452290c4dd169339b4746fd882b',
 	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
 	queryBinaryPhylip=>'f6f265f9eb02e876e04b4f5eac8c1e41',
@@ -115,6 +115,9 @@ foreach my $test(@{['plasmids','query','genomes']}){
 		next;
 	}
 	
+	#remove the ID column for testing, as it changes every run
+	_removeIDColumn("$FindBin::Bin/$test/");
+	
 	my $md5 = _getMD5("$FindBin::Bin/$test/");
 	is($md5->{'coreSnps'},$md5Sum{"${test}CoreSnps"},"${test}CoreSnps generated correctly");
 	is($md5->{'panGenome'},$md5Sum{"${test}PanGenome"},"${test}PanGenome generated correctly");
@@ -133,12 +136,28 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	
 }
 
-sub _getMD5{
-	my $directory=shift;
+sub _getFilesFromDirectory{
+	my $directory = shift;
 	
 	opendir( DIRECTORY, $directory ) or die "cannot open directory $directory $!\n";
     my @dir = readdir DIRECTORY;
-    closedir DIRECTORY;	
+    closedir DIRECTORY;	    
+    return @dir;
+}
+
+sub _removeIDColumn{
+	my $directory = shift;
+	
+    my @dir = _getFilesFromDirectory($directory);
+	
+}
+
+
+sub _getMD5{
+	my $directory=shift;
+	
+	
+    my @dir = _getFilesFromDirectory($directory);
 	
 	my %md5Hash;
 	my $digester = Digest::MD5->new();
