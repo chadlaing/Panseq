@@ -9,6 +9,7 @@ use Test::Pretty;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
 use IO::File;
+use File::Copy;
 
 my $type = $ARGV[0] // 'genomes';
 my $removeRun = $ARGV[1] // 1;
@@ -21,7 +22,7 @@ my $muscleExecutable = '/usr/bin/muscle';
 my %plasmidsConfig=(
 	queryDirectory=>"$FindBin::Bin/data/plasmids/",
 	baseDirectory=>"$FindBin::Bin/plasmids/",
-	numberOfCores=>4,
+	numberOfCores=>1,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"500",
@@ -37,7 +38,7 @@ my %queryConfig=(
 	queryDirectory=>"$FindBin::Bin/data/genomes/",
 	queryFile=>"$FindBin::Bin/data/testfragments.fasta",
 	baseDirectory=>"$FindBin::Bin/query/",
-	numberOfCores=>"1",
+	numberOfCores=>1,
 	nameOrId=>'name',
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
@@ -54,7 +55,7 @@ my %queryConfig=(
 my %genomesConfig=(
 	queryDirectory=>"$FindBin::Bin/data/genomes/",
 	baseDirectory=>"$FindBin::Bin/genomes/",
-	numberOfCores=>"1",
+	numberOfCores=>1,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"1000",
@@ -67,21 +68,21 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'62a1d75c504dee92530d8a5a7f6bb706',
-	plasmidsPanGenome=>'694c40e186f6ab99e76d76f2541d8136',
-	plasmidsBinaryTable=>'a42ac19fd24b06d92cda1a9cfea8112a',
-	plasmidsSnpTable=>'d80f3f0a6b0484edddffa1d42a576895',
-	plasmidsBinaryPhylip=>'8c9d7e286bc718e380d8f02b5b377a2e',
+	plasmidsCoreSnps=>'225996c682a42630917f7c9e917bfc30',
+	plasmidsPanGenome=>'6c398139935d400379728728eb15de95',
+	plasmidsBinaryTable=>'b26574a7251f2fc0060e65cba1dbbc53',
+	plasmidsSnpTable=>'3a88ed79ddcf0bc525319de29f4b8e23',
+	plasmidsBinaryPhylip=>'a033883cc4bcf457fefca7da76d942e6',
 	plasmidsSnpPhylip=>'eedf538b1f01a8afa53bc813c26eb03b',
-	genomesCoreSnps=>'4c25c6ba2475f5d9cc6641131dfd05c3',
-	genomesPanGenome=>'478bbf41ec3a894b5a0a289ee6d4c132',
-	genomesBinaryTable=>'c1002e14a5da5dad544ce53d8e93a2e2',
-	genomesSnpTable=>'2ec5fe0256aa273c46c69a6ca7364c76',
-	genomesBinaryPhylip=>'2e126c05a39fc00eb54c5a74fb2879fc',
-	genomesSnpPhylip=>'e0041d87a497056b7934b9fa181820a7',
-	queryCoreSnps=>'665e547de347114db35fa8a813210956',
-	queryPanGenome=>'7d429141afd723524380342c293f6a62',
-	queryBinaryTable=>'7b7505fee1407c86f5b8f75d03c9b24c',
+	genomesCoreSnps=>'d0c99a6ea5d35bbd5d275d9a7fdd1b1b',
+	genomesPanGenome=>'44619ab2f10d75509b8a8993cb900223',
+	genomesBinaryTable=>'cfb2368af43146c273109c1f779d44db',
+	genomesSnpTable=>'25343dcc1e33fd4bbc0195542ed35a6b',
+	genomesBinaryPhylip=>'e576f7865893bf8e00bea0081b5f1aea',
+	genomesSnpPhylip=>'14dd6176feba701c23589b68c025bd2c',
+	queryCoreSnps=>'c0df4f4122d388a6d498f61910060436',
+	queryPanGenome=>'be84039b4c11f7e5e731105d6fdf3378',
+	queryBinaryTable=>'6d2e38b5ab20c77ad57f7ea02b7cf26a',
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
 	queryBinaryPhylip=>'14b852f4f00745ae8e8190a8fdb9dbe2',
 	querySnpPhylip=>'d41d8cd98f00b204e9800998ecf8427e',
@@ -150,6 +151,34 @@ sub _removeIDColumn{
 	my $directory = shift;
 	
     my @dir = _getFilesFromDirectory($directory);
+    
+    foreach my $file(@dir){
+    	unless(
+    		$file eq 'pan_genome.txt'
+    		|| $file eq 'core_snps.txt'
+    		|| $file eq 'binary_table.txt'
+    		|| $file eq 'snp_table.txt'
+    	){
+    		next;
+    	}
+    	
+    	my $originalFileName = $directory . $file;
+    	my $modFileName = $originalFileName . 'mod';
+    	
+    	my $tempFH = IO::File->new('<' . $originalFileName) or die "Could not open $originalFileName";
+    	my $tempOut = IO::File->new('>'. $directory . $file . 'mod') or die "Could not create modded file $modFileName";
+    	
+    	while(my $line = $tempFH->getline){
+    		my @la = split("\t",$line);
+    		shift @la;
+    		$tempOut->print(join("\t",@la));
+    	}
+    	$tempOut->close();
+    	$tempFH->close();
+    	
+    	#with File::Copy
+    	move($modFileName,$originalFileName);
+    }
 	
 }
 

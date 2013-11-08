@@ -120,7 +120,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	#$self->_cleanUp();
+	$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -322,6 +322,7 @@ sub _createTree{
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
 	
 	my $sql;
+	$self->logger->info("Name or id: " . $self->settings->nameOrId);
 	if($self->settings->nameOrId eq 'name'){
 		$sql = "SELECT strain.name,results.value, locus.name";
 	}

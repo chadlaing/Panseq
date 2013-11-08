@@ -542,7 +542,7 @@ sub _createOutputFile{
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
 		WHERE results.type = '$type'
-		ORDER BY locus.id,strain.name,results.start_bp ASC
+		ORDER BY locus.name,strain.name,results.start_bp ASC
 	};
 
 	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
