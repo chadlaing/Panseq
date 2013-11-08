@@ -145,6 +145,7 @@ sub _getFilesFromDirectory{
     return @dir;
 }
 
+#need to have test output ber consistent
 sub _removeIDColumn{
 	my $directory = shift;
 	
