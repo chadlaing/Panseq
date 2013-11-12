@@ -339,7 +339,7 @@ sub _createTree{
 		JOIN strain ON contig.strain_id = strain.id
 		JOIN locus ON results.locus_id = locus.id
 		WHERE results.type = '$type'
-		ORDER BY locus.id ASC
+		ORDER BY locus.name ASC
 	};
 
 	my $sth = $dbh->prepare($sql);

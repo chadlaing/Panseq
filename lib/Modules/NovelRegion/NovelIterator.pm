@@ -283,6 +283,7 @@ sub run{
 	}
 	
 	#run the novel regions final file against itself to remove seed-genome duplication
+	$self->logger->info("Running the novel regions to remove duplicates");
 	$finalFile = $self->_performFinalNucmer($finalFile,$finalFile);	
 
 	#need to run against the referenceDirectory files if they exist
@@ -579,7 +580,7 @@ sub _getQueryReferenceFileFromList{
 
 	my $ref = shift @allFiles;
 	$self->logger->info("Reference file for nucmer run is $ref");
-	$self->logger->info("Files combined for query run: @{$listOfFiles}");
+	$self->logger->info("Files combined for query run: @allFiles");
 	#with Roles::CombineFilesIntoSingleFile
 	my $queryFileName = $name . '_query';
 	$self->_combineFilesIntoSingleFile(
