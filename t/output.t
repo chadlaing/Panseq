@@ -20,6 +20,7 @@ my $muscleExecutable = '/usr/bin/muscle';
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
+print "SCRIPT_LOCATION: $SCRIPT_LOCATION\n";
 
 my %plasmidsConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/plasmids/",
@@ -186,8 +187,7 @@ sub _removeIDColumn{
 
 
 sub _getMD5{
-	my $directory=shift;
-	
+	my $directory=shift;	
 	
     my @dir = _getFilesFromDirectory($directory);
 	
@@ -241,7 +241,8 @@ sub _removeRun{
 sub _runPanseq{
 	my $t=shift;
 	
-	my $systemLine="perl $SCRIPT_LOCATION/../lib/panseq.pl $t.batch";
+	my $systemLine="perl $SCRIPT_LOCATION/../lib/panseq.pl $SCRIPT_LOCATION/$t.batch";
+	print "Systemline: $systemLine\n";
 	system($systemLine);
 }
 
