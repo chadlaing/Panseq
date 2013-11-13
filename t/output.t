@@ -2,14 +2,13 @@
 
 use strict;
 use warnings;
-use FindBin;
-use lib "$FindBin::Bin/../lib/";
 use Test::More tests=>19;
 use Test::Pretty;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
 use IO::File;
 use File::Copy;
+use File::Basename;
 
 my $type = $ARGV[0] // 'genomes';
 my $removeRun = $ARGV[1] // 1;
@@ -19,9 +18,12 @@ my $blastDirectory = '/usr/bin/';
 my $mummerDirectory = '/usr/bin/';
 my $muscleExecutable = '/usr/bin/muscle';
 
+#get script location via File::Basename
+my $SCRIPT_LOCATION = dirname(__FILE__);
+
 my %plasmidsConfig=(
-	queryDirectory=>"$FindBin::Bin/data/plasmids/",
-	baseDirectory=>"$FindBin::Bin/plasmids/",
+	queryDirectory=>"$SCRIPT_LOCATION/data/plasmids/",
+	baseDirectory=>"$SCRIPT_LOCATION/plasmids/",
 	numberOfCores=>1,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
@@ -35,9 +37,9 @@ my %plasmidsConfig=(
 );
 
 my %queryConfig=(
-	queryDirectory=>"$FindBin::Bin/data/genomes/",
-	queryFile=>"$FindBin::Bin/data/testfragments.fasta",
-	baseDirectory=>"$FindBin::Bin/query/",
+	queryDirectory=>"$SCRIPT_LOCATION/data/genomes/",
+	queryFile=>"$SCRIPT_LOCATION/data/testfragments.fasta",
+	baseDirectory=>"$SCRIPT_LOCATION/query/",
 	numberOfCores=>1,
 	nameOrId=>'name',
 	mummerDirectory=>$mummerDirectory,
@@ -53,8 +55,8 @@ my %queryConfig=(
 );
 
 my %genomesConfig=(
-	queryDirectory=>"$FindBin::Bin/data/genomes/",
-	baseDirectory=>"$FindBin::Bin/genomes/",
+	queryDirectory=>"$SCRIPT_LOCATION/data/genomes/",
+	baseDirectory=>"$SCRIPT_LOCATION/genomes/",
 	numberOfCores=>1,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
@@ -70,21 +72,21 @@ my %genomesConfig=(
 my %md5Sum=(
 	plasmidsCoreSnps=>'225996c682a42630917f7c9e917bfc30',
 	plasmidsPanGenome=>'6c398139935d400379728728eb15de95',
-	plasmidsBinaryTable=>'b26574a7251f2fc0060e65cba1dbbc53',
-	plasmidsSnpTable=>'3a88ed79ddcf0bc525319de29f4b8e23',
-	plasmidsBinaryPhylip=>'a033883cc4bcf457fefca7da76d942e6',
-	plasmidsSnpPhylip=>'eedf538b1f01a8afa53bc813c26eb03b',
+	plasmidsBinaryTable=>'8bb90f3371dc4919f19c815dbbdde174',
+	plasmidsSnpTable=>'2e113342930ceaad8767378abcb99a55',
+	plasmidsBinaryPhylip=>'fa503a7b4e4c284dcae6165fd3054dbd',
+	plasmidsSnpPhylip=>'275f7953f2679d10483b7a1756a9a321',
 	genomesCoreSnps=>'d0c99a6ea5d35bbd5d275d9a7fdd1b1b',
 	genomesPanGenome=>'44619ab2f10d75509b8a8993cb900223',
-	genomesBinaryTable=>'cfb2368af43146c273109c1f779d44db',
-	genomesSnpTable=>'25343dcc1e33fd4bbc0195542ed35a6b',
-	genomesBinaryPhylip=>'e576f7865893bf8e00bea0081b5f1aea',
-	genomesSnpPhylip=>'14dd6176feba701c23589b68c025bd2c',
+	genomesBinaryTable=>'dd6723f30271de76053935b3adcbc62f',
+	genomesSnpTable=>'b55e64c33f7e59a96195114a23851401',
+	genomesBinaryPhylip=>'f73de672af16e1d1c654b1b6abdac9ff',
+	genomesSnpPhylip=>'fc7a6c25955756f9066c32c181e64a62',
 	queryCoreSnps=>'c0df4f4122d388a6d498f61910060436',
 	queryPanGenome=>'be84039b4c11f7e5e731105d6fdf3378',
-	queryBinaryTable=>'6d2e38b5ab20c77ad57f7ea02b7cf26a',
+	queryBinaryTable=>'256e1803ceb4853d5a8a547648e7c5b0',
 	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryBinaryPhylip=>'14b852f4f00745ae8e8190a8fdb9dbe2',
+	queryBinaryPhylip=>'2a6ea24ef1da8adc251ea6c69621f3ae',
 	querySnpPhylip=>'d41d8cd98f00b204e9800998ecf8427e',
 	queryAlleles=>'201833090475055cd4ec9f28ce4adc70'
 );
@@ -117,9 +119,9 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	}
 	
 	#remove the ID column for testing, as it changes every run
-	_removeIDColumn("$FindBin::Bin/$test/");
+	_removeIDColumn("$SCRIPT_LOCATION/$test/");
 	
-	my $md5 = _getMD5("$FindBin::Bin/$test/");
+	my $md5 = _getMD5("$SCRIPT_LOCATION/$test/");
 	is($md5->{'coreSnps'},$md5Sum{"${test}CoreSnps"},"${test}CoreSnps generated correctly");
 	is($md5->{'panGenome'},$md5Sum{"${test}PanGenome"},"${test}PanGenome generated correctly");
 	is($md5->{'binaryTable'},$md5Sum{"${test}BinaryTable"},"${test}BinaryTable generated correctly");
@@ -232,14 +234,14 @@ sub _removeRun{
 	my $t=shift;
 	
 	#with File::Path
-	remove_tree("$FindBin::Bin/$t");
-	unlink "$FindBin::Bin/$t.batch";
+	remove_tree("$SCRIPT_LOCATION/$t");
+	unlink "$SCRIPT_LOCATION/$t.batch";
 }
 
 sub _runPanseq{
 	my $t=shift;
 	
-	my $systemLine="perl $FindBin::Bin/../lib/panseq.pl $t.batch";
+	my $systemLine="perl $SCRIPT_LOCATION/../lib/panseq.pl $t.batch";
 	system($systemLine);
 }
 
@@ -248,7 +250,7 @@ sub _createBatchFile{
 	my $batchFile=shift;
 	my $name=shift;
 	
-	my $batchFH=IO::File->new('>' . "$FindBin::Bin/$name.batch") or die "Could not create test batch file $name.batch";
+	my $batchFH=IO::File->new('>' . "$SCRIPT_LOCATION/$name.batch") or die "Could not create test batch file $name.batch";
 	foreach my $key(keys %{$batchFile}){
 		$batchFH->print("$key\t$batchFile->{$key}\n");
 	}

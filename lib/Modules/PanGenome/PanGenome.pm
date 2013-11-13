@@ -397,7 +397,7 @@ sub run{
 	$forker->wait_all_children;
 	
 	#add entries for query segments that have no Blast hits
-	
+	#$self->_addQueryWithNoBlastHits();
 	
 	$self->logger->info("Processing blast output files complete");
 
@@ -416,6 +416,21 @@ sub run{
 	$self->_sqliteDb->disconnect();
 
 	$self->logger->info("Pan-genome generation complete");
+}
+
+=head2 _addQueryWithNoBlastHits
+
+
+
+=cut
+
+sub _addQueryWithNoBlastHits{
+	my $self=shift;
+	
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+	
+	$self->_sqliteDb->disconnect();
+	$self->logger->info("X Query sequences added with no Blast hits");
 }
 
 =head2 _createCoreAccessoryGenomes
