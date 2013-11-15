@@ -401,7 +401,6 @@ sub run{
 	
 	$self->logger->info("Processing blast output files complete");
 
-	
 	#reopen database handle that has been closed from the forking above
 	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 

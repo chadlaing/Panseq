@@ -71,25 +71,25 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'225996c682a42630917f7c9e917bfc30',
-	plasmidsPanGenome=>'6c398139935d400379728728eb15de95',
-	plasmidsBinaryTable=>'8bb90f3371dc4919f19c815dbbdde174',
-	plasmidsSnpTable=>'2e113342930ceaad8767378abcb99a55',
-	plasmidsBinaryPhylip=>'fa503a7b4e4c284dcae6165fd3054dbd',
-	plasmidsSnpPhylip=>'275f7953f2679d10483b7a1756a9a321',
-	genomesCoreSnps=>'d0c99a6ea5d35bbd5d275d9a7fdd1b1b',
+	plasmidsCoreSnps=>'db76a69bf6a6de4c8a4892eeb3efc444',
+	plasmidsPanGenome=>'520e12c7b588dea7dbf68aee14c81066',
+	plasmidsBinaryTable=>'16d5468e64301223914321185ad8e845',
+	plasmidsSnpTable=>'3b66b254e30361599741e1fc24738ee0',
+	plasmidsBinaryPhylip=>'ec3d516ca77e84639f01bd31c83a0983',
+	plasmidsSnpPhylip=>'2eb68d2fdcb140599210116cb96c4c8d',
+	genomesCoreSnps=>'5ccf9a59c9324607ae2bc4b859a2c216',
 	genomesPanGenome=>'44619ab2f10d75509b8a8993cb900223',
 	genomesBinaryTable=>'dd6723f30271de76053935b3adcbc62f',
-	genomesSnpTable=>'b55e64c33f7e59a96195114a23851401',
+	genomesSnpTable=>'dfcdcebe312ce271d2aa0d93524b1cb6',
 	genomesBinaryPhylip=>'f73de672af16e1d1c654b1b6abdac9ff',
-	genomesSnpPhylip=>'fc7a6c25955756f9066c32c181e64a62',
-	queryCoreSnps=>'c0df4f4122d388a6d498f61910060436',
-	queryPanGenome=>'be84039b4c11f7e5e731105d6fdf3378',
-	queryBinaryTable=>'256e1803ceb4853d5a8a547648e7c5b0',
-	querySnpTable=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryBinaryPhylip=>'2a6ea24ef1da8adc251ea6c69621f3ae',
-	querySnpPhylip=>'d41d8cd98f00b204e9800998ecf8427e',
-	queryAlleles=>'201833090475055cd4ec9f28ce4adc70'
+	genomesSnpPhylip=>'38e50cb985fee5f4bee23ea240dd7758',
+	queryCoreSnps=>'049650deb7962f40bff95cb77f5968fd',
+	queryPanGenome=>'88f127b4f3cd97c1d7e21edeff28dde1',
+	queryBinaryTable=>'f84739ff95263f3769a36f8c5c3872de',
+	querySnpTable=>'07a6254b83fd662974de95d2a8195fa4',
+	queryBinaryPhylip=>'2fc8a88b74179d17364ab2e5b1ce2915',
+	querySnpPhylip=>'0435def55963465508987718249ad03d',
+	queryAlleles=>'0281a6770ff31fb4037435bc7f3a2ee2'
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
