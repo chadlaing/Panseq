@@ -35,9 +35,16 @@ sub _outFH{
 	$self->{'__outFH'} = shift // return $self->{'__outFH'};
 }
 
-sub _storedLine{
+
+#we want to store UNDEF in this variable, which makes the standard way always return the stored value, rather than setting it to UNDEF.
+sub _setStoredLine{
 	my $self=shift;
-	$self->{'__storedLine'} = shift // return $self->{'__storedLine'};	
+	$self->{'__storedLine'} = shift;	
+}
+
+sub _getStoredLine{
+	my $self = shift;
+	return $self->{'__storedLine'}
 }
 
 
@@ -54,6 +61,9 @@ sub _initialize {
 
 	$self->percentIdentityCutoff($cutoff);
 	$self->_outFH(IO::File->new('<' . $outFile)) // $self->logger->logdie("$!");
+	
+	#set the first line in _storedLine to prevent infinite looping
+	$self->_setStoredLine($self->_outFH->getline());
 }
 
 sub percentIdentityCutoff{
@@ -65,24 +75,25 @@ sub getNextResult{
 	my $self=shift;
 		
 	my $results;
-	my $line = $self->_storedLine() // $self->_outFH->getline();
+	my $line = $self->_getStoredLine(); #on object creation, this is initialized with the first line
+	$self->logger->info("Calling getNextResult with line: $line");
 	my $counter=0;
-	while($line){
+	while($line){		
 		$counter++;
-		$self->logger->debug("counter: $counter");
 		my $nextLine = $self->_outFH->getline();
-		$self->_storedLine($nextLine);	
+		$self->_setStoredLine($nextLine);	
 		
-		if(!defined $nextLine){
-			$self->logger->debug("nextLine undef");
-			return $results;
+		my @nextLa;
+		if(defined $nextLine){
+			$nextLine =~ s/\R//g;
+			@nextLa = split("\t",$nextLine);
+		}
+		else{
+			$self->logger->info("nextLine UNDEF");
 		}
 		
-		$line =~ s/\R//g;
-		$nextLine =~ s/\R//g;
-		my @la = split("\t",$line);
-		my @nextLa = split("\t",$nextLine);
-		
+		$line =~ s/\R//g;		
+		my @la = split("\t",$line);		
 		
 		#'outfmt'=>'"6 
 		# [0]sseqid 
@@ -109,10 +120,10 @@ sub getNextResult{
 				$self->logger->debug("Adding $sNameName to results");
 				$results->{$sNameName}=\@la;
 			}				
-		}
+		}		
 		
-		if($la[1] ne $nextLa[1]){
-			$self->logger->debug("la1 $la[1] and nextLa1 $nextLa[1] not equal");
+		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
+			$self->logger->info("nextLa not defined or la1 $la[1] and nextLa1 $nextLa[1] not equal");
 			return $results;
 		}
 		$line = $nextLine;
