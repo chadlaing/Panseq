@@ -76,7 +76,7 @@ sub getNextResult{
 		
 	my $results;
 	my $line = $self->_getStoredLine(); #on object creation, this is initialized with the first line
-	$self->logger->info("Calling getNextResult with line: $line");
+	
 	my $counter=0;
 	while($line){		
 		$counter++;
@@ -117,13 +117,11 @@ sub getNextResult{
 				#nothing
 			}
 			else{
-				$self->logger->debug("Adding $sNameName to results");
 				$results->{$sNameName}=\@la;
 			}				
 		}		
 		
 		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
-			$self->logger->info("nextLa not defined or la1 $la[1] and nextLa1 $nextLa[1] not equal");
 			return $results;
 		}
 		$line = $nextLine;

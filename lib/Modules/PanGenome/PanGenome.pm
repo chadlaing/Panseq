@@ -605,7 +605,6 @@ sub _processBlastXML {
 	while(my $result = $blastResult->getNextResult){
 		my @names = sort keys %{$result};
 		$counter++;		
-		$self->logger->debug("_processBlastXML counter: $counter");
 		
 		my $coreOrAccessory;
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
@@ -687,7 +686,7 @@ sub _processBlastXML {
 					table=>'results',
 					type=>'snp',
 					contig_id=>$self->_contigIds->{$cResult->{'contig'}},
-					locus_id=>$cResult->{'locusId'},
+					locus_id=>$counter,
 					start_bp=>$cResult->{'startBp'},
 					end_bp=>$cResult->{'startBp'},
 					value=>$cResult->{'value'}
@@ -773,7 +772,7 @@ sub _getHashOfFastaAlignment{
 			$line =~ s/>//;
 			my $sn = Modules::Fasta::SequenceName->new($line);
 			$name = $sn->name;
-			$self->logger->debug("New name: $name");
+			
 			#we don't need or want the '>'; all names are stored without the fasta header signifier
 			$results->{$name}->{'fasta'}=$line;
 		}
