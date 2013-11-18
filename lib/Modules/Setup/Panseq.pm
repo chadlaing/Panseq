@@ -324,10 +324,10 @@ sub _createTree{
 	my $sql;
 	$self->logger->info("Name or id: " . $self->settings->nameOrId);
 	if($self->settings->nameOrId eq 'name'){
-		$sql = "SELECT strain.name,results.value, locus.name";
+		$sql = "SELECT strain.name,results.value, locus.name, results.number";
 	}
 	elsif($self->settings->nameOrId eq 'id'){
-		$sql = "SELECT strain.name,results.value, locus.id";
+		$sql = "SELECT strain.name,results.value, locus.id, results.number";
 	}
 	else{
 		$self->logger->logdie("Incorrect setting " . $self->settings->nameOrId . " in nameOrId. Expected name or id");
@@ -339,7 +339,7 @@ sub _createTree{
 		JOIN strain ON contig.strain_id = strain.id
 		JOIN locus ON results.locus_id = locus.id
 		WHERE results.type = '$type'
-		ORDER BY locus.name ASC
+		ORDER BY locus.name, results.number ASC
 	};
 
 	my $sth = $dbh->prepare($sql);
@@ -354,36 +354,31 @@ sub _createTree{
 	my %loci;
 	my $locus;
 	my @genomeOrder;
-	while(my $row = $sth->fetchrow_arrayref){
-	    if(defined $results{$row->[0]}){
-	    	push @{$results{$row->[0]}},$row->[1];
-	    }
-	    else{
-	    	$results{$row->[0]}=[$row->[1]];
-	    }
+	
+	my @row = $sth->fetchrow_array;
+	my $counter=0;
+	while(defined $row[0]){
+		$counter++;
+		$self->logger->info("Tree counter $counter");
+	  	my @nextRow = $sth->fetchrow_array;
+	  	$loci{$row[0]}=$row[1];
+	  	
+	    push @{$results{$row[0]}},$row[1];
 
-	    if(defined $locus && ($locus ne $row->[2])){
+	    if((!defined $nextRow[0]) || ($row[3] ne $nextRow[3])){
 	    	unless(defined $genomeOrder[0]){
 	    		@genomeOrder = sort keys %loci;
 	    		$tableFH->print("\t" . join("\t",@genomeOrder) . "\n");
 	    	}
-	    	$tableFH->print($locus);
+	    	$tableFH->print($row[3]);
 	    	foreach my $genome(@genomeOrder){
 	    		$tableFH->print("\t" . $loci{$genome});
 	    	}
 	    	$tableFH->print("\n");
 	    }
-	    $locus = $row->[2];
-	    $loci{$row->[0]}=$row->[1];
+	    @row=@nextRow;  
 	}
 	
-	if(defined $locus){
-		$tableFH->print($locus);
-		foreach my $genome(@genomeOrder){
-			$tableFH->print("\t" . $loci{$genome});
-		}
-		$tableFH->print("\n");
-	}
 	
 	$dbh->disconnect();
 	$tableFH->close();	

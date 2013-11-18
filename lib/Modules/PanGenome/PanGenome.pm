@@ -125,7 +125,7 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
@@ -597,13 +597,18 @@ sub _processBlastXML {
 
 	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
-	$counter *=(100 * time());
+	#allows up to 1000 SNPs per result
+	$counter *=(1000 * time());
 
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->percentIdentityCutoff);
 	
 	while(my $result = $blastResult->getNextResult){
 		my @names = sort keys %{$result};
-		$counter++;		
+		$counter++;	
+		
+		#this defines how many results / locus allele
+		#for binary, this will always be 1
+		my $resultNumber=1;
 		
 		my $coreOrAccessory;
 		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
@@ -645,6 +650,7 @@ sub _processBlastXML {
 						type=>'binary',
 						contig_id=>$self->_contigIds->{$result->{$name}->[0]},
 						locus_id=>$counter,
+						number=>$counter,
 						start_bp=>$result->{$name}->[2],
 						end_bp=>$result->{$name}->[3],
 						value=>1
@@ -656,6 +662,7 @@ sub _processBlastXML {
 						type=>'binary',
 						contig_id=>$self->_contigIds->{'NA_' . $name},
 						locus_id=>$counter,
+						number=>$counter,
 						start_bp=>0,
 						end_bp=>0,
 						value=>'0'
@@ -685,6 +692,7 @@ sub _processBlastXML {
 					table=>'results',
 					type=>'snp',
 					contig_id=>$self->_contigIds->{$cResult->{'contig'}},
+					number=>$cResult->{'locusId'},
 					locus_id=>$counter,
 					start_bp=>$cResult->{'startBp'},
 					end_bp=>$cResult->{'startBp'},
