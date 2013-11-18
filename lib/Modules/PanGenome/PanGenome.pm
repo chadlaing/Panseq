@@ -133,6 +133,9 @@ sub _initDb{
 	$self->_sqlString->{'results'}=[];
 	$self->_sqlString->{'locus'}=[];
 	$self->_sqlString->{'allele'}=[];
+	$self->_sqlString->{'strain'}=[];
+	$self->_sqlString->{'contig'}=[];
+	$self->logger->info("SQL DB initialized");
 }
 
 =head2 _sqliteDb
@@ -345,52 +348,87 @@ sub _populateStrainTable{
 	my %contigIds;
 	my $counter=1;
 
-	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	#my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 	
 	#add case for missing values
-	my $sql = qq{INSERT INTO strain(name) VALUES('')};
-	$dbh->do($sql);
-
+#	my $sql = qq{INSERT INTO strain(name) VALUES('')};
+#	$dbh->do($sql);
+#	$self->_insertIntoDb(
+#		table=>'strain',
+#		name=>''
+#	);
+	
+	my $strainId=0;
 	foreach my $name(sort keys %{$mfsn->sequenceNameHash}){
-		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
-		$dbh->do($sql);
+		$strainId++;
+		$self->logger->debug("strainId: $strainId for $name");
+#		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
+#		$dbh->do($sql);
+		$self->_insertIntoDb(
+			table=>'strain',
+			id=>$strainId,
+			name=>$name
+		);
 
 		#add the no value case
 		my $missingContig = 'NA_' . $name;
-		my $missingSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$missingContig")};
-		$dbh->do($missingSql);
+		
+#		my $missingSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$missingContig")};
+#		$dbh->do($missingSql);
+		$self->_insertIntoDb(
+			table=>'contig',
+			strain_id=>$strainId,
+			name=>$missingContig
+		);
+		
 		$contigIds{$missingContig}=$counter;
 		$counter++;
 
 		foreach my $contig(@{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders}){
-			my $contigSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$contig")};
-			$dbh->do($contigSql);
+#			my $contigSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$contig")};
+#			$dbh->do($contigSql);
+			$self->_insertIntoDb(
+				table=>'contig',
+				strain_id=>$strainId,
+				name=>$contig
+			);
+			
 			$contigIds{$contig}=$counter;
 			$counter++;
 		}		
 	}
-	$dbh->disconnect();
+
+	$self->_emptySqlBuffers();
+	
+	#$dbh->disconnect();
+	$self->_sqliteDb->disconnect();
+	$self->logger->info("Strain table populated");
 	return \%contigIds;
 }
 
 sub run{
 	my $self=shift;
 	
+	$self->logger->info("Analyzing the pan-genome");
+	$self->logger->info("Gathering ordered genome names");
 	my ($mfsn,$orderedNames)=$self->_generateOrderedNamesArray();
 	$self->_mfsn($mfsn);
 	$self->_orderedNames($orderedNames);
 
+	$self->logger->info("Populating the strain table");
 	$self->_contigIds($self->_populateStrainTable($self->_mfsn));
 
 	my $forker = Parallel::ForkManager->new($self->numberOfCores);
 	my $counter=0;
 	#process all XML files
+	$self->logger->info("Processing Blast output files");
 	foreach my $xml(sort @{$self->xmlFiles}){
 		$counter++;
 		$forker->start and next;
 			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
-			#unlink $xml;
+			unlink $xml;
 			$self->_sqliteDb->disconnect();
 		$forker->finish;
 	}
@@ -808,10 +846,18 @@ If any are left in the buffer, add them to the DB.
 sub _emptySqlBuffers{
 	my $self=shift;
 	
-	foreach my $table(sort keys %{$self->_sqlString}){
+	#the reverse sort is because we need strain to come before contig,
+	#as contig uses the strain ID as a foreign key
+	foreach my $table(reverse sort keys %{$self->_sqlString}){
 		if(defined $self->_sqlString->{$table}->[0]){
+			$self->logger->debug("$table defined, emptying buffers");
 			my $sqlString = join('',@{$self->_sqlString->{$table}});
-			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr);
+			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
+			#actually empty the buffer, rahter than just print it out
+			$self->_sqlString->{$table}=[];
+		}
+		else{
+			$self->logger->debug("$table not defined, not emptying");
 		}
 	}	
 }
@@ -881,6 +927,8 @@ sub _insertIntoDb{
 			$counter++;
 		}
 		$currentSql .="\n";
+		
+		$self->logger->debug("Adding to $table currentSql\n$currentSql");
 		push @{$sql},$currentSql;
 	}
 	else{		
@@ -907,17 +955,20 @@ sub _insertIntoDb{
 			$counter++;
 		}
 		$currentSql .="\n";
+		
+		$self->logger->debug("Adding to $table initialSql\n$currentSql");
 		push @{$sql}, $currentSql;
 		#push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
 	}
 	
 	if(scalar(@{$sql})==500){
 		my $sqlString = join('',@{$sql});
-		#$self->logger->info("$sqlString");
+		$self->logger->debug("performing DO with $sqlString");
 		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
 		$self->_sqlString->{$table}=[];
 	}
 	else{
+		$self->logger->debug("Adding SQL string to array for table $table");
 		$self->_sqlString->{$table}=$sql;
 	}
 }
