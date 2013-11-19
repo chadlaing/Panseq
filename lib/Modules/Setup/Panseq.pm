@@ -510,16 +510,9 @@ sub _performPanGenomeAnalyses{
 	#do the pan-genome analysis	
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
 		xmlFiles=>\@blastFiles,
-		numberOfCores=>$self->settings->numberOfCores,
-		percentIdentityCutoff=>$self->settings->percentIdentityCutoff,
-		coreGenomeThreshold=>$self->settings->coreGenomeThreshold,
-		outputDirectory=>$self->settings->baseDirectory,
-		muscleExecutable=>$self->settings->muscleExecutable,
-		accessoryType=>$self->settings->accessoryType,
 		queryFile=>$files->singleQueryFile,
 		panGenome=>$panGenomeFile,
-		queryFileSpecified=>$self->settings->queryFile // undef,
-		storeAlleles=>$self->settings->storeAlleles
+		settings=>$self->settings
 	);
 	$panAnalyzer->run();
 	

@@ -104,7 +104,7 @@ sub _initialize{
 
 	#default values
 	unless(defined $self->panGenomeOutputFile){
-		$self->panGenomeOutputFile($self->outputDirectory . 'pan_genome.txt');
+		$self->panGenomeOutputFile($self->settings->baseDirectory . 'pan_genome.txt');
 	}
 
 	$self->_currentResult(0);
@@ -115,7 +115,7 @@ sub _initDb{
 	
 	$self->logger->info("Initializing SQL DB");
 	#define SQLite db
-	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
 	
 	$dbh->do("DROP TABLE IF EXISTS results");
 	$dbh->do("DROP TABLE IF EXISTS strain");
@@ -177,62 +177,7 @@ sub xmlFiles{
 	$self->{'_xmlFiles'}=shift // return $self->{'_xmlFiles'};
 }
 
-=head3 percentIdentityCutoff
 
-Threshold for sequence identity of a locus to be considered 'core'.
-If below, considered 'accessory'
-
-=cut
-
-sub percentIdentityCutoff{
-	my $self=shift;
-	$self->{'_percentIdentityCutoff'}=shift // return $self->{'_percentIdentityCutoff'};
-}
-
-=head3 coreGenomeThreshold
-
-The number of genomes that a locus must be present in to be considered 'core'.
-Below this number the locus is considered 'accessory'
-
-=cut
-
-sub coreGenomeThreshold{
-	my $self=shift;
-	$self->{'_coreGenomeThreshold'}=shift // return $self->{'_coreGenomeThreshold'};
-}
-
-=head3 numberOfCores
-
-The number of forks that will be made by Panseq
-
-=cut
-
-sub numberOfCores{
-	my $self=shift;
-	$self->{'_numberOfCores'}=shift // return $self->{'_numberOfCores'};
-}
-
-=head3 outputDirectory
-
-Directory that all files are output to.
-
-=cut
-
-sub outputDirectory{
-	my $self=shift;
-	$self->{'_outputDirectory'}=shift // return $self->{'_outputDirectory'};
-}
-
-=head3 muscleExecutable
-
-Absolute path to the Muscle (http://www.drive5.com/muscle/) alignment program.
-
-=cut
-
-sub muscleExecutable{
-	my $self=shift;
-	$self->{'_muscleExecutable'}=shift // return $self->{'_muscleExecutable'};
-}
 
 =head3 queryFile
 
@@ -259,17 +204,6 @@ sub _mfsn{
 	$self->{'__mfsn'}=shift // return $self->{'__mfsn'};
 }
 
-=head3 accessoryType
-
-Determines whether a binary, percent ID, or actual sequence will be output for the accessory table.
-
-=cut
-
-sub accessoryType{
-	my $self=shift;
-	$self->{'_accessoryType'}=shift // return $self->{'_accessoryType'};
-}
-
 
 =head3 _orderedNames
 
@@ -284,10 +218,6 @@ sub _orderedNames{
 	$self->{'__orderedNames'}=shift // return $self->{'__orderedNames'};
 }
 
-sub queryFileSpecified{
-	my $self=shift;
-	$self->{'_queryFileSpecified'} = shift // return $self->{'_queryFileSpecified'};	
-}
 
 
 =head3 panGenomeOutputFile
@@ -326,6 +256,11 @@ sub storeAlleles{
 	$self->{'_storeAlleles'} = shift // return $self->{'_storeAlleles'};	
 }
 
+sub settings{
+	my $self=shift;
+	$self->{'_settings'} = shift // return $self->{'_settings'};	
+}
+
 
 sub _currentResult{
 	my $self=shift;
@@ -359,8 +294,8 @@ sub _populateStrainTable{
 	my %contigIds;
 	my $counter=1;
 
-	#my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+	#my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 	
 	#add case for missing values
 #	my $sql = qq{INSERT INTO strain(name) VALUES('')};
@@ -429,14 +364,14 @@ sub run{
 	$self->logger->info("Populating the strain table");
 	$self->_contigIds($self->_populateStrainTable($self->_mfsn));
 
-	my $forker = Parallel::ForkManager->new($self->numberOfCores);
+	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
 	my $counter=0;
 	#process all XML files
 	$self->logger->info("Processing Blast output files");
 	foreach my $xml(sort @{$self->xmlFiles}){
 		$counter++;
 		$forker->start and next;
-			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
 			unlink $xml;
 			$self->_sqliteDb->disconnect();
@@ -445,19 +380,19 @@ sub run{
 	$forker->wait_all_children;
 	
 	#add entries for query segments that have no Blast hits
-	if(defined $self->queryFileSpecified){
-		$self->logger->debug("queryFile specified as " . $self->queryFileSpecified);
+	if(defined $self->settings->queryFile){
+		$self->logger->debug("queryFile specified as " . $self->settings->queryFile);
 		$self->_addQueryWithNoBlastHits();
 	}
 	
 	$self->logger->info("Processing blast output files complete");
 
 	#reopen database handle that has been closed from the forking above
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 
-	$self->_createOutputFile('snp',$self->outputDirectory . 'core_snps.txt');
-	$self->_createOutputFile('binary',$self->outputDirectory . 'pan_genome.txt');
-	if($self->storeAlleles == 1){
+	$self->_createOutputFile('snp',$self->settings->baseDirectory . 'core_snps.txt');
+	$self->_createOutputFile('binary',$self->settings->baseDirectory . 'pan_genome.txt');
+	if($self->settings->storeAlleles == 1){
 		$self->_createAlleleFiles();
 	}
 	
@@ -521,7 +456,7 @@ sub _addQueryWithNoBlastHits{
 	#get list of all input query names
 	my $queryHashRef = $self->_getPanGenomeHashRef();
 	
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 	my $sql = "SELECT locus.name FROM locus ORDER BY locus.name ASC";
 	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
 	$sth->execute() or $self->logger->logdie($self->_sqliteDb->errstr);
@@ -586,9 +521,9 @@ sub _createCoreAccessoryGenomes{
 	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
 	$sth->execute();
 	
-	my $coreFH = IO::File->new('>' . $self->outputDirectory . 'coreGenomeFragments.fasta') or die "Could not open file coreGenomeFragments.fasta";
-	my $accessoryFH = IO::File->new('>' . $self->outputDirectory . 'accessoryGenomeFragments.fasta') or die "Could not open file accessoryGenomeFragments.fasta";
-	my $panFH = IO::File->new('>' . $self->outputDirectory . 'panGenomeFragments.fasta') or die "Could not open file panGenomeFragments.fasta";
+	my $coreFH = IO::File->new('>' . $self->settings->baseDirectory . 'coreGenomeFragments.fasta') or die "Could not open file coreGenomeFragments.fasta";
+	my $accessoryFH = IO::File->new('>' . $self->settings->baseDirectory . 'accessoryGenomeFragments.fasta') or die "Could not open file accessoryGenomeFragments.fasta";
+	my $panFH = IO::File->new('>' . $self->settings->baseDirectory . 'panGenomeFragments.fasta') or die "Could not open file panGenomeFragments.fasta";
 
 	while(my $row = $sth->fetchrow_arrayref){
 		my $output = '>lcl|' . $row->[0] . '|' . $row->[1] . "\n" . $row->[2] . "\n";
@@ -634,7 +569,7 @@ sub _createAlleleFiles{
 	my $sth = $self->_sqliteDb->prepare($sql);
 	$sth->execute();
 	
-	my $outFH = IO::File->new('>' . $self->outputDirectory . 'locus_alleles.fasta') or die "Could not open file locus_alleles.fasta";
+	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . 'locus_alleles.fasta') or die "Could not open file locus_alleles.fasta";
 	my @nextRow;
 	my @outputBuffer;
 	
@@ -673,7 +608,7 @@ sub _createOutputFile{
 	#INNER JOIN TableB
 	#ON TableA.name = TableB.name
 	my $sql;
-	if($self->storeAlleles){
+	if($self->settings->storeAlleles){
 		$sql= qq{
 			SELECT results.locus_id,locus.name,strain.name,results.value,results.start_bp,results.end_bp,contig.name
 		}
@@ -697,7 +632,7 @@ sub _createOutputFile{
 
 	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
 	#print header for output file
-	if($self->storeAlleles){
+	if($self->settings->storeAlleles){
 		$outFH->print("Locus Id\tLocus Name\tGenome\tAllele\tStart bp\tEnd bp\tContig\n");
 	}
 	else{
@@ -748,7 +683,7 @@ sub _processBlastXML {
 	#allows up to 1000 SNPs per result
 	$counter = $self->_getUniqueResultId($counter);
 
-	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->percentIdentityCutoff);
+	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
 	
 	while(my $result = $blastResult->getNextResult){
 		my @names = sort keys %{$result};
@@ -759,7 +694,7 @@ sub _processBlastXML {
 		my $resultNumber=1;
 		
 		my $coreOrAccessory;
-		if(scalar(keys %{$result}) >= $self->coreGenomeThreshold){
+		if(scalar(keys %{$result}) >= $self->settings->coreGenomeThreshold){
 			$coreOrAccessory='core';
 		}
 		else{
@@ -784,7 +719,7 @@ sub _processBlastXML {
 			if(defined $result->{$name}){
 					#currently, we only store the alleles if using an input file
 					#if we generate a pan-genome, no alleles are stored
-					if($self->storeAlleles){
+					if($self->settings->storeAlleles){
 						$self->_insertIntoDb(
 							table=>'allele',
 							locus_id=>$counter,
@@ -865,9 +800,9 @@ sub _getMsa{
 	my $resultNumber=shift;
 
 	#create temp files for muscle
-	my $tempInFile = $self->outputDirectory . 'muscleTemp_in' . $resultNumber;
+	my $tempInFile = $self->settings->baseDirectory . 'muscleTemp_in' . $resultNumber;
 	my $tempInFH = IO::File->new('>'. $tempInFile) or die "$!";
-	my $tempOutFile = $self->outputDirectory . 'muscleTemp_out' . $resultNumber;
+	my $tempOutFile = $self->settings->baseDirectory . 'muscleTemp_out' . $resultNumber;
 	my $tempOutFH = IO::File->new('+>' . $tempOutFile) or die "$!";
 	
 	#'outfmt'=>'"6 
@@ -887,7 +822,7 @@ sub _getMsa{
 		$tempInFH->print('>' . $result->{$hit}->[0] . "\n" . $result->{$hit}->[10] . "\n");
 	}
 	
-	my $systemLine = $self->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
+	my $systemLine = $self->settings->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
 	system($systemLine);
 
 	#close the open FH

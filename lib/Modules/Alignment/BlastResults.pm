@@ -57,18 +57,18 @@ sub _initialize {
 	$self->logger(Log::Log4perl->get_logger());
 	$self->logger->debug("Logger initialized in Modules::Alignment::BlastResults");
 	my $outFile = shift // $self->logger->logdie("No file sent to BlastResults");
-	my $cutoff = shift // $self->logger->logdie("percentIdentityCutoff required");
+	my $settings = shift // $self->logger->logdie("Settings required in BlastResults");
+	$self->settings($settings);
 
-	$self->percentIdentityCutoff($cutoff);
 	$self->_outFH(IO::File->new('<' . $outFile)) // $self->logger->logdie("$!");
 	
 	#set the first line in _storedLine to prevent infinite looping
 	$self->_setStoredLine($self->_outFH->getline());
 }
 
-sub percentIdentityCutoff{
+sub settings{
 	my $self=shift;
-	$self->{'_percentIdentityCutoff'} = shift // return $self->{'_percentIdentityCutoff'};
+	$self->{'_settings'} = shift // return $self->{'_settings'};	
 }
 
 sub getNextResult{
@@ -112,7 +112,7 @@ sub getNextResult{
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
 		my $sNameName= $sName->name;			
 		
-		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->percentIdentityCutoff){
+		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){
 			if(defined $results && defined $results->{$sNameName}){
 				#nothing
 			}
