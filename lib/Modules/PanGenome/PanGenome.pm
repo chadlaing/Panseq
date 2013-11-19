@@ -149,6 +149,12 @@ sub _sqliteDb{
 }
 
 
+sub panGenome{
+	my $self=shift;
+	$self->{'_panGenome'} = shift // return $self->{'_panGenome'};	
+}
+
+
 =head3 logger
 
 Stores a logger object for the module.
@@ -278,6 +284,11 @@ sub _orderedNames{
 	$self->{'__orderedNames'}=shift // return $self->{'__orderedNames'};
 }
 
+sub queryFileSpecified{
+	my $self=shift;
+	$self->{'_queryFileSpecified'} = shift // return $self->{'_queryFileSpecified'};	
+}
+
 
 =head3 panGenomeOutputFile
 
@@ -362,7 +373,6 @@ sub _populateStrainTable{
 	my $strainId=0;
 	foreach my $name(sort keys %{$mfsn->sequenceNameHash}){
 		$strainId++;
-		$self->logger->debug("strainId: $strainId for $name");
 #		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
 #		$dbh->do($sql);
 		$self->_insertIntoDb(
@@ -435,7 +445,10 @@ sub run{
 	$forker->wait_all_children;
 	
 	#add entries for query segments that have no Blast hits
-	#$self->_addQueryWithNoBlastHits();
+	if(defined $self->queryFileSpecified){
+		$self->logger->debug("queryFile specified as " . $self->queryFileSpecified);
+		$self->_addQueryWithNoBlastHits();
+	}
 	
 	$self->logger->info("Processing blast output files complete");
 
@@ -455,19 +468,101 @@ sub run{
 	$self->logger->info("Pan-genome generation complete");
 }
 
+=head2 _getPanGenomeHashRef
+
+Returns a hash of all "pan" fragments for the run, with the fasta header as key and the sequence as value.
+
+=cut
+
+sub _getPanGenomeHashRef{
+	my $self=shift;
+	
+	my $panFH = IO::File->new('<' . $self->panGenome) or die "$! Could not open " . $self->panGenome . "\n";
+	
+	my %panHash;
+	my $line = $panFH->getline();
+	my $sequence='';
+	my $header;
+	while($line){
+		my $nextLine = $panFH->getline();
+		
+		$line =~ s/\R//g;
+		if($line =~ m/^>/){
+			$header = $line;
+			$header =~ s/>//;
+		}
+		else{
+			$sequence .= $line;
+		}		
+		
+		if((length($sequence) > 0) && (!defined $nextLine || $nextLine =~ m/^>/)){
+			$panHash{$header}=$sequence;
+		}		
+		$line = $nextLine;
+	}	
+	$panFH->close();
+	return \%panHash;
+}
+
+
+
 =head2 _addQueryWithNoBlastHits
 
-
+If a user-supplied queryFile is used in place of pan-genome generation, the possibility
+exists for a "pan" fragment to have a hit in 0 genomes.
+This function allows for the outputting of such data.
 
 =cut
 
 sub _addQueryWithNoBlastHits{
 	my $self=shift;
 	
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+	$self->logger->info("Adding query fragments with no blast hits");
+	#get list of all input query names
+	my $queryHashRef = $self->_getPanGenomeHashRef();
 	
+	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->outputDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+	my $sql = "SELECT locus.name FROM locus ORDER BY locus.name ASC";
+	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
+	$sth->execute() or $self->logger->logdie($self->_sqliteDb->errstr);
+	
+	my %panHits;
+	while(my $row = $sth->fetchrow_arrayref){
+		$panHits{$row->[0]}=1;
+	}
+	
+	my $missingCounter=0;
+	foreach my $panQuery(sort keys %{$queryHashRef}){	
+		unless(defined $panHits{$panQuery}){
+			#add result if "pan" fragment is completely absent
+			my $id = $self->_getUniqueResultId(1) + $missingCounter;
+			
+			$self->_insertIntoDb(
+				table=>'locus',
+				id=>$id,
+				name=>$panQuery,
+				sequence=>$queryHashRef->{$panQuery},
+				pan=>'accessory'
+			);
+			
+			foreach my $name(@{$self->_orderedNames}){
+				$self->_insertIntoDb(
+					table=>'results',
+					type=>'binary',
+					contig_id=>$self->_contigIds->{'NA_' . $name},
+					locus_id=>$id,
+					number=>$id,
+					start_bp=>0,
+					end_bp=>0,
+					value=>'0'
+				);
+			}
+			$missingCounter++;
+		}
+	}	
+	$self->_emptySqlBuffers();
 	$self->_sqliteDb->disconnect();
-	$self->logger->info("X Query sequences added with no Blast hits");
+	$self->logger->info("$missingCounter query sequences added with no Blast hits");
 }
 
 =head2 _createCoreAccessoryGenomes
@@ -627,6 +722,21 @@ sub _generateOrderedNamesArray{
 	#order the hash for a consistent order of names
 }
 
+=head2 _getUniqueResultId
+
+Given the time in s since the epoch as a starting point, return a 1000 character range of SNPs to work with
+for an individual blast result.
+
+=cut
+
+sub _getUniqueResultId{
+	my $self=shift;
+	my $seed = shift;
+	
+	return ($seed * 1000 * time());
+}
+
+
 
 sub _processBlastXML {
 	my $self = shift;
@@ -636,13 +746,13 @@ sub _processBlastXML {
 	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
-	$counter *=(1000 * time());
+	$counter = $self->_getUniqueResultId($counter);
 
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->percentIdentityCutoff);
 	
 	while(my $result = $blastResult->getNextResult){
 		my @names = sort keys %{$result};
-		$counter++;	
+		$counter +=1000;	
 		
 		#this defines how many results / locus allele
 		#for binary, this will always be 1
@@ -850,14 +960,14 @@ sub _emptySqlBuffers{
 	#as contig uses the strain ID as a foreign key
 	foreach my $table(reverse sort keys %{$self->_sqlString}){
 		if(defined $self->_sqlString->{$table}->[0]){
-			$self->logger->debug("$table defined, emptying buffers");
+			#$self->logger->debug("$table defined, emptying buffers");
 			my $sqlString = join('',@{$self->_sqlString->{$table}});
 			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
 			#actually empty the buffer, rahter than just print it out
 			$self->_sqlString->{$table}=[];
 		}
 		else{
-			$self->logger->debug("$table not defined, not emptying");
+			#$self->logger->debug("$table not defined, not emptying");
 		}
 	}	
 }
@@ -928,7 +1038,7 @@ sub _insertIntoDb{
 		}
 		$currentSql .="\n";
 		
-		$self->logger->debug("Adding to $table currentSql\n$currentSql");
+		#$self->logger->debug("Adding to $table currentSql\n$currentSql");
 		push @{$sql},$currentSql;
 	}
 	else{		
@@ -956,19 +1066,19 @@ sub _insertIntoDb{
 		}
 		$currentSql .="\n";
 		
-		$self->logger->debug("Adding to $table initialSql\n$currentSql");
+		#$self->logger->debug("Adding to $table initialSql\n$currentSql");
 		push @{$sql}, $currentSql;
 		#push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
 	}
 	
 	if(scalar(@{$sql})==500){
 		my $sqlString = join('',@{$sql});
-		$self->logger->debug("performing DO with $sqlString");
+		#$self->logger->debug("performing DO with $sqlString");
 		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
 		$self->_sqlString->{$table}=[];
 	}
 	else{
-		$self->logger->debug("Adding SQL string to array for table $table");
+		#$self->logger->debug("Adding SQL string to array for table $table");
 		$self->_sqlString->{$table}=$sql;
 	}
 }

@@ -507,24 +507,25 @@ sub _performPanGenomeAnalyses{
 	}
 	$forker->wait_all_children();
 	
+	#do the pan-genome analysis	
+	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
+		xmlFiles=>\@blastFiles,
+		numberOfCores=>$self->settings->numberOfCores,
+		percentIdentityCutoff=>$self->settings->percentIdentityCutoff,
+		coreGenomeThreshold=>$self->settings->coreGenomeThreshold,
+		outputDirectory=>$self->settings->baseDirectory,
+		muscleExecutable=>$self->settings->muscleExecutable,
+		accessoryType=>$self->settings->accessoryType,
+		queryFile=>$files->singleQueryFile,
+		panGenome=>$panGenomeFile,
+		queryFileSpecified=>$self->settings->queryFile // undef,
+		storeAlleles=>$self->settings->storeAlleles
+	);
+	$panAnalyzer->run();
+	
 	if(defined $segmenter && -e $segmenter->outputFile){
 		unlink $segmenter->outputFile;
 	}
-	
-	#do the pan-genome analysis
-	
-	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
-		'xmlFiles'=>\@blastFiles,
-		'numberOfCores'=>$self->settings->numberOfCores,
-		'percentIdentityCutoff'=>$self->settings->percentIdentityCutoff,
-		'coreGenomeThreshold'=>$self->settings->coreGenomeThreshold,
-		'outputDirectory'=>$self->settings->baseDirectory,
-		'muscleExecutable'=>$self->settings->muscleExecutable,
-		'accessoryType'=>$self->settings->accessoryType,
-		'queryFile'=>$files->singleQueryFile,
-		'storeAlleles'=>$self->settings->storeAlleles
-	);
-	$panAnalyzer->run();
 	
 	#add the functional assignment of pan-genome loci based of blastx of the genbank NR database
 	#only if nrDatabase is defined
