@@ -359,7 +359,6 @@ sub _createTree{
 	my $counter=0;
 	while(defined $row[0]){
 		$counter++;
-		$self->logger->info("Tree counter $counter");
 	  	my @nextRow = $sth->fetchrow_array;
 	  	$loci{$row[0]}=$row[1];
 	  	
