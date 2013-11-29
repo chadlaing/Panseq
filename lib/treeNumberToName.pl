@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 use IO::File;
 
 use strict;
@@ -21,6 +21,7 @@ my $treeAsLine;
 while(my $line = $treeFH->getline){
 	$treeAsLine .= $line;
 }
+$treeAsLine =~ s/\R//g;
 
 my $counter=0;
 while(my $line = $infoFH->getline){
@@ -39,9 +40,12 @@ while(my $line = $infoFH->getline){
 	#print STDERR "number: $number\nname: $name\n";
 
 	#substitute
-	if($treeAsLine =~ m/[\)\(\,\s]\Q$number\E[\:\)]/){
-		print STDERR "matched\n";
-		$treeAsLine =~ s/([\)\(\,\s])\Q$number\E([\:\)])/$1$name$2/;
+	if($treeAsLine =~ m/[\)\(,\s]\Q$number\E[\:\,)]/){
+		print STDERR "matched $number\n";
+		$treeAsLine =~ s/([\)\(\,\s])\Q$number\E([\:\),])/$1$name$2/;
+	}
+	else{
+		print STDERR "Could not match $number\n";
 	}
 }
 
