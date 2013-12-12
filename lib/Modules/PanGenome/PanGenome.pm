@@ -470,7 +470,7 @@ sub _addQueryWithNoBlastHits{
 	foreach my $panQuery(sort keys %{$queryHashRef}){	
 		unless(defined $panHits{$panQuery}){
 			#add result if "pan" fragment is completely absent
-			my $id = $self->_getUniqueResultId(1) + $missingCounter;
+			my $id = $self->_getUniqueResultId(777) + $missingCounter;
 			
 			$self->_insertIntoDb(
 				table=>'locus',
