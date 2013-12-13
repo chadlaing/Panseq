@@ -272,7 +272,7 @@ sub _setSettingValue{
 	if($self->can($setting)){
 		$self->$setting($value);
 
-		$self->logger->debug("Loading setting $setting with value $value");
+		print("Loading setting $setting with value $value\n");
 	}
 	else{
 		$self->logger->info("Setting $setting is not valid, skipping");

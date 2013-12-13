@@ -323,6 +323,7 @@ sub _createTree{
 	
 	my $sql;
 	$self->logger->info("Name or id: " . $self->settings->nameOrId);
+
 	if($self->settings->nameOrId eq 'name'){
 		$sql = "SELECT strain.name,results.value, locus.name, results.number";
 	}
@@ -369,7 +370,7 @@ sub _createTree{
 	    		@genomeOrder = sort keys %loci;
 	    		$tableFH->print("\t" . join("\t",@genomeOrder) . "\n");
 	    	}
-	    	$tableFH->print($row[3]);
+	    	$tableFH->print($row[2]);
 	    	foreach my $genome(@genomeOrder){
 	    		$tableFH->print("\t" . $loci{$genome});
 	    	}
