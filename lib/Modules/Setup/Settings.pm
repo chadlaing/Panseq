@@ -30,6 +30,13 @@ sub _initialize{
 
 
 #class variables
+
+sub addMissingQuery{
+	my $self=shift;
+	$self->{'_addMissingQuery'} = shift // return $self->{'_addMissingQuery'};	
+}
+
+
 sub logger{
 	my $self=shift;
 	$self->{'_logger'} = shift // return $self->{'_logger'};
@@ -299,6 +306,10 @@ sub _setDefaults{
 	
 	unless(defined $self->coreGenomeThreshold){
 		$self->coreGenomeThreshold(1);
+	}
+	
+	unless(defined $self->addMissingQuery){
+		$self->addMissingQuery(0);
 	}
 }
 
