@@ -380,7 +380,7 @@ sub run{
 	$forker->wait_all_children;
 	
 	#add entries for query segments that have no Blast hits
-	if(defined $self->settings->queryFile){
+	if(defined $self->settings->queryFile && $self->storeAlleles){
 		$self->logger->debug("queryFile specified as " . $self->settings->queryFile);
 		$self->_addQueryWithNoBlastHits();
 	}
