@@ -373,7 +373,7 @@ sub run{
 		$forker->start and next;
 			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 			$self->_processBlastXML($xml,$counter);
-			unlink $xml;
+			#unlink $xml;
 			$self->_sqliteDb->disconnect();
 		$forker->finish;
 	}
@@ -682,25 +682,48 @@ sub _processBlastXML {
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
 	$counter = $self->_getUniqueResultId($counter);
-
+	#$self->logger->debug("Gather unique id $counter");
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
-	
+	#$self->logger->debug("About to get the first result");
+	my $totalResults=0;
 	while(my $result = $blastResult->getNextResult){
-		my @names = sort keys %{$result};
+		$totalResults++;
+		my @allNames = sort keys %{$result};
+		#check to see if the result is defined, if not, remove it
+		#this is because the keys are always present, but actual results may not be
+		
+		my @names;
+		foreach my $aName(@allNames){
+			if(defined $result->{$aName}->[0]){
+				push @names, $aName;
+			}
+			else{
+				$self->logger->debug("$aName not defined");
+			}
+		}
+		
+		my $numberOfResults = scalar(@names);
+		
+		if($numberOfResults == 0){
+			$self->logger->warn("No results for query sequence $totalResults, skipping");
+			next;
+		}
+		#$self->logger->debug("Number of names: " . $numberOfResults);
+
 		$counter +=1000;	
 		
-		#this defines how many results / locus allele
-		#for binary, this will always be 1
-		my $resultNumber=1;
+#		#this defines how many results / locus allele
+#		#for binary, this will always be 1
+#		my $resultNumber=1;
 		
 		my $coreOrAccessory;
-		if(scalar(keys %{$result}) >= $self->settings->coreGenomeThreshold){
+		if($numberOfResults >= $self->settings->coreGenomeThreshold){
 			$coreOrAccessory='core';
 		}
 		else{
 			$coreOrAccessory='accessory';
 		}
-		
+		$self->logger->debug($result->{$names[0]}->[1] . "is $coreOrAccessory");
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
@@ -712,11 +735,11 @@ sub _processBlastXML {
 		#generate a MSA of all strains that contain sequence
 		#if the locus is core, we will send this MSA to the SNPFinder
 		my $msaHash = $self->_getHashOfFastaAlignment(
-			$self->_getMsa($result,$counter)
+			$self->_getMsa($result,$counter,\@names)
 		);
 		
 		foreach my $name(@{$self->_orderedNames}){							
-			if(defined $result->{$name}){
+			if(defined $result->{$name}->[0]){
 					#currently, we only store the alleles if using an input file
 					#if we generate a pan-genome, no alleles are stored
 					if($self->settings->storeAlleles){
@@ -769,7 +792,7 @@ sub _processBlastXML {
 			# [11]qseq		
 
 			#if it is a core result, send to SNP finding
-			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
+			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter,\@names);		
 			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
 					table=>'results',
@@ -784,7 +807,7 @@ sub _processBlastXML {
 			}
 		}
 	}
-	$self->logger->info("Total results: $counter");
+	$self->logger->info("Total results: $totalResults");
 	$self->_emptySqlBuffers();
 }
 
@@ -798,6 +821,7 @@ sub _getMsa{
 	my $self=shift;
 	my $result=shift;	
 	my $resultNumber=shift;
+	my $names = shift;
 
 	#create temp files for muscle
 	my $tempInFile = $self->settings->baseDirectory . 'muscleTemp_in' . $resultNumber;
@@ -818,7 +842,7 @@ sub _getMsa{
 	# [9]length"',
 	# [10]sseq,
 	# [11]qseq
-	foreach my $hit(sort keys %{$result}){
+	foreach my $hit(@{$names}){
 		$tempInFH->print('>' . $result->{$hit}->[0] . "\n" . $result->{$hit}->[10] . "\n");
 	}
 	
@@ -1024,6 +1048,7 @@ sub _getCoreResult {
 	my $result=shift;
 	my $msaHash=shift;
 	my $resultNumber=shift;
+	my $resultNames = shift;
 	
 	#'outfmt'=>'"6 
 	# [0]sseqid 
@@ -1039,7 +1064,7 @@ sub _getCoreResult {
 	# [10]sseq,
 	# [11]qseq
 	my %startBpHash;
-	foreach my $hit(sort keys %{$result}){
+	foreach my $hit(@{$resultNames}){
 		$startBpHash{$result->{$hit}->[0]}=$result->{$hit}->[4];
 	}
 	

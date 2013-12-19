@@ -76,10 +76,10 @@ sub getNextResult{
 		
 	my $results;
 	my $line = $self->_getStoredLine(); #on object creation, this is initialized with the first line
+	#$self->logger->debug("stored line: $line");
+
+	while($line){	
 	
-	my $counter=0;
-	while($line){		
-		$counter++;
 		my $nextLine = $self->_outFH->getline();
 		$self->_setStoredLine($nextLine);	
 		
@@ -89,12 +89,12 @@ sub getNextResult{
 			@nextLa = split("\t",$nextLine);
 		}
 		else{
-			$self->logger->info("nextLine UNDEF");
+			$self->logger->debug("nextLine UNDEF");
 		}
 		
 		$line =~ s/\R//g;		
 		my @la = split("\t",$line);		
-		
+		$self->logger->debug("line: $la[1]");
 		#'outfmt'=>'"6 
 		# [0]sseqid 
 		# [1]qseqid 
@@ -110,18 +110,25 @@ sub getNextResult{
 		# [11]qseq
 
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
-		my $sNameName= $sName->name;			
+		my $sNameName= $sName->name;
+		
+		unless(defined $results->{$sNameName}){
+			$results->{$sNameName}=undef;
+		}					
 		
 		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){
 			if(defined $results && defined $results->{$sNameName}){
+				#$self->logger->debug("$la[1] defined for $la[0], doing nothing")
 				#nothing
 			}
 			else{
+				#$self->logger->debug("Adding $la[1] for $sNameName");
 				$results->{$sNameName}=\@la;
 			}				
 		}		
 		
 		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
+			#$self->logger->debug("next not defined or next not eq current\n$line\n$nextLine\n\n");
 			return $results;
 		}
 		$line = $nextLine;
