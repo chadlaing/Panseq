@@ -159,10 +159,12 @@ sub run{
 	system($mummerLine);	
 
 	#add a delta-filter to limit the nucmer matches to the percentIdentity cutoff
-	my $filteredDeltaFile = $self->_deltaFilter($deltaFile);
-
+	#this differs slightly from how BLAST calculates things
+	#letting all matches go through, to remove discrepancy
+	#my $filteredDeltaFile = $self->_deltaFilter($deltaFile);
+	
 	#run show-coords on delta file
-	$self->_showCoords($filteredDeltaFile);
+	$self->_showCoords($deltaFile);
 }
 
 =head2

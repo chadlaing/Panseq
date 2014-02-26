@@ -120,7 +120,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	#$self->_cleanUp();
+	$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -316,7 +316,6 @@ sub _createTree{
 	my $self=shift;
 	my $type = shift;
 	
-	#TODO: Add the tree generation here to avoid duplicate database calls
 	$self->logger->info("Creating tree $type");
 	#define SQLite db
 	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
@@ -406,11 +405,27 @@ sub _printPhylipFile{
 			$outFH->print(scalar(keys %{$results}) . "\t" . scalar(@{$results->{$genome}}) . "\n");
 		}
 
-		$outFH->print($counter . "\t" . join('',@{$results->{$genome}}) . "\n");
+		$outFH->print($counter . $self->_numberOfSpacesToAdd($counter) . join('',@{$results->{$genome}}) . "\n");
 		$counter++;
 	}
 	$outFH->close();
 	return \%nameConversion;
+}
+
+
+=head2 _numberOfSpacesToAdd
+
+Phylip requires the name to be exactly 10 characters, including spaces.
+This is that.
+
+=cut
+
+sub _numberOfSpacesToAdd{
+	my $self=shift;
+	my $counter = shift;
+	
+	my $numberOfSpaces = 10 - length($counter);
+	return(" " x $numberOfSpaces);	
 }
 
 

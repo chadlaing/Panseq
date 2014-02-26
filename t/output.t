@@ -71,24 +71,24 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'db76a69bf6a6de4c8a4892eeb3efc444',
-	plasmidsPanGenome=>'520e12c7b588dea7dbf68aee14c81066',
-	plasmidsBinaryTable=>'16d5468e64301223914321185ad8e845',
-	plasmidsSnpTable=>'3b85b92e0e930741f360bc18668d2378',
-	plasmidsBinaryPhylip=>'ec3d516ca77e84639f01bd31c83a0983',
-	plasmidsSnpPhylip=>'2eb68d2fdcb140599210116cb96c4c8d',
-	genomesCoreSnps=>'5ccf9a59c9324607ae2bc4b859a2c216',
-	genomesPanGenome=>'44619ab2f10d75509b8a8993cb900223',
-	genomesBinaryTable=>'dd6723f30271de76053935b3adcbc62f',
-	genomesSnpTable=>'454837ace243d559171273f35b0352f0',
-	genomesBinaryPhylip=>'f73de672af16e1d1c654b1b6abdac9ff',
-	genomesSnpPhylip=>'38e50cb985fee5f4bee23ea240dd7758',
+	plasmidsCoreSnps=>'8e2b0b92973aee6d0b7e697182f28ee5',
+	plasmidsPanGenome=>'d63e619a76340da441e02b4cca94b686',
+	plasmidsBinaryTable=>'fd71cd2c1cda95cfe9aecd2c7d695ff8',
+	plasmidsSnpTable=>'f9a8c22340c38ca8bb052a55c803c695',
+	plasmidsBinaryPhylip=>'7f190e173434ecf9a5b08e9aa677e881',
+	plasmidsSnpPhylip=>'b98400ad5683a8eeae3979e2f6e75d88',
+	genomesCoreSnps=>'7366ebaf1694e3710ccdb44d08aca87e',
+	genomesPanGenome=>'fba0a0f8f3b1688a4610236d41ae9f91',
+	genomesBinaryTable=>'a0d6b2a6d3a924d7e6b495114a1890eb',
+	genomesSnpTable=>'bc9f220ee3bfa050d49a7fa17a08302b',
+	genomesBinaryPhylip=>'8766ee22edddbcd6d41543be842a5958',
+	genomesSnpPhylip=>'c57e751f29667138fcd151cdc4bac5a5',
 	queryCoreSnps=>'049650deb7962f40bff95cb77f5968fd',
 	queryPanGenome=>'88f127b4f3cd97c1d7e21edeff28dde1',
 	queryBinaryTable=>'f84739ff95263f3769a36f8c5c3872de',
 	querySnpTable=>'f729e214ebbd1f044afed910398d5fa5',
-	queryBinaryPhylip=>'2fc8a88b74179d17364ab2e5b1ce2915',
-	querySnpPhylip=>'0435def55963465508987718249ad03d',
+	queryBinaryPhylip=>'4a6fa93762c08dc189f71a2099ebed11',
+	querySnpPhylip=>'d0e24d6ad8da3ceb870d716d6b95ff4b',
 	queryAlleles=>'0281a6770ff31fb4037435bc7f3a2ee2'
 );
 
