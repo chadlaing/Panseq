@@ -702,13 +702,14 @@ sub _processBlastXML {
 			}
 		}
 		
-		my $numberOfResults = scalar(@names);
-		
-		if($numberOfResults == 0){
+		my $numberOfResults;
+		if(defined $names[0]){
+			#good, go on
+		}
+		else{
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
 		}
-		#$self->logger->debug("Number of names: " . $numberOfResults);
 
 		$counter +=1000;	
 		
@@ -724,6 +725,7 @@ sub _processBlastXML {
 			$coreOrAccessory='accessory';
 		}
 		$self->logger->debug($result->{$names[0]}->[1] . "is $coreOrAccessory");
+		
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
