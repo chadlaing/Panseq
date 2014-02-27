@@ -695,10 +695,11 @@ sub _processBlastXML {
 		my @names;
 		foreach my $aName(@allNames){
 			if(defined $result->{$aName}->[0]){
+				$self->logger->debug("$counter: $aName is defined");
 				push @names, $aName;
 			}
 			else{
-				$self->logger->debug("$aName not defined");
+				$self->logger->debug("$counter $aName not defined");
 			}
 		}
 		
