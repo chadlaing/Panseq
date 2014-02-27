@@ -703,7 +703,6 @@ sub _processBlastXML {
 			}
 		}
 		
-		my $numberOfResults;
 		if(defined $names[0]){
 			#good, go on
 		}
@@ -711,6 +710,7 @@ sub _processBlastXML {
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
 		}
+		my $numberOfResults = scalar(@names);
 
 		$counter +=1000;	
 		
@@ -741,7 +741,8 @@ sub _processBlastXML {
 			$self->_getMsa($result,$counter,\@names)
 		);
 		
-		foreach my $name(@{$self->_orderedNames}){							
+		foreach my $name(@{$self->_orderedNames}){	
+			my $contigId = $self->_contigIds->{$result->{$name}->[0]} // $self->_contigIds->{'NA_' . $name};					
 			if(defined $result->{$name}->[0]){
 					#currently, we only store the alleles if using an input file
 					#if we generate a pan-genome, no alleles are stored
@@ -749,7 +750,7 @@ sub _processBlastXML {
 						$self->_insertIntoDb(
 							table=>'allele',
 							locus_id=>$counter,
-							contig_id=>$self->_contigIds->{$result->{$name}->[0]},
+							contig_id=>$contigId,
 							sequence=>$msaHash->{$name}->{'sequence'}
 						);
 					}					
@@ -757,7 +758,7 @@ sub _processBlastXML {
 					$self->_insertIntoDb(
 						table=>'results',
 						type=>'binary',
-						contig_id=>$self->_contigIds->{$result->{$name}->[0]},
+						contig_id=>$contigId,
 						locus_id=>$counter,
 						number=>$counter,
 						start_bp=>$result->{$name}->[2],
@@ -769,7 +770,7 @@ sub _processBlastXML {
 					$self->_insertIntoDb(
 						table=>'results',
 						type=>'binary',
-						contig_id=>$self->_contigIds->{'NA_' . $name},
+						contig_id=>$contigId,
 						locus_id=>$counter,
 						number=>$counter,
 						start_bp=>0,

@@ -94,7 +94,7 @@ sub getNextResult{
 		
 		$line =~ s/\R//g;		
 		my @la = split("\t",$line);		
-		$self->logger->debug("line: $la[1]");
+		#$self->logger->debug("line: $la[1]");
 		#'outfmt'=>'"6 
 		# [0]sseqid 
 		# [1]qseqid 
