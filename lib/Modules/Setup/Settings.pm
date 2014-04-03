@@ -305,7 +305,7 @@ sub _setDefaults{
 	}
 	
 	unless(defined $self->coreGenomeThreshold){
-		$self->coreGenomeThreshold(1);
+		$self->coreGenomeThreshold(3);
 	}
 	
 	unless(defined $self->addMissingQuery){
