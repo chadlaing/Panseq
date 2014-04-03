@@ -270,6 +270,11 @@ sub _setSettingValue{
 	#if not, we print a warning
 
 	if($self->can($setting)){
+		
+		#ensure any directory has a trailing slash
+		if($setting =~ m/Directory/){
+			$value = $self->_trailingSlash($value);
+		}
 		$self->$setting($value);
 
 		print("Loading setting $setting with value $value\n");
@@ -277,6 +282,25 @@ sub _setSettingValue{
 	else{
 		$self->logger->info("Setting $setting is not valid, skipping");
 	}
+}
+
+
+
+=head2
+
+Ensure that all Directory settings end in a slash, whether they are set by
+the user or not.
+
+=cut
+
+sub _trailingSlash{
+	my $self = shift;
+	my $directory = shift;
+	
+	$directory =~ s/\/$//;
+	$directory .= '/';
+	
+	return $directory;
 }
 
 sub _setDefaults{
