@@ -251,11 +251,6 @@ This number is multiplied by a billion in _processQueue.
 
 =cut
 
-sub storeAlleles{
-	my $self=shift;
-	$self->{'_storeAlleles'} = shift // return $self->{'_storeAlleles'};	
-}
-
 sub settings{
 	my $self=shift;
 	$self->{'_settings'} = shift // return $self->{'_settings'};	
@@ -726,7 +721,7 @@ sub _processBlastXML {
 			$coreOrAccessory='accessory';
 		}
 		$self->logger->debug($result->{$names[0]}->[1] . "is $coreOrAccessory");
-		
+		$self->logger->debug("Sequence is: " . $result->{$names[0]}->[11] . "\n");
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
@@ -744,8 +739,7 @@ sub _processBlastXML {
 		foreach my $name(@{$self->_orderedNames}){	
 			my $contigId = $self->_contigIds->{$result->{$name}->[0]} // $self->_contigIds->{'NA_' . $name};					
 			if(defined $result->{$name}->[0]){
-					#currently, we only store the alleles if using an input file
-					#if we generate a pan-genome, no alleles are stored
+					#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
 					if($self->settings->storeAlleles){
 						$self->_insertIntoDb(
 							table=>'allele',
