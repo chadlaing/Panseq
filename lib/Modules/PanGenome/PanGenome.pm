@@ -309,8 +309,8 @@ sub _populateStrainTable{
 	if($self->settings->allelesToKeep > 1){
 		foreach my $name(@names){
 			push @newNames, $name;
+			my $counter = 2;
 			for(2..$self->settings->allelesToKeep){
-				my $counter = 2;
 				my $newName = $name . '_-a' . $counter;
 				push @newNames, $newName;
 				my $newNameObj = Modules::Fasta::SequenceName->new($newName);
@@ -321,7 +321,8 @@ sub _populateStrainTable{
 				$counter++;
 			}
 		}
-		@names = @newNames;
+		@names = sort @newNames;
+		$self->logger->debug("ALLNAMES: @names\n");
 	}
 	
 	foreach my $name(@names){
@@ -704,9 +705,10 @@ sub _processBlastXML {
 	$self->logger->debug("About to get the first result");
 	my $totalResults=0;
 	while(my $result = $blastResult->getNextResult){
-		$self->logger->debug("Getting result $totalResults");
 		$totalResults++;
+		$self->logger->debug("Getting result $totalResults");
 		my @allNames = sort keys %{$result};
+		
 		#check to see if the result is defined, if not, remove it
 		#this is because the keys are always present, but actual results may not be
 		
@@ -729,7 +731,7 @@ sub _processBlastXML {
 			next;
 		}
 		my $numberOfResults = scalar(@names);
-
+		$self->logger->debug("There are $numberOfResults results");
 		$counter +=1000;	
 		
 #		#this defines how many results / locus allele
@@ -759,9 +761,18 @@ sub _processBlastXML {
 			$self->_getMsa($result,$counter,\@names)
 		);
 		
-		foreach my $name(@{$self->_orderedNames}){	
-			my $contigId = $self->_contigIds->{$result->{$name}->[0]} // $self->_contigIds->{'NA_' . $name};					
-			if(defined $result->{$name}->[0]){
+		foreach my $name(@{$self->_orderedNames}){			
+			my $allele = $result->{$name}->[0] // undef;
+			
+			my $contigId;
+			if(defined $allele){
+				$contigId = $self->_contigIds->{$allele};
+			}
+			else{
+				 $contigId = $self->_contigIds->{'NA_' . $name};
+			}
+					
+			if(defined $allele){
 					#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
 					if($self->settings->storeAlleles){
 						$self->_insertIntoDb(

@@ -144,7 +144,7 @@ sub getNextResult{
 		}		
 		
 		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
-			$self->logger->debug("next not defined or next not eq current\n$line\n$nextLine\n\n");
+			$self->logger->debug("next not defined or next not eq current\n$line\n\n");
 			return $results;
 		}
 		$line = $nextLine;
