@@ -701,9 +701,10 @@ sub _processBlastXML {
 	$counter = $self->_getUniqueResultId($counter);
 	#$self->logger->debug("Gather unique id $counter");
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
-	#$self->logger->debug("About to get the first result");
+	$self->logger->debug("About to get the first result");
 	my $totalResults=0;
 	while(my $result = $blastResult->getNextResult){
+		$self->logger->debug("Getting result $totalResults");
 		$totalResults++;
 		my @allNames = sort keys %{$result};
 		#check to see if the result is defined, if not, remove it

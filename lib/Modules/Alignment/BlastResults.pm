@@ -119,9 +119,9 @@ sub getNextResult{
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
 		my $sNameName= $sName->name;
 		
-		unless(defined $results->{$sNameName}){
-			$results->{$sNameName}=undef;
-		}					
+#		unless(defined $results->{$sNameName}){
+#			$results->{$sNameName}=undef;
+#		}					
 		
 		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){			
 			$self->logger->debug("Passes percent identity cutoff");
@@ -144,7 +144,7 @@ sub getNextResult{
 		}		
 		
 		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
-			#$self->logger->debug("next not defined or next not eq current\n$line\n$nextLine\n\n");
+			$self->logger->debug("next not defined or next not eq current\n$line\n$nextLine\n\n");
 			return $results;
 		}
 		$line = $nextLine;
