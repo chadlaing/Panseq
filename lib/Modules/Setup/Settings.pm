@@ -217,6 +217,11 @@ sub nameOrId{
 	$self->{'_nameOrId'} = shift // return $self->{'_nameOrId'};	
 }
 
+sub allelesToKeep{
+	my $self=shift;
+	$self->{'_allelesToKeep'} = shift // return $self->{'_allelesToKeep'};	
+}
+
 #methods
 sub _getSettingsFromConfigurationFile {
 	my ($self) = shift;
@@ -334,6 +339,10 @@ sub _setDefaults{
 	
 	unless(defined $self->addMissingQuery){
 		$self->addMissingQuery(0);
+	}
+	
+	unless(defined $self->allelesToKeep){
+		$self->allelesToKeep(1);
 	}
 }
 

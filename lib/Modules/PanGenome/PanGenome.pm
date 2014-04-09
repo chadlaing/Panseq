@@ -43,6 +43,8 @@ package Modules::PanGenome::PanGenome;
 #includes
 use strict;
 use warnings;
+use diagnostics;
+
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;
@@ -301,7 +303,28 @@ sub _populateStrainTable{
 #	);
 	
 	my $strainId=0;
-	foreach my $name(sort keys %{$mfsn->sequenceNameHash}){
+	my @names = (sort keys %{$mfsn->sequenceNameHash});
+	
+	my @newNames;
+	if($self->settings->allelesToKeep > 1){
+		foreach my $name(@names){
+			push @newNames, $name;
+			for(2..$self->settings->allelesToKeep){
+				my $counter = 2;
+				my $newName = $name . '_-a' . $counter;
+				push @newNames, $newName;
+				my $newNameObj = Modules::Fasta::SequenceName->new($newName);
+				
+				$mfsn->sequenceNameHash->{$newName}=$newNameObj;
+				#$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders = $mfsn->sequenceNameHash->{$name}->arrayOfHeaders;
+				push@{$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders}, @{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders};
+				$counter++;
+			}
+		}
+		@names = @newNames;
+	}
+	
+	foreach my $name(@names){
 		$strainId++;
 #		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
 #		$dbh->do($sql);
@@ -341,7 +364,6 @@ sub _populateStrainTable{
 
 	$self->_emptySqlBuffers();
 	
-	#$dbh->disconnect();
 	$self->_sqliteDb->disconnect();
 	$self->logger->info("Strain table populated");
 	return \%contigIds;
@@ -737,7 +759,12 @@ sub _processBlastXML {
 		);
 		
 		foreach my $name(@{$self->_orderedNames}){	
-			my $contigId = $self->_contigIds->{$result->{$name}->[0]} // $self->_contigIds->{'NA_' . $name};					
+			#we need to check for multiple alleles at this point
+			#if there is a contig with a _-a# ending, we need to add it to the DB
+			my $allele = $result->{$name}->[0] // $self->_contigIds->{'NA_' . $name};
+			
+			
+			my $contigId = $self->_contigIds->{$allele} // die "$allele is not defined!\n";					
 			if(defined $result->{$name}->[0]){
 					#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
 					if($self->settings->storeAlleles){

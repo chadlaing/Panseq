@@ -64,11 +64,18 @@ sub _initialize {
 	
 	#set the first line in _storedLine to prevent infinite looping
 	$self->_setStoredLine($self->_outFH->getline());
+	
+	$self->_alleleCount({});
 }
 
 sub settings{
 	my $self=shift;
 	$self->{'_settings'} = shift // return $self->{'_settings'};	
+}
+
+sub _alleleCount{
+	my $self=shift;
+	$self->{'__alleleCount'} = shift // return $self->{'__alleleCount'};	
 }
 
 sub getNextResult{
@@ -94,7 +101,7 @@ sub getNextResult{
 		
 		$line =~ s/\R//g;		
 		my @la = split("\t",$line);		
-		#$self->logger->debug("line: $la[1]");
+		$self->logger->debug("line: $la[1]");
 		#'outfmt'=>'"6 
 		# [0]sseqid 
 		# [1]qseqid 
@@ -116,13 +123,22 @@ sub getNextResult{
 			$results->{$sNameName}=undef;
 		}					
 		
-		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){
-			if(defined $results && defined $results->{$sNameName}){
-				#$self->logger->debug("$la[1] defined for $la[0], doing nothing")
+		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){			
+			$self->logger->debug("Passes percent identity cutoff");
+			
+			my $alleleCount = $self->_getAlleleCount($sNameName);
+			$self->logger->debug("Returned with $alleleCount alleles");
+			if($alleleCount >= $self->settings->allelesToKeep){
+				$self->logger->debug("$la[1] defined for $la[0], doing nothing")
 				#nothing
 			}
 			else{
-				#$self->logger->debug("Adding $la[1] for $sNameName");
+				$alleleCount++;				
+				$self->_alleleCount->{$sNameName}=$alleleCount;
+				unless($alleleCount == 1){
+					$sNameName .= '_-a' . $alleleCount;
+				}
+				$self->logger->debug("Returning result for $sNameName, alleleCount $alleleCount");
 				$results->{$sNameName}=\@la;
 			}				
 		}		
@@ -133,6 +149,26 @@ sub getNextResult{
 		}
 		$line = $nextLine;
 	}
+}
+
+
+=head2
+
+Get the current allele count for the query sequence.
+
+=cut
+
+
+sub _getAlleleCount{
+	my $self = shift;
+	my $name = shift;
+	
+	my $counter=0;
+	if(defined $self->_alleleCount && defined $self->_alleleCount->{$name}){
+		my $counter = $self->_alleleCount->{$name};
+	}
+	$self->logger->debug("Getting allele count of $name, with $counter alleles");
+	return $counter;
 }
 
 sub _getPercentId{
