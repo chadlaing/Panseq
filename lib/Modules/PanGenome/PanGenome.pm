@@ -760,12 +760,7 @@ sub _processBlastXML {
 		);
 		
 		foreach my $name(@{$self->_orderedNames}){	
-			#we need to check for multiple alleles at this point
-			#if there is a contig with a _-a# ending, we need to add it to the DB
-			my $allele = $result->{$name}->[0] // $self->_contigIds->{'NA_' . $name};
-			
-			
-			my $contigId = $self->_contigIds->{$allele} // die "$allele is not defined!\n";					
+			my $contigId = $self->_contigIds->{$result->{$name}->[0]} // $self->_contigIds->{'NA_' . $name};					
 			if(defined $result->{$name}->[0]){
 					#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
 					if($self->settings->storeAlleles){
