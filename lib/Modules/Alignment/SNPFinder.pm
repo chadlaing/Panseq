@@ -104,7 +104,7 @@ sub _getAlignmentLength{
 	
 	my $length;
 	foreach my $key(keys %{$alignedFastaHash}){
-		$length=length($alignedFastaHash->{$key}->{'sequence'});
+		$length=length($alignedFastaHash->{$key});
 		last;
 	}
 	return $length;
