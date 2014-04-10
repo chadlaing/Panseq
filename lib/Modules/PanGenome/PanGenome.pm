@@ -665,7 +665,7 @@ sub _getNamesOfGenomesForThisResult{
 	foreach my $res(@{$result}){
 		$genomeNames{$res->[0]}=1;
 	}
-	return(sort keys %genomeNames);
+	return \%genomeNames;
 }
 
 sub _processBlastXML {
@@ -685,17 +685,13 @@ sub _processBlastXML {
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;
 		$self->logger->debug("Getting result $totalResults");
-		my @allNames = $self->_getNamesOfGenomesForThisResult($result);
+		my $allNames = $self->_getNamesOfGenomesForThisResult($result);
 		
-		if(defined $allNames[0]){
-			#good, go on
-		}
-		else{
+		my $numberOfResults = scalar keys %{$allNames};
+		unless($numberOfResults > 0){
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
-		}
-		
-		my $numberOfResults = scalar(@allNames);
+		}		
 		$self->logger->debug("There are $numberOfResults results");
 		$counter +=1000;			
 	
@@ -706,61 +702,28 @@ sub _processBlastXML {
 		else{
 			$coreOrAccessory='accessory';
 		}
-		$self->logger->debug($result->{$names[0]}->[1] . "is $coreOrAccessory");
-		$self->logger->debug("Sequence is: " . $result->{$names[0]}->[11] . "\n");
+	
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
-			name=>$result->{$names[0]}->[1],
-			sequence=>$result->{$names[0]}->[11],
+			name=>$result->[0]->[1],
+			sequence=>$result->[0]->[11],
 			pan=>$coreOrAccessory
 		);
 		
 		#generate a MSA of all strains that contain sequence
 		#if the locus is core, we will send this MSA to the SNPFinder
 		my $msaHash = $self->_getHashOfFastaAlignment(
-			$self->_getMsa($result,$counter,\@names)
+			$self->_getMsa($result,$counter,$allNames)
 		);
 		
+		
 		foreach my $name(@{$self->_orderedNames}){			
-			my $allele = $result->{$name}->[0] // undef;
-			
-			my $contigId;
-			if(defined $allele){
-				my $alleleForContigIdLookup = $allele;
-				if($alleleForContigIdLookup =~ m/^(.+)_-a\d+$/){
-					$alleleForContigIdLookup = $1;
-				}
-				$contigId = $self->_contigIds->{$alleleForContigIdLookup};
-			}
-			else{
-				 $contigId = $self->_contigIds->{'NA_' . $name};
-			}
-					
-			if(defined $allele){
-					#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
-					if($self->settings->storeAlleles){
-						$self->_insertIntoDb(
-							table=>'allele',
-							locus_id=>$counter,
-							contig_id=>$contigId,
-							sequence=>$msaHash->{$name}->{'sequence'}
-						);
-					}					
-										
-					$self->_insertIntoDb(
-						table=>'results',
-						type=>'binary',
-						contig_id=>$contigId,
-						locus_id=>$counter,
-						number=>$counter,
-						start_bp=>$result->{$name}->[2],
-						end_bp=>$result->{$name}->[3],
-						value=>1
-					);
-				}
-				else{
-					$self->_insertIntoDb(
+			if(defined $allNames->{$name}){
+				next;
+			}			
+			my $contigId = $self->_contigIds->{'NA_' . $name};
+			$self->_insertIntoDb(
 						table=>'results',
 						type=>'binary',
 						contig_id=>$contigId,
@@ -770,8 +733,31 @@ sub _processBlastXML {
 						end_bp=>0,
 						value=>'0'
 					);
-				}		
-			}	
+		}
+		
+		foreach my $res(@{$result}){
+			my $contigId = $self->_contigIds->{$res->[0]};
+			#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
+#			if($self->settings->storeAlleles){
+#				$self->_insertIntoDb(
+#					table=>'allele',
+#					locus_id=>$counter,
+#					contig_id=>$contigId,
+#					sequence=>$msaHash->{$name}->{'sequence'}
+#				);
+#			}					
+										
+			$self->_insertIntoDb(
+				table=>'results',
+				type=>'binary',
+				contig_id=>$contigId,
+				locus_id=>$counter,
+				number=>$counter,
+				start_bp=>$res->[2],
+				end_bp=>$res->[3],
+				value=>1
+			);				
+		}	
 	
 		if($coreOrAccessory eq 'core'){
 			#'outfmt'=>'"6 
@@ -789,7 +775,7 @@ sub _processBlastXML {
 			# [11]qseq		
 
 			#if it is a core result, send to SNP finding
-			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter,\@names);		
+			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter,$allNames);		
 			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
 					table=>'results',
