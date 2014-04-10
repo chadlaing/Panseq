@@ -738,14 +738,14 @@ sub _processBlastXML {
 		foreach my $res(@{$result}){
 			my $contigId = $self->_contigIds->{$res->[0]};
 			#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
-#			if($self->settings->storeAlleles){
-#				$self->_insertIntoDb(
-#					table=>'allele',
-#					locus_id=>$counter,
-#					contig_id=>$contigId,
-#					sequence=>$msaHash->{$name}->{'sequence'}
-#				);
-#			}					
+			if($self->settings->storeAlleles){
+				$self->_insertIntoDb(
+					table=>'allele',
+					locus_id=>$counter,
+					contig_id=>$contigId,
+					sequence=>$msaHash->{$res->[0]}->{'sequence'}
+				);
+			}					
 										
 			$self->_insertIntoDb(
 				table=>'results',
