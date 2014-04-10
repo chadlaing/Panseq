@@ -81,7 +81,7 @@ sub _alleleCount{
 sub getNextResult{
 	my $self=shift;
 		
-	my $results;
+	my @results;
 	my $line = $self->_getStoredLine(); #on object creation, this is initialized with the first line
 	#$self->logger->debug("stored line: $line");
 
@@ -117,11 +117,7 @@ sub getNextResult{
 		# [11]qseq
 
 		my $sName = Modules::Fasta::SequenceName->new($la[0]);
-		my $sNameName= $sName->name;
-		
-#		unless(defined $results->{$sNameName}){
-#			$results->{$sNameName}=undef;
-#		}					
+		my $sNameName= $sName->name;				
 		
 		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){			
 			$self->logger->debug("Passes percent identity cutoff");
@@ -137,14 +133,14 @@ sub getNextResult{
 				$self->_alleleCount->{$sNameName}=$alleleCount;
 			
 				$self->logger->debug("Returning result for $sNameName, alleleCount $alleleCount");
-				$results->{$sNameName}=\@la;
+				push @results, \@la;
 			}				
 		}		
 		
 		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
 			$self->logger->debug("next not defined or next not eq current\n$line\n\n");
 			$self->_alleleCount->{$sNameName}=0;
-			return $results;
+			return \@results;
 		}
 		$line = $nextLine;
 	}

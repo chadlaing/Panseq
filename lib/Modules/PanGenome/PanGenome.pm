@@ -125,8 +125,8 @@ sub _initDb{
 	$dbh->do("DROP TABLE IF EXISTS locus");
 	$dbh->do("DROP TABLE IF EXISTS allele");
 
-	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, sid INTEGER, name TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_sid INTEGER, FOREIGN KEY(strain_sid) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
@@ -294,83 +294,34 @@ sub _populateStrainTable{
 	#my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
 	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
 	
-	#add case for missing values
-#	my $sql = qq{INSERT INTO strain(name) VALUES('')};
-#	$dbh->do($sql);
-#	$self->_insertIntoDb(
-#		table=>'strain',
-#		name=>''
-#	);
-	
-	my $strainSid=0;
+	my $strainId=0;
 	my @names = (sort keys %{$mfsn->sequenceNameHash});
-	
-	my @newNames;
-	if($self->settings->allelesToKeep > 1){
-		foreach my $name(@names){
-			push @newNames, $name;
-			my $counter = 2;
-			for(2..$self->settings->allelesToKeep){
-				my $newName = $name . '_-a' . $counter;
-				push @newNames, $newName;
-#				my $newNameObj = Modules::Fasta::SequenceName->new($newName);
-#				
-#				$mfsn->sequenceNameHash->{$newName}=$newNameObj;
-#				#$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders = $mfsn->sequenceNameHash->{$name}->arrayOfHeaders;
-#				push@{$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders}, @{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders};
-				$counter++;
-			}
-		}
-		@names = sort @newNames;
-		$self->logger->debug("ALLNAMES: @names\n");
-	}
-	
-	my $prevName = '';
+
 	foreach my $name(@names){
-		my $matchName = $name;
-		if($matchName =~ m/(^.+)_-a\d+$/){
-			$matchName = $1;
-		}
-		
-		if($prevName ne $matchName){
-			$strainSid++;
-		}
-		
-#		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
-#		$dbh->do($sql);
+		$strainId++;		
+
 		$self->_insertIntoDb(
 			table=>'strain',
-			sid=>$strainSid,
+			id=>$strainId,
 			name=>$name
 		);
 
 		#add the no value case
-		my $missingContig = 'NA_' . $name;
-		
-#		my $missingSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$missingContig")};
-#		$dbh->do($missingSql);
+		my $missingContig = 'NA_' . $name;	
+
 		$self->_insertIntoDb(
 			table=>'contig',
-			strain_sid=>$strainSid,
+			strain_id=>$strainId,
 			name=>$missingContig
 		);
 		
 		$contigIds{$missingContig}=$counter;
 		$counter++;
 		
-		#don't add contigs to the duplicate name values
-		#eg _-a2 _-a3 all point to the same contig table
-		$prevName = $matchName;	
-		if($name =~ m/_-a\d+$/){
-			next;
-		}
-		
 		foreach my $contig(@{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders}){
-#			my $contigSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$contig")};
-#			$dbh->do($contigSql);
 			$self->_insertIntoDb(
 				table=>'contig',
-				strain_sid=>$strainSid,
+				strain_id=>$strainId,
 				name=>$contig
 			);
 			
@@ -656,7 +607,7 @@ sub _createOutputFile{
 		FROM results
 		JOIN locus ON results.locus_id = locus.id
 		JOIN contig ON results.contig_id = contig.id
-		JOIN strain ON contig.strain_sid = strain.sid
+		JOIN strain ON contig.strain_id = strain.id
 		WHERE results.type = '$type'
 		ORDER BY locus.name,strain.name,results.start_bp ASC
 	};
@@ -706,6 +657,16 @@ sub _getUniqueResultId{
 }
 
 
+sub _getNamesOfGenomesForThisResult{
+	my $self = shift;
+	my $result = shift;
+	
+	my %genomeNames;
+	foreach my $res(@{$result}){
+		$genomeNames{$res->[0]}=1;
+	}
+	return(sort keys %genomeNames);
+}
 
 sub _processBlastXML {
 	my $self = shift;
@@ -720,40 +681,24 @@ sub _processBlastXML {
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
 	$self->logger->debug("About to get the first result");
 	my $totalResults=0;
+	
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;
 		$self->logger->debug("Getting result $totalResults");
-		my @allNames = sort keys %{$result};
+		my @allNames = $self->_getNamesOfGenomesForThisResult($result);
 		
-		#check to see if the result is defined, if not, remove it
-		#this is because the keys are always present, but actual results may not be
-		
-		my @names;
-		foreach my $aName(@allNames){
-			if(defined $result->{$aName}->[0]){
-				$self->logger->debug("$counter: $aName is defined");
-				push @names, $aName;
-			}
-			else{
-				$self->logger->debug("$counter $aName not defined");
-			}
-		}
-		
-		if(defined $names[0]){
+		if(defined $allNames[0]){
 			#good, go on
 		}
 		else{
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
 		}
-		my $numberOfResults = scalar(@names);
+		
+		my $numberOfResults = scalar(@allNames);
 		$self->logger->debug("There are $numberOfResults results");
-		$counter +=1000;	
-		
-#		#this defines how many results / locus allele
-#		#for binary, this will always be 1
-#		my $resultNumber=1;
-		
+		$counter +=1000;			
+	
 		my $coreOrAccessory;
 		if($numberOfResults >= $self->settings->coreGenomeThreshold){
 			$coreOrAccessory='core';
@@ -782,7 +727,11 @@ sub _processBlastXML {
 			
 			my $contigId;
 			if(defined $allele){
-				$contigId = $self->_contigIds->{$allele};
+				my $alleleForContigIdLookup = $allele;
+				if($alleleForContigIdLookup =~ m/^(.+)_-a\d+$/){
+					$alleleForContigIdLookup = $1;
+				}
+				$contigId = $self->_contigIds->{$alleleForContigIdLookup};
 			}
 			else{
 				 $contigId = $self->_contigIds->{'NA_' . $name};
