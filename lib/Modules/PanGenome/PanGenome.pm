@@ -717,6 +717,7 @@ sub _processBlastXML {
 			$self->_getMsa($result,$counter)
 		);
 		
+		#$self->_printMsaHash($msaHash);
 		
 		foreach my $name(@{$self->_orderedNames}){			
 			if(defined $allNames->{$name}){
@@ -738,6 +739,7 @@ sub _processBlastXML {
 		foreach my $res(@{$result}){
 			my $contigId = $self->_contigIds->{$res->[0]};
 			#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
+			$self->logger->debug("Inserting into: $res->[0]" . $msaHash->{$res->[0]}->{'sequence'});
 			if($self->settings->storeAlleles){
 				$self->_insertIntoDb(
 					table=>'allele',
@@ -794,6 +796,20 @@ sub _processBlastXML {
 	$self->_emptySqlBuffers();
 }
 
+sub _printMsaHash{
+	my $self = shift;
+	my $msaHash = shift;
+	
+	foreach my $key(keys %{$msaHash}){
+		foreach my $secKey(keys %{$msaHash->{$key}}){
+			$self->logger->debug("msaKEY: $key msaSECKEY: $secKey msaVAVLUE: " . $msaHash->{$key}->{$secKey} . "\n");
+		}
+	}
+}
+
+
+
+
 =head2 _getMsa
 
 Take in a Modules::Alignment::BlastResult and generate a MSA of all hit sequences.
@@ -846,10 +862,7 @@ sub _getMsa{
 
 Given the FASTA alignment produced by Muscle, create a hash where the
 name is based on the Modules::Fasta::SequenceName->name and
-$hashRef->{'name'}->{'fasta'}="fasta header"
-$hashRef->{'name'}->{'sequence'}="DNA sequence"
-the {'fasta'} key contains the fasta header,
-and the {'sequence'} key contains the DNA sequence.
+
 
 =cut
 
@@ -857,33 +870,31 @@ sub _getHashOfFastaAlignment{
 	my $self = shift;
 	my $alignedFastaSequences=shift;
 	
-	my $results={};
-	my $name;
+	my %results;
+	my $header;
+	my $sequence;
 	my $alignmentLength;
-
+	
 	foreach my $line(@{$alignedFastaSequences}){
 		$line =~ s/\R//g;
+		$self->logger->debug("GHOFA: $line\n");
 		
 		if($line =~ /^>(.+)/){		
 			$line =~ s/>//;
-			my $sn = Modules::Fasta::SequenceName->new($line);
-			$name = $sn->name;
-			
-			#we don't need or want the '>'; all names are stored without the fasta header signifier
-			$results->{$name}->{'fasta'}=$line;
+			$header = $line;
 		}
 		else{
-			if(defined $results->{$name}->{'sequence'}){
+			if(defined $results{$header}){
 			#	$self->logger->debug("Sequence already present, adding to it:\n$line");
-				$results->{$name}->{'sequence'}=$results->{$name}->{'sequence'} . $line;	
+				$results{$header} .= $line;	
 			}
 			else{
 				#$self->logger->debug("New sequence, adding:\n$line");
-				$results->{$name}->{'sequence'}=$line;
+				$results{$header}=$line;
 			}					
 		}
 	}
-	return ($results);
+	return (\%results);
 }
 
 
