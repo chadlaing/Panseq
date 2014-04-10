@@ -714,7 +714,7 @@ sub _processBlastXML {
 		#generate a MSA of all strains that contain sequence
 		#if the locus is core, we will send this MSA to the SNPFinder
 		my $msaHash = $self->_getHashOfFastaAlignment(
-			$self->_getMsa($result,$counter,$allNames)
+			$self->_getMsa($result,$counter)
 		);
 		
 		
@@ -804,7 +804,6 @@ sub _getMsa{
 	my $self=shift;
 	my $result=shift;	
 	my $resultNumber=shift;
-	my $names = shift;
 
 	#create temp files for muscle
 	my $tempInFile = $self->settings->baseDirectory . 'muscleTemp_in' . $resultNumber;
@@ -825,10 +824,10 @@ sub _getMsa{
 	# [9]length"',
 	# [10]sseq,
 	# [11]qseq
-	foreach my $hit(@{$names}){
-		$tempInFH->print('>' . $result->{$hit}->[0] . "\n" . $result->{$hit}->[10] . "\n");
+	foreach my $res(@{$result}){
+		$tempInFH->print('>' . $res->[0] . "\n" . $res->[10] . "\n");
 	}
-	
+		
 	my $systemLine = $self->settings->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
 	system($systemLine);
 
