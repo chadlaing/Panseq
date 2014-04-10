@@ -126,7 +126,7 @@ sub getNextResult{
 		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){			
 			$self->logger->debug("Passes percent identity cutoff");
 			
-			my $alleleCount = $self->_getAlleleCount($sNameName);
+			my $alleleCount = $self->_alleleCount->{$sNameName} // 0;
 			$self->logger->debug("Returned with $alleleCount alleles");
 			if($alleleCount >= $self->settings->allelesToKeep){
 				$self->logger->debug("$la[1] defined for $la[0], doing nothing")
@@ -135,9 +135,7 @@ sub getNextResult{
 			else{
 				$alleleCount++;				
 				$self->_alleleCount->{$sNameName}=$alleleCount;
-				unless($alleleCount == 1){
-					$sNameName .= '_-a' . $alleleCount;
-				}
+			
 				$self->logger->debug("Returning result for $sNameName, alleleCount $alleleCount");
 				$results->{$sNameName}=\@la;
 			}				
@@ -145,6 +143,7 @@ sub getNextResult{
 		
 		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
 			$self->logger->debug("next not defined or next not eq current\n$line\n\n");
+			$self->_alleleCount->{$sNameName}=0;
 			return $results;
 		}
 		$line = $nextLine;
@@ -158,18 +157,6 @@ Get the current allele count for the query sequence.
 
 =cut
 
-
-sub _getAlleleCount{
-	my $self = shift;
-	my $name = shift;
-	
-	my $counter=0;
-	if(defined $self->_alleleCount && defined $self->_alleleCount->{$name}){
-		my $counter = $self->_alleleCount->{$name};
-	}
-	$self->logger->debug("Getting allele count of $name, with $counter alleles");
-	return $counter;
-}
 
 sub _getPercentId{
 	my $self=shift;
