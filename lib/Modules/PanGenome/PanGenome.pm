@@ -125,8 +125,8 @@ sub _initDb{
 	$dbh->do("DROP TABLE IF EXISTS locus");
 	$dbh->do("DROP TABLE IF EXISTS allele");
 
-	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, sid INTEGER, name TEXT)") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_sid INTEGER, FOREIGN KEY(strain_sid) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
@@ -302,7 +302,7 @@ sub _populateStrainTable{
 #		name=>''
 #	);
 	
-	my $strainId=0;
+	my $strainSid=0;
 	my @names = (sort keys %{$mfsn->sequenceNameHash});
 	
 	my @newNames;
@@ -313,11 +313,11 @@ sub _populateStrainTable{
 			for(2..$self->settings->allelesToKeep){
 				my $newName = $name . '_-a' . $counter;
 				push @newNames, $newName;
-				my $newNameObj = Modules::Fasta::SequenceName->new($newName);
-				
-				$mfsn->sequenceNameHash->{$newName}=$newNameObj;
-				#$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders = $mfsn->sequenceNameHash->{$name}->arrayOfHeaders;
-				push@{$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders}, @{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders};
+#				my $newNameObj = Modules::Fasta::SequenceName->new($newName);
+#				
+#				$mfsn->sequenceNameHash->{$newName}=$newNameObj;
+#				#$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders = $mfsn->sequenceNameHash->{$name}->arrayOfHeaders;
+#				push@{$mfsn->sequenceNameHash->{$newName}->arrayOfHeaders}, @{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders};
 				$counter++;
 			}
 		}
@@ -325,13 +325,22 @@ sub _populateStrainTable{
 		$self->logger->debug("ALLNAMES: @names\n");
 	}
 	
+	my $prevName = '';
 	foreach my $name(@names){
-		$strainId++;
+		my $matchName = $name;
+		if($matchName =~ m/(^.+)_-a\d+$/){
+			$matchName = $1;
+		}
+		
+		if($prevName ne $matchName){
+			$strainSid++;
+		}
+		
 #		my $sql = qq{INSERT INTO strain(name) VALUES("$name")};
 #		$dbh->do($sql);
 		$self->_insertIntoDb(
 			table=>'strain',
-			id=>$strainId,
+			sid=>$strainSid,
 			name=>$name
 		);
 
@@ -342,25 +351,32 @@ sub _populateStrainTable{
 #		$dbh->do($missingSql);
 		$self->_insertIntoDb(
 			table=>'contig',
-			strain_id=>$strainId,
+			strain_sid=>$strainSid,
 			name=>$missingContig
 		);
 		
 		$contigIds{$missingContig}=$counter;
 		$counter++;
-
+		
+		#don't add contigs to the duplicate name values
+		#eg _-a2 _-a3 all point to the same contig table
+		$prevName = $matchName;	
+		if($name =~ m/_-a\d+$/){
+			next;
+		}
+		
 		foreach my $contig(@{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders}){
 #			my $contigSql = qq{INSERT INTO contig(strain_id,name) VALUES((SELECT MAX(id) FROM strain),"$contig")};
 #			$dbh->do($contigSql);
 			$self->_insertIntoDb(
 				table=>'contig',
-				strain_id=>$strainId,
+				strain_sid=>$strainSid,
 				name=>$contig
 			);
 			
 			$contigIds{$contig}=$counter;
 			$counter++;
-		}		
+		}
 	}
 
 	$self->_emptySqlBuffers();
@@ -579,7 +595,7 @@ sub _createAlleleFiles{
 		SELECT strain.name,locus.name,allele.sequence
 		FROM allele
 		JOIN contig ON allele.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id
+		JOIN strain ON contig.strain_sid = strain.id
 		JOIN locus ON allele.locus_id = locus.id
 		ORDER BY locus.name,strain.name ASC
 	};
@@ -640,7 +656,7 @@ sub _createOutputFile{
 		FROM results
 		JOIN locus ON results.locus_id = locus.id
 		JOIN contig ON results.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id
+		JOIN strain ON contig.strain_sid = strain.sid
 		WHERE results.type = '$type'
 		ORDER BY locus.name,strain.name,results.start_bp ASC
 	};
