@@ -775,7 +775,7 @@ sub _processBlastXML {
 			# [11]qseq		
 
 			#if it is a core result, send to SNP finding
-			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter,$allNames);		
+			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
 			foreach my $cResult(@{$coreResults}){				
 				$self->_insertIntoDb(
 					table=>'results',
@@ -1030,7 +1030,6 @@ sub _getCoreResult {
 	my $result=shift;
 	my $msaHash=shift;
 	my $resultNumber=shift;
-	my $resultNames = shift;
 	
 	#'outfmt'=>'"6 
 	# [0]sseqid 
@@ -1046,8 +1045,8 @@ sub _getCoreResult {
 	# [10]sseq,
 	# [11]qseq
 	my %startBpHash;
-	foreach my $hit(@{$resultNames}){
-		$startBpHash{$result->{$hit}->[0]}=$result->{$hit}->[4];
+	foreach my $res(@{$result}){
+		$startBpHash{$res->[0]}=$res->[4];
 	}
 	
 	#add SNP information to the return
@@ -1061,8 +1060,6 @@ sub _getCoreResult {
 	 #this returns undef if there are no SNPs
 	 return $snpDataArrayRef;	
 }
-
-
 
 1;
 
