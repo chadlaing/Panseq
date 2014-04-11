@@ -546,7 +546,7 @@ sub _createAlleleFiles{
 		SELECT strain.name,locus.name,allele.sequence
 		FROM allele
 		JOIN contig ON allele.contig_id = contig.id
-		JOIN strain ON contig.strain_sid = strain.id
+		JOIN strain ON contig.strain_id = strain.id
 		JOIN locus ON allele.locus_id = locus.id
 		ORDER BY locus.name,strain.name ASC
 	};
@@ -739,13 +739,12 @@ sub _processBlastXML {
 		foreach my $res(@{$result}){
 			my $contigId = $self->_contigIds->{$res->[0]};
 			#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
-			$self->logger->debug("Inserting into: $res->[0]" . $msaHash->{$res->[0]}->{'sequence'});
 			if($self->settings->storeAlleles){
 				$self->_insertIntoDb(
 					table=>'allele',
 					locus_id=>$counter,
 					contig_id=>$contigId,
-					sequence=>$msaHash->{$res->[0]}->{'sequence'}
+					sequence=>$msaHash->{$res->[0]}
 				);
 			}					
 										
@@ -881,7 +880,9 @@ sub _getHashOfFastaAlignment{
 		
 		if($line =~ /^>(.+)/){		
 			$line =~ s/>//;
-			$header = $line;
+			
+			my $sn = Modules::Fasta::SequenceName->new($line);
+			$header = $sn->name;
 		}
 		else{
 			if(defined $results{$header}){
@@ -1057,7 +1058,8 @@ sub _getCoreResult {
 	# [11]qseq
 	my %startBpHash;
 	foreach my $res(@{$result}){
-		$startBpHash{$res->[0]}=$res->[4];
+		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
+		$startBpHash{$sn->name}=$res->[4];
 	}
 	
 	#add SNP information to the return
