@@ -663,7 +663,8 @@ sub _getNamesOfGenomesForThisResult{
 	
 	my %genomeNames;
 	foreach my $res(@{$result}){
-		$genomeNames{$res->[0]}=1;
+		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
+		$genomeNames{$sn->name}=1;
 	}
 	return \%genomeNames;
 }
@@ -865,19 +866,14 @@ sub _getHashOfFastaAlignment{
 		$self->logger->debug("GHOFA: $line\n");
 		
 		if($line =~ /^>(.+)/){		
-			$line =~ s/>//;
-			
-#			my $sn = Modules::Fasta::SequenceName->new($line);
-#			$header = $sn->name;
+			$line =~ s/>//;			
 			$header=$line;
 		}
 		else{
 			if(defined $results{$header}){
-			#	$self->logger->debug("Sequence already present, adding to it:\n$line");
 				$results{$header} .= $line;	
 			}
 			else{
-				#$self->logger->debug("New sequence, adding:\n$line");
 				$results{$header}=$line;
 			}					
 		}
