@@ -47,7 +47,7 @@ use Modules::LociSelector::LociSelector;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
-use File::Path 'make_path';
+use File::Path qw/make_path remove_tree/;
 use Carp;
 use File::Copy;
 use Archive::Zip;
@@ -237,14 +237,16 @@ sub _createDirectories{
 	my $self=shift;
 
 	if(-d $self->settings->baseDirectory){
-		print "\nThe directory you have specified for program output:\n\t" . $self->settings->baseDirectory . "\n"
-			. 'already exists. Please specify a new baseDirectory' . "\n";
-		exit(1);
+		print "Directory exists: overwriting\n";
+		remove_tree($self->settings->baseDirectory);
+##		print "\nThe directory you have specified for program output:\n\t" . $self->settings->baseDirectory . "\n"
+##			. 'already exists. Please specify a new baseDirectory' . "\n";
+##		exit(1);
 	}
-	else{
-		#with File::Path
+#	else{
+#		#with File::Path
 		make_path($self->settings->baseDirectory);
-	}
+#	}
 	unless(-d $self->settings->baseDirectory){
 		print STDERR "Unable to create directory " . $self->settings->baseDirectory . "\n";
 		exit(1);
