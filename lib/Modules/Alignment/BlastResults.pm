@@ -100,8 +100,9 @@ sub getNextResult{
 		}
 		
 		$line =~ s/\R//g;		
-		my @la = split("\t",$line);		
-		$self->logger->debug("line: $la[1]");
+		my @la = split("\t",$line);
+		$self->logger->debug("Current hit: $la[0]");		
+		$self->logger->debug("Current query: $la[1]");
 		#'outfmt'=>'"6 
 		# [0]sseqid 
 		# [1]qseqid 
@@ -123,7 +124,7 @@ sub getNextResult{
 			$self->logger->debug("Passes percent identity cutoff");
 			
 			my $alleleCount = $self->_alleleCount->{$sNameName} // 0;
-			$self->logger->debug("Returned with $alleleCount alleles");
+			$self->logger->debug("$sNameName has $alleleCount alleles");
 			if($alleleCount >= $self->settings->allelesToKeep){
 				$self->logger->debug("$la[1] defined for $la[0], doing nothing")
 				#nothing
@@ -137,12 +138,19 @@ sub getNextResult{
 			}				
 		}		
 		
-		if(!defined $nextLa[0] || $la[1] ne $nextLa[1]){
-			$self->logger->debug("next not defined or next not eq current\n$line\n\n");
-			$self->_alleleCount->{$sNameName}=0;
+		if(!defined $nextLa[0]){
+			$self->logger->debug("Next not defined\n\n");
+			$self->_alleleCount({});
 			return \@results;
 		}
-		$line = $nextLine;
+		elsif($la[1] ne $nextLa[1]){
+			$self->logger->debug("$la[1] NE to $nextLa[1]");
+			$self->_alleleCount({});
+			return \@results;			
+		}
+		else{
+			$line = $nextLine;
+		}
 	}
 }
 

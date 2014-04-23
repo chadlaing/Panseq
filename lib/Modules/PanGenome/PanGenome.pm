@@ -685,6 +685,7 @@ sub _processBlastXML {
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;
 		$self->logger->debug("Result $totalResults processed from BlastResult.pm");
+		$self->logger->debug("Result array contains " . scalar(@{$result}) . " elements");
 		my $allNames = $self->_getNamesOfGenomesForThisResult($result);
 		
 		my $numberOfResults = scalar keys %{$allNames};
