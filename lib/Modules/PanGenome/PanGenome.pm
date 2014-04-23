@@ -718,8 +718,6 @@ sub _processBlastXML {
 			$self->_getMsa($result,$counter)
 		);
 		
-		#$self->_printMsaHash($msaHash);
-		
 		foreach my $name(@{$self->_orderedNames}){			
 			if(defined $allNames->{$name}){
 				next;
@@ -796,19 +794,6 @@ sub _processBlastXML {
 	$self->_emptySqlBuffers();
 }
 
-sub _printMsaHash{
-	my $self = shift;
-	my $msaHash = shift;
-	
-	foreach my $key(keys %{$msaHash}){
-		foreach my $secKey(keys %{$msaHash->{$key}}){
-			$self->logger->debug("msaKEY: $key msaSECKEY: $secKey msaVAVLUE: " . $msaHash->{$key}->{$secKey} . "\n");
-		}
-	}
-}
-
-
-
 
 =head2 _getMsa
 
@@ -882,8 +867,9 @@ sub _getHashOfFastaAlignment{
 		if($line =~ /^>(.+)/){		
 			$line =~ s/>//;
 			
-			my $sn = Modules::Fasta::SequenceName->new($line);
-			$header = $sn->name;
+#			my $sn = Modules::Fasta::SequenceName->new($line);
+#			$header = $sn->name;
+			$header=$line;
 		}
 		else{
 			if(defined $results{$header}){
@@ -948,7 +934,7 @@ sub _insertIntoDb{
 		push @keys, $key;
 	}
 	my $table = $params{'table'} // $self->logger->logdie("table required in _insertIntoDb");
-	
+	#$self->logger->debug("\nTable: $table");
 	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
 	# INSERT INTO 'tablename'
  	# SELECT 'data1' AS 'column1', 'data2' AS 'column2'
@@ -983,6 +969,7 @@ sub _insertIntoDb{
 		
 		my $counter=0;
 		foreach my $key(@keys){
+			#$self->logger->debug("In SQL, key: $key, value: $params{$key}");
 			if($counter > 0){
 				$currentSql .= ", ";
 			}
