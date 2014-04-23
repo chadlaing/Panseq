@@ -237,16 +237,22 @@ sub _createDirectories{
 	my $self=shift;
 
 	if(-d $self->settings->baseDirectory){
-		print "Directory exists: overwriting\n";
-		remove_tree($self->settings->baseDirectory);
-##		print "\nThe directory you have specified for program output:\n\t" . $self->settings->baseDirectory . "\n"
-##			. 'already exists. Please specify a new baseDirectory' . "\n";
-##		exit(1);
+		print "\nThe directory you have specified for program output:\n\t" . $self->settings->baseDirectory . "\n"
+			. "already exists.\n";
+		
+		print "overwrite: " . $self->settings->overwrite . "\n";
+		
+		if($self->settings->overwrite){
+			print "Overwrite set to true. Deleting directory " . $self->settings->baseDirectory . "\n";
+			remove_tree($self->settings->baseDirectory);
+		}
+		else{		
+			print "Please specify a new baseDirectory\n";
+			exit(1);
+		}
 	}
-#	else{
-#		#with File::Path
-		make_path($self->settings->baseDirectory);
-#	}
+	make_path($self->settings->baseDirectory);
+	
 	unless(-d $self->settings->baseDirectory){
 		print STDERR "Unable to create directory " . $self->settings->baseDirectory . "\n";
 		exit(1);

@@ -132,7 +132,7 @@ sub getNextResult{
 				$alleleCount++;				
 				$self->_alleleCount->{$sNameName}=$alleleCount;
 			
-				$self->logger->debug("Returning result for $sNameName, alleleCount $alleleCount");
+				$self->logger->debug("Adding result for $sNameName, alleleCount $alleleCount");
 				push @results, \@la;
 			}				
 		}		

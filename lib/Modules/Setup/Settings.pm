@@ -222,6 +222,11 @@ sub allelesToKeep{
 	$self->{'_allelesToKeep'} = shift // return $self->{'_allelesToKeep'};	
 }
 
+sub overwrite{
+	my $self=shift;
+	$self->{'_overwrite'} = shift // return $self->{'_overwrite'};	
+}
+
 #methods
 sub _getSettingsFromConfigurationFile {
 	my ($self) = shift;
@@ -343,6 +348,10 @@ sub _setDefaults{
 	
 	unless(defined $self->allelesToKeep){
 		$self->allelesToKeep(1);
+	}
+	
+	unless(defined $self->overwrite){
+		$self->overwrite(0);
 	}
 }
 
