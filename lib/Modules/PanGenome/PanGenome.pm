@@ -776,8 +776,16 @@ sub _processBlastXML {
 			# [11]qseq		
 
 			#if it is a core result, send to SNP finding
+			$self->logger->debug("Core, adding to DB");
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
-			foreach my $cResult(@{$coreResults}){				
+			foreach my $cResult(@{$coreResults}){
+				$self->logger->debug("contig_id: " . $self->_contigIds->{$cResult->{'contig'}} . "\n"
+				. "number: " . $cResult->{'locusId'} . "\n"
+				. "locus_id: $counter\n"
+				. "start_bp: " .  $cResult->{'startBp'} . "\n"
+				. "end_bp: " . $cResult->{'startBp'} . "\n"
+				. "value: " . $cResult->{'value'} . "\n");
+							
 				$self->_insertIntoDb(
 					table=>'results',
 					type=>'snp',
@@ -1042,8 +1050,8 @@ sub _getCoreResult {
 	# [11]qseq
 	my %startBpHash;
 	foreach my $res(@{$result}){
-		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
-		$startBpHash{$sn->name}=$res->[4];
+#		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
+		$startBpHash{$res->[0]}=$res->[4];
 	}
 	
 	#add SNP information to the return

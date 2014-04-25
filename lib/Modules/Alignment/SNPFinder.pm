@@ -168,54 +168,45 @@ sub _getSingleBaseResult{
 	my %baseTypes;
 	my @currentResult=();
 	
-	foreach my $name(@{$self->orderedNames}){
+	foreach my $contig(keys %{$alignedHashRef}){
+		#$self->logger->debug("snp contig: $contig\n");
 		my $base;
-		my $contig = $alignedHashRef->{$name}->{'fasta'} // undef;
-
 		my %resultHash=();
-		if(defined $contig){		
-			$base = substr($alignedHashRef->{$name}->{'sequence'},$position,1); 
-			my $dashOffset = $self->_dashOffset->{$name};
+				
+		$base = substr($alignedHashRef->{$contig},$position,1); 
+		my $dashOffset = $self->_dashOffset->{$contig};
 
-			unless(defined $base){
-				$self->logger->fatal("name: $name\nfasta: " . $contig. "\nseq: " . $alignedHashRef->{$name}->{'sequence'} . "\npos: $position");
-				exit(1);
-			}
+		unless(defined $base){
+			$self->logger->fatal($contig. "\nseq: " . "\npos: $position");
+			exit(1);
+		}
 
-			if(defined $self->allowableChars->{$base}){
-				#make sure base is uppercase
-				$base = uc($base);
-				$baseTypes{$base}=1;
-			}				
+		if(defined $self->allowableChars->{$base}){
+			#make sure base is uppercase
+			$base = uc($base);
+			$baseTypes{$base}=1;
+		}				
 
-			my $startBp = $self->startBpHashRef->{$contig};		
-			#update _dashOffset if need be
-			#if the char is a '-', there is no position information for the original sequence, so report a 0
-			my $finalPosition;
-			if($base eq '-'){
-				$finalPosition = 0;	
-				$dashOffset++;
-				$self->_dashOffset->{$name}=$dashOffset;
-			}
-			else{
-				$finalPosition = ($startBp + $position - $dashOffset);	
-			}
-			
-			%resultHash=(
-				contig=>$contig,
-				startBp=>$finalPosition,
-				value=>$base,
-				locusId=>$resultNumber
-			);			
+		my $startBp = $self->startBpHashRef->{$contig};		
+		#update _dashOffset if need be
+		#if the char is a '-', there is no position information for the original sequence, so report a 0
+		my $finalPosition;
+		if($base eq '-'){
+			$finalPosition = 0;	
+			$dashOffset++;
+			$self->_dashOffset->{$contig}=$dashOffset;
 		}
 		else{
-			%resultHash=(
-				contig=>"NA_$name",
-				startBp=>'0',
-				value=>'-',
-				locusId=>$resultNumber
-			);	
+			$finalPosition = ($startBp + $position - $dashOffset);	
 		}
+		
+		%resultHash=(
+			contig=>$contig,
+			startBp=>$finalPosition,
+			value=>$base,
+			locusId=>$resultNumber
+		);		
+		
 		push @currentResult,\%resultHash;
 	}
 
