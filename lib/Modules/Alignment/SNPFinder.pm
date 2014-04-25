@@ -167,45 +167,48 @@ sub _getSingleBaseResult{
 
 	my %baseTypes;
 	my @currentResult=();
+	my %observedGenomes=();
 	
-	foreach my $contig(keys %{$alignedHashRef}){
-		#$self->logger->debug("snp contig: $contig\n");
-		my $base;
-		my %resultHash=();
-				
-		$base = substr($alignedHashRef->{$contig},$position,1); 
-		my $dashOffset = $self->_dashOffset->{$contig};
-
-		unless(defined $base){
-			$self->logger->fatal($contig. "\nseq: " . "\npos: $position");
-			exit(1);
-		}
-
-		if(defined $self->allowableChars->{$base}){
-			#make sure base is uppercase
-			$base = uc($base);
-			$baseTypes{$base}=1;
-		}				
-
-		my $startBp = $self->startBpHashRef->{$contig};		
-		#update _dashOffset if need be
-		#if the char is a '-', there is no position information for the original sequence, so report a 0
-		my $finalPosition;
-		if($base eq '-'){
-			$finalPosition = 0;	
-			$dashOffset++;
-			$self->_dashOffset->{$contig}=$dashOffset;
-		}
-		else{
-			$finalPosition = ($startBp + $position - $dashOffset);	
-		}
+	
+	foreach my $contig(sort keys %{$alignedHashRef}){
 		
-		%resultHash=(
-			contig=>$contig,
-			startBp=>$finalPosition,
-			value=>$base,
-			locusId=>$resultNumber
-		);		
+		
+			my $base;
+			my %resultHash=();
+					
+			$base = substr($alignedHashRef->{$contig},$position,1); 
+			my $dashOffset = $self->_dashOffset->{$contig};
+	
+			unless(defined $base){
+				$self->logger->fatal($contig. "\nseq: " . "\npos: $position");
+				exit(1);
+			}
+	
+			if(defined $self->allowableChars->{$base}){
+				#make sure base is uppercase
+				$base = uc($base);
+				$baseTypes{$base}=1;
+			}				
+	
+			my $startBp = $self->startBpHashRef->{$contig};		
+			#update _dashOffset if need be
+			#if the char is a '-', there is no position information for the original sequence, so report a 0
+			my $finalPosition;
+			if($base eq '-'){
+				$finalPosition = 0;	
+				$dashOffset++;
+				$self->_dashOffset->{$contig}=$dashOffset;
+			}
+			else{
+				$finalPosition = ($startBp + $position - $dashOffset);	
+			}
+			
+			%resultHash=(
+				contig=>$contig,
+				startBp=>$finalPosition,
+				value=>$base,
+				locusId=>$resultNumber
+			);	
 		
 		push @currentResult,\%resultHash;
 	}

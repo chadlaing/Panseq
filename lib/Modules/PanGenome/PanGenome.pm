@@ -129,7 +129,7 @@ sub _initDb{
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, copy INTEGER, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
 	$self->_sqlString->{'results'}=[];
@@ -605,9 +605,9 @@ sub _createOutputFile{
 	}		
 	$sql .=qq{
 		FROM results
-		LEFT OUTER JOIN locus ON results.locus_id = locus.id
-		LEFT OUTER JOIN contig ON results.contig_id = contig.id
-		LEFT OUTER JOIN strain ON contig.strain_id = strain.id
+		JOIN locus ON results.locus_id = locus.id
+		JOIN contig ON results.contig_id = contig.id
+		JOIN strain ON contig.strain_id = strain.id
 		WHERE results.type = '$type'
 		ORDER BY locus.name,strain.name,results.start_bp ASC
 	};
@@ -869,20 +869,30 @@ sub _getHashOfFastaAlignment{
 	my $sequence;
 	my $alignmentLength;
 	
+	my %copyNumber=();
+	
 	foreach my $line(@{$alignedFastaSequences}){
 		$line =~ s/\R//g;
-		$self->logger->debug("GHOFA: $line\n");
 		
 		if($line =~ /^>(.+)/){		
 			$line =~ s/>//;			
-			$header=$line;
+			$header= $line;
+			
+			if(defined $copyNumber{$header}){
+				$copyNumber{$header}++;
+			}
+			else{
+				$copyNumber{$header}=1;
+			}
+			
+			$results{$header}->{'copy'}=$copyNumber{$header};
 		}
 		else{
 			if(defined $results{$header}){
-				$results{$header} .= $line;	
+				$results{$header}->{'sequence'} .= $line;	
 			}
 			else{
-				$results{$header}=$line;
+				$results{$header}->{'sequence'}=$line;
 			}					
 		}
 	}
