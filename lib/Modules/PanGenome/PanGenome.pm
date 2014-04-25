@@ -885,14 +885,14 @@ sub _getHashOfFastaAlignment{
 				$copyNumber{$header}=1;
 			}
 			
-			$results{$header}->{'copy'}=$copyNumber{$header};
 		}
 		else{
 			if(defined $results{$header}){
-				$results{$header}->{'sequence'} .= $line;	
+				$results{$header}->{$copyNumber{$header}} .= $line;
+				
 			}
 			else{
-				$results{$header}->{'sequence'}=$line;
+				$results{$header}->{$copyNumber{$header}} = $line;
 			}					
 		}
 	}
