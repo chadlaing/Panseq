@@ -713,11 +713,7 @@ sub _processBlastXML {
 			pan=>$coreOrAccessory
 		);
 		
-		#generate a MSA of all strains that contain sequence
-		#if the locus is core, we will send this MSA to the SNPFinder
-		my $msaHash = $self->_getHashOfFastaAlignment(
-			$self->_getMsa($result,$counter)
-		);
+		
 		
 		foreach my $name(@{$self->_orderedNames}){			
 			if(defined $allNames->{$name}){
@@ -744,7 +740,7 @@ sub _processBlastXML {
 					table=>'allele',
 					locus_id=>$counter,
 					contig_id=>$contigId,
-					sequence=>$msaHash->{$res->[0]}
+					sequence=>$res->[10]
 				);
 			}					
 										
@@ -761,6 +757,13 @@ sub _processBlastXML {
 		}	
 	
 		if($coreOrAccessory eq 'core'){
+			
+			#generate a MSA of all strains that contain sequence
+			#if the locus is core, we will send this MSA to the SNPFinder
+			my $msaHash = $self->_getHashOfFastaAlignment(
+				$self->_getMsa($result,$counter)
+			);
+			
 			#'outfmt'=>'"6 
 			# [0]sseqid 
 			# [1]qseqid 
