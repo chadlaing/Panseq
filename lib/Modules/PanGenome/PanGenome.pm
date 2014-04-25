@@ -605,9 +605,9 @@ sub _createOutputFile{
 	}		
 	$sql .=qq{
 		FROM results
-		JOIN locus ON results.locus_id = locus.id
-		JOIN contig ON results.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id
+		LEFT OUTER JOIN locus ON results.locus_id = locus.id
+		LEFT OUTER JOIN contig ON results.contig_id = contig.id
+		LEFT OUTER JOIN strain ON contig.strain_id = strain.id
 		WHERE results.type = '$type'
 		ORDER BY locus.name,strain.name,results.start_bp ASC
 	};

@@ -34,7 +34,8 @@ my %plasmidsConfig=(
 	fragmentationSize=>'500',
 	percentIdentityCutoff=>'90',
 	coreGenomeThreshold=>'3',
-	runMode=>'pan'
+	runMode=>'pan',
+	overwrite=>1
 );
 
 my %queryConfig=(
@@ -52,7 +53,8 @@ my %queryConfig=(
 	percentIdentityCutoff=>90,
 	coreGenomeThreshold=>2,
 	runMode=>'pan',
-	storeAlleles=>1
+	storeAlleles=>1,
+	overwrite=>1
 );
 
 my %genomesConfig=(
@@ -67,7 +69,8 @@ my %genomesConfig=(
 	fragmentationSize=>'1000',
 	percentIdentityCutoff=>'90',
 	coreGenomeThreshold=>'3',
-	runMode=>'pan'
+	runMode=>'pan',
+	overwrite=>1
 );
 
 my %md5Sum=(
