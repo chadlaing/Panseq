@@ -25,11 +25,6 @@ sub allowableChars{
 	$self->{'_allowableChars'} = shift // return $self->{'_allowableChars'};
 }
 
-sub orderedNames{
-	my $self=shift;
-	$self->{'_queryNameOrderHash'}=shift // return $self->{'_queryNameOrderHash'};
-}
-
 sub alignedFastaHash{
 	my $self=shift;
 	$self->{'_alignedFastaHash'}=shift // return $self->{'_alignedFastaHash'};
@@ -171,12 +166,11 @@ sub _getSingleBaseResult{
 	
 	
 	foreach my $contig(sort keys %{$alignedHashRef}){
-		
-		
+		foreach my $copyNum(sort keys %{$alignedHashRef->{$contig}}){
 			my $base;
 			my %resultHash=();
 					
-			$base = substr($alignedHashRef->{$contig},$position,1); 
+			$base = substr($alignedHashRef->{$contig}->{$copyNum},$position,1); 
 			my $dashOffset = $self->_dashOffset->{$contig};
 	
 			unless(defined $base){
@@ -207,10 +201,11 @@ sub _getSingleBaseResult{
 				contig=>$contig,
 				startBp=>$finalPosition,
 				value=>$base,
-				locusId=>$resultNumber
-			);	
-		
-		push @currentResult,\%resultHash;
+				locusId=>$resultNumber,
+				copy=>$copyNum
+			);			
+			push @currentResult,\%resultHash;
+		}
 	}
 
 	#only need the case where there is an actual snp

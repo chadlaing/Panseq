@@ -127,9 +127,9 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, copy INTEGER, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, copy INTEGER, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
 	$self->_sqlString->{'results'}=[];
@@ -728,7 +728,8 @@ sub _processBlastXML {
 						number=>$counter,
 						start_bp=>0,
 						end_bp=>0,
-						value=>'0'
+						value=>0,
+						copy=>1
 					);
 		}
 		
@@ -752,7 +753,8 @@ sub _processBlastXML {
 				number=>$counter,
 				start_bp=>$res->[2],
 				end_bp=>$res->[3],
-				value=>1
+				value=>1,
+				copy=>1
 			);				
 		}	
 	
@@ -787,7 +789,8 @@ sub _processBlastXML {
 				. "locus_id: $counter\n"
 				. "start_bp: " .  $cResult->{'startBp'} . "\n"
 				. "end_bp: " . $cResult->{'startBp'} . "\n"
-				. "value: " . $cResult->{'value'} . "\n");
+				. "value: " . $cResult->{'value'} . "\n"
+				. "copy: " . $cResult->{'copy'});
 							
 				$self->_insertIntoDb(
 					table=>'results',
@@ -797,7 +800,8 @@ sub _processBlastXML {
 					locus_id=>$counter,
 					start_bp=>$cResult->{'startBp'},
 					end_bp=>$cResult->{'startBp'},
-					value=>$cResult->{'value'}
+					value=>$cResult->{'value'},
+					copy=>$cResult->{'copy'}
 				);
 			}
 		}
@@ -869,10 +873,9 @@ sub _getHashOfFastaAlignment{
 	
 	my %results;
 	my $header;
-	my $sequence;
-	my $alignmentLength;
 	
 	my %copyNumber=();
+	my %sequenceNames = ();
 	
 	foreach my $line(@{$alignedFastaSequences}){
 		$line =~ s/\R//g;
@@ -886,8 +889,9 @@ sub _getHashOfFastaAlignment{
 			}
 			else{
 				$copyNumber{$header}=1;
+				my $sn = Modules::Fasta::SequenceName->new($header);
+				$sequenceNames{$sn->name}=1;
 			}
-			
 		}
 		else{
 			if(defined $results{$header}){
@@ -897,6 +901,14 @@ sub _getHashOfFastaAlignment{
 			else{
 				$results{$header}->{$copyNumber{$header}} = $line;
 			}					
+		}
+	}
+	my @gn = keys %results;
+	my $alignmentLength = length($results{$gn[0]}->{1});
+	#add all the missing genomes as '-'
+	foreach my $genome(@{$self->_orderedNames}){
+		unless(defined $sequenceNames{$genome}){
+			$results{'NA_' . $genome}->{1}='-' x $alignmentLength;
 		}
 	}
 	return (\%results);
@@ -1063,13 +1075,11 @@ sub _getCoreResult {
 	# [11]qseq
 	my %startBpHash;
 	foreach my $res(@{$result}){
-#		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
 		$startBpHash{$res->[0]}=$res->[4];
 	}
 	
 	#add SNP information to the return
 	my $snpDetective = Modules::Alignment::SNPFinder->new(
-		 'orderedNames'=>$self->_orderedNames,
 		 'alignedFastaHash'=>$msaHash,
 		 'startBpHashRef'=>\%startBpHash,
 		 'resultNumber'=>$resultNumber,

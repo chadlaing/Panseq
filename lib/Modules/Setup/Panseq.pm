@@ -346,7 +346,7 @@ sub _createTree{
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
 		JOIN locus ON results.locus_id = locus.id
-		WHERE results.type = '$type'
+		WHERE results.type = '$type' AND results.copy = 1
 		ORDER BY locus.name, results.number ASC
 	};
 
@@ -366,6 +366,7 @@ sub _createTree{
 	my @row = $sth->fetchrow_array;
 	my $counter=0;
 	while(defined $row[0]){
+		$self->logger->debug("@row");
 		$counter++;
 	  	my @nextRow = $sth->fetchrow_array;
 	  	$loci{$row[0]}=$row[1];
