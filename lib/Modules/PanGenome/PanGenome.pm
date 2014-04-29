@@ -691,7 +691,6 @@ sub _processBlastXML {
 			$coreOrAccessory='accessory';
 		}
 	
-		$self->logger->debug("Locus name: " . $result->{$resultKeys[0]}->[0]->[1]);
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
@@ -726,17 +725,15 @@ sub _processBlastXML {
 				#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
 				#if not, we store an empty sequence to save space
 				
-				my $sequence='';
-				if($self->settings->storeAlleles){
-					$sequence = $hit->[10];
-				}
-				
-				$self->_insertIntoDb(
-					table=>'allele',
-					locus_id=>$counter,
-					contig_id=>$contigId,
-					sequence=>$sequence
-				);								
+			
+				if($self->settings->storeAlleles){				
+					$self->_insertIntoDb(
+						table=>'allele',
+						locus_id=>$counter,
+						contig_id=>$contigId,
+						sequence=>$hit->[10]
+					);
+				}						
 											
 				$self->_insertIntoDb(
 					table=>'results',
