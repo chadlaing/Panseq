@@ -127,9 +127,9 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, copy INTEGER, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, allele_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id), FOREIGN KEY(allele_id) REFERENCES allele(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, copy INTEGER, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
 	$self->_sqlString->{'results'}=[];
@@ -656,28 +656,6 @@ sub _getUniqueResultId{
 	return ($seed * 1000 * time());
 }
 
-
-sub _getNamesOfGenomesForThisResult{
-	my $self = shift;
-	my $result = shift;
-	
-	my %genomeNames;
-	foreach my $res(@{$result}){
-		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
-		
-		if(defined $genomeNames{$sn->name}){
-			my $copy = $genomeNames{$sn->name};
-			$copy++;
-			$genomeNames{$sn->name}->{$copy}=$res;
-		}
-		else{
-			$genomeNames{$sn->name}->{1}=$res;
-		}
-		
-	}
-	return \%genomeNames;
-}
-
 sub _processBlastXML {
 	my $self = shift;
 	my $blastFile = shift;
@@ -693,17 +671,11 @@ sub _processBlastXML {
 	my $totalResults=0;
 	
 	while(my $result = $blastResult->getNextResult){
-		$totalResults++;
-		$self->logger->debug("Result $totalResults processed from BlastResult.pm");
-		$self->logger->debug("Result array contains " . scalar(@{$result}) . " elements");
+		$totalResults++;		
 		
-		#store all results by SequenceName and in order of best to worst match
-		#$allResults->{copy#}=result
-		#use this to get the alleles with a copy number for output.
+		my @resultKeys = keys %{$result};
+		my $numberOfResults = scalar @resultKeys;
 		
-		my $allResults = $self->_getNamesOfGenomesForThisResult($result);
-		
-		my $numberOfResults = scalar keys %{$allResults};
 		unless($numberOfResults > 0){
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
@@ -719,18 +691,17 @@ sub _processBlastXML {
 			$coreOrAccessory='accessory';
 		}
 	
+		$self->logger->debug("Locus name: " . $result->{$resultKeys[0]}->[0]->[1]);
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
-			name=>$result->[0]->[1],
-			sequence=>$result->[0]->[11],
+			name=>$result->{$resultKeys[0]}->[0]->[1],
+			sequence=>$result->{$resultKeys[0]}->[0]->[11],
 			pan=>$coreOrAccessory
 		);
 		
-		
-		
 		foreach my $name(@{$self->_orderedNames}){			
-			if(defined $allResults->{$name}){
+			if(defined $result->{$name}){
 				next;
 			}			
 			my $contigId = $self->_contigIds->{'NA_' . $name};
@@ -746,75 +717,77 @@ sub _processBlastXML {
 					);
 		}
 		
-		foreach my $res(@{$result}){
-			my $contigId = $self->_contigIds->{$res->[0]};
-			#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
-			if($self->settings->storeAlleles){
+		foreach my $resKey(keys %{$result}){
+			my $hitNum = 0;
+			foreach my $hit(@{$result->{$resKey}}){
+				$hitNum++;
+				
+				my $contigId = $self->_contigIds->{$hit->[0]};
+				#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
+				#if not, we store an empty sequence to save space
+				
+				my $sequence='';
+				if($self->settings->storeAlleles){
+					$sequence = $hit->[10];
+				}
+				
 				$self->_insertIntoDb(
 					table=>'allele',
 					locus_id=>$counter,
 					contig_id=>$contigId,
-					sequence=>$res->[10]
-				);
-			}					
-										
-			$self->_insertIntoDb(
-				table=>'results',
-				type=>'binary',
-				contig_id=>$contigId,
-				locus_id=>$counter,
-				number=>$counter,
-				start_bp=>$res->[2],
-				end_bp=>$res->[3],
-				value=>1
-			);				
-		}	
-	
-		if($coreOrAccessory eq 'core'){
-			
-			#generate a MSA of all strains that contain sequence
-			#if the locus is core, we will send this MSA to the SNPFinder
-			my $msaHash = $self->_getHashOfFastaAlignment(
-				$self->_getMsa($result,$counter)
-			);
-			
-			#'outfmt'=>'"6 
-			# [0]sseqid 
-			# [1]qseqid 
-			# [2]sstart 
-			# [3]send 
-			# [4]qstart 
-			# [5]qend 
-			# [6]slen 
-			# [7]qlen 
-			# [8]pident 
-			# [9]length"',
-			# [10]sseq,
-			# [11]qseq		
-
-			#if it is a core result, send to SNP finding
-			$self->logger->debug("Core, adding to DB");
-			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
-			foreach my $cResult(@{$coreResults}){
-				$self->logger->debug("contig: " . $cResult->{'contig'} . "\n"
-				. "contig_id: " . $self->_contigIds->{$cResult->{'contig'}} . "\n"
-				. "number: " . $cResult->{'locusId'} . "\n"
-				. "locus_id: $counter\n"
-				. "start_bp: " .  $cResult->{'startBp'} . "\n"
-				. "end_bp: " . $cResult->{'startBp'} . "\n"
-				. "value: " . $cResult->{'value'} . "\n");
-				
-							
+					sequence=>$sequence,
+					copy=>$hitNum
+				);								
+											
 				$self->_insertIntoDb(
 					table=>'results',
-					type=>'snp',
-					contig_id=>$self->_contigIds->{$cResult->{'contig'}},
-					number=>$cResult->{'locusId'},
+					type=>'binary',
+					contig_id=>$contigId,
 					locus_id=>$counter,
-					start_bp=>$cResult->{'startBp'},
-					end_bp=>$cResult->{'startBp'},
-					value=>$cResult->{'value'}
+					number=>$counter,
+					start_bp=>$hit->[2],
+					end_bp=>$hit->[3],
+					value=>1
+				);				
+			}	
+		
+			if($coreOrAccessory eq 'core'){
+				
+				#generate a MSA of all strains that contain sequence
+				#if the locus is core, we will send this MSA to the SNPFinder
+				my $msaHash = $self->_getHashOfFastaAlignment(
+					$self->_getMsa($result,$counter)
 				);
+				
+				#'outfmt'=>'"6 
+				# [0]sseqid 
+				# [1]qseqid 
+				# [2]sstart 
+				# [3]send 
+				# [4]qstart 
+				# [5]qend 
+				# [6]slen 
+				# [7]qlen 
+				# [8]pident 
+				# [9]length"',
+				# [10]sseq,
+				# [11]qseq		
+	
+				#if it is a core result, send to SNP finding
+				$self->logger->debug("Core, adding to DB");
+				my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
+				foreach my $cResult(@{$coreResults}){								
+					$self->_insertIntoDb(
+						table=>'results',
+						type=>'snp',
+						contig_id=>$self->_contigIds->{$cResult->{'contig'}},
+						number=>$cResult->{'locusId'},
+						locus_id=>$counter,
+						start_bp=>$cResult->{'startBp'},
+						end_bp=>$cResult->{'startBp'},
+						value=>$cResult->{'value'}
+					);
+				}
 			}
 		}
 	}
@@ -825,7 +798,7 @@ sub _processBlastXML {
 
 =head2 _getMsa
 
-Take in a Modules::Alignment::BlastResult and generate a MSA of all hit sequences.
+Take in a Modules::Alignment::BlastResult and generate a MSA of all the TOP hit sequences.
 
 =cut
 
@@ -853,8 +826,8 @@ sub _getMsa{
 	# [9]length"',
 	# [10]sseq,
 	# [11]qseq
-	foreach my $res(@{$result}){
-		$tempInFH->print('>' . $res->[0] . "\n" . $res->[10] . "\n");
+	foreach my $resKey(keys %{$result}){
+		$tempInFH->print('>' . $result->{$resKey}->[0]->[0] . "\n" . $result->{$resKey}->[0]->[10] . "\n");
 	}
 		
 	my $systemLine = $self->settings->muscleExecutable . ' -in ' . $tempInFile . ' -out ' . $tempOutFile . ' -maxiters 3 -quiet';
@@ -1086,8 +1059,8 @@ sub _getCoreResult {
 	# [10]sseq,
 	# [11]qseq
 	my %startBpHash;
-	foreach my $res(@{$result}){
-		$startBpHash{$res->[0]}=$res->[4];
+	foreach my $resKey(keys %{$result}){
+		$startBpHash{$result->{$resKey}->[0]->[0]}=$result->{$resKey}->[0]->[4];
 	}
 	
 	#add SNP information to the return
