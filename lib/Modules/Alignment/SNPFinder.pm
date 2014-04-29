@@ -170,7 +170,7 @@ sub _getSingleBaseResult{
 			my $base;
 			my %resultHash=();
 					
-			$base = substr($alignedHashRef->{$contig}->{1},$position,1); 
+			$base = substr($alignedHashRef->{$contig},$position,1); 
 			my $dashOffset = $self->_dashOffset->{$contig};
 	
 			unless(defined $base){
