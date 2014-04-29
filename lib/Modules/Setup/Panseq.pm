@@ -371,6 +371,7 @@ sub _createTree{
 	  	my @nextRow = $sth->fetchrow_array;
 	  	$loci{$row[0]}=$row[1];
 	  	
+	  	$self->logger->debug("Pushing $row[1] onto $row[0]");
 	    push @{$results{$row[0]}},$row[1];
 
 	    if((!defined $nextRow[0]) || ($row[3] ne $nextRow[3])){

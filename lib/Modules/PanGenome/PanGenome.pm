@@ -543,7 +543,7 @@ sub _createAlleleFiles{
 	
 	$self->logger->info("Creating allele files");
 	my $sql=qq{
-		SELECT strain.name,locus.name,allele.sequence
+		SELECT strain.name,locus.name,allele.name,allele.sequence
 		FROM allele
 		JOIN contig ON allele.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
@@ -561,7 +561,7 @@ sub _createAlleleFiles{
 	my @row = $sth->fetchrow_array;	
 	while($row[0]){		
 		@nextRow = $sth->fetchrow_array;
-		push @outputBuffer,('>' . $row[0] . "\n" . $row[2] . "\n");
+		push @outputBuffer,('>' . $row[2] . "\n" . $row[3] . "\n");
 		
 	    if((!defined $nextRow[0]) || ($row[1] ne $nextRow[1])){   
 	    	$outFH->print("Locus ". $row[1] ."\n"); 	
