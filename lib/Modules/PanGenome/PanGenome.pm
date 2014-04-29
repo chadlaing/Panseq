@@ -127,9 +127,9 @@ sub _initDb{
 
 	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, allele_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id), FOREIGN KEY(allele_id) REFERENCES allele(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, copy INTEGER, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
+	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
 	
 	$dbh->disconnect();
 	$self->_sqlString->{'results'}=[];
@@ -735,8 +735,7 @@ sub _processBlastXML {
 					table=>'allele',
 					locus_id=>$counter,
 					contig_id=>$contigId,
-					sequence=>$sequence,
-					copy=>$hitNum
+					sequence=>$sequence
 				);								
 											
 				$self->_insertIntoDb(
@@ -756,7 +755,8 @@ sub _processBlastXML {
 				#generate a MSA of all strains that contain sequence
 				#if the locus is core, we will send this MSA to the SNPFinder
 				my $msaHash = $self->_getHashOfFastaAlignment(
-					$self->_getMsa($result,$counter)
+					$self->_getMsa($result,$counter),
+					$result
 				);
 				
 				#'outfmt'=>'"6 
@@ -855,45 +855,34 @@ name is based on the Modules::Fasta::SequenceName->name and
 sub _getHashOfFastaAlignment{
 	my $self = shift;
 	my $alignedFastaSequences=shift;
+	my $blastResult = shift;
 	
 	my %results;
-	my $header;
-	
-	my %copyNumber=();
-	my %sequenceNames = ();
+	my $header;	
 	
 	foreach my $line(@{$alignedFastaSequences}){
 		$line =~ s/\R//g;
 		
 		if($line =~ /^>(.+)/){		
 			$line =~ s/>//;			
-			$header= $line;
-			
-			if(defined $copyNumber{$header}){
-				$copyNumber{$header}++;
-			}
-			else{
-				$copyNumber{$header}=1;
-				my $sn = Modules::Fasta::SequenceName->new($header);
-				$sequenceNames{$sn->name}=1;
-			}
+			$header= $line;			
 		}
 		else{
 			if(defined $results{$header}){
-				$results{$header}->{$copyNumber{$header}} .= $line;
+				$results{$header} .= $line;
 				
 			}
 			else{
-				$results{$header}->{$copyNumber{$header}} = $line;
+				$results{$header} = $line;
 			}					
 		}
 	}
 	my @gn = keys %results;
-	my $alignmentLength = length($results{$gn[0]}->{1});
+	my $alignmentLength = length($results{$gn[0]});
 	#add all the missing genomes as '-'
 	foreach my $genome(@{$self->_orderedNames}){
-		unless(defined $sequenceNames{$genome}){
-			$results{'NA_' . $genome}->{1}='-' x $alignmentLength;
+		unless(defined $blastResult->{$genome}){
+			$results{'NA_' . $genome} = '-' x $alignmentLength;
 		}
 	}
 	return (\%results);
