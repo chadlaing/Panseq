@@ -595,12 +595,12 @@ sub _createOutputFile{
 	my $sql;
 	if($self->settings->storeAlleles){
 		$sql= qq{
-			SELECT results.locus_id,locus.name,strain.name,results.value,results.start_bp,results.end_bp,contig.name
+			SELECT locus.id,locus.name,strain.name,results.value,results.start_bp,results.end_bp,contig.name
 		}
 	}
 	else{
 		$sql = qq{
-			SELECT results.locus_id,strain.name,results.value,results.start_bp,results.end_bp,contig.name
+			SELECT locus.id,strain.name,results.value,results.start_bp,results.end_bp,contig.name
 		};
 	}		
 	$sql .=qq{
@@ -664,7 +664,16 @@ sub _getNamesOfGenomesForThisResult{
 	my %genomeNames;
 	foreach my $res(@{$result}){
 		my $sn = Modules::Fasta::SequenceName->new($res->[0]);
-		$genomeNames{$sn->name}=1;
+		
+		if(defined $genomeNames{$sn->name}){
+			my $copy = $genomeNames{$sn->name};
+			$copy++;
+			$genomeNames{$sn->name}->{$copy}=$res;
+		}
+		else{
+			$genomeNames{$sn->name}->{1}=$res;
+		}
+		
 	}
 	return \%genomeNames;
 }
@@ -687,9 +696,14 @@ sub _processBlastXML {
 		$totalResults++;
 		$self->logger->debug("Result $totalResults processed from BlastResult.pm");
 		$self->logger->debug("Result array contains " . scalar(@{$result}) . " elements");
-		my $allNames = $self->_getNamesOfGenomesForThisResult($result);
 		
-		my $numberOfResults = scalar keys %{$allNames};
+		#store all results by SequenceName and in order of best to worst match
+		#$allResults->{copy#}=result
+		#use this to get the alleles with a copy number for output.
+		
+		my $allResults = $self->_getNamesOfGenomesForThisResult($result);
+		
+		my $numberOfResults = scalar keys %{$allResults};
 		unless($numberOfResults > 0){
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
@@ -716,7 +730,7 @@ sub _processBlastXML {
 		
 		
 		foreach my $name(@{$self->_orderedNames}){			
-			if(defined $allNames->{$name}){
+			if(defined $allResults->{$name}){
 				next;
 			}			
 			my $contigId = $self->_contigIds->{'NA_' . $name};
@@ -728,8 +742,7 @@ sub _processBlastXML {
 						number=>$counter,
 						start_bp=>0,
 						end_bp=>0,
-						value=>0,
-						copy=>1
+						value=>0
 					);
 		}
 		
@@ -753,8 +766,7 @@ sub _processBlastXML {
 				number=>$counter,
 				start_bp=>$res->[2],
 				end_bp=>$res->[3],
-				value=>1,
-				copy=>1
+				value=>1
 			);				
 		}	
 	
@@ -784,13 +796,14 @@ sub _processBlastXML {
 			$self->logger->debug("Core, adding to DB");
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
 			foreach my $cResult(@{$coreResults}){
-				$self->logger->debug("contig_id: " . $self->_contigIds->{$cResult->{'contig'}} . "\n"
+				$self->logger->debug("contig: " . $cResult->{'contig'} . "\n"
+				. "contig_id: " . $self->_contigIds->{$cResult->{'contig'}} . "\n"
 				. "number: " . $cResult->{'locusId'} . "\n"
 				. "locus_id: $counter\n"
 				. "start_bp: " .  $cResult->{'startBp'} . "\n"
 				. "end_bp: " . $cResult->{'startBp'} . "\n"
-				. "value: " . $cResult->{'value'} . "\n"
-				. "copy: " . $cResult->{'copy'});
+				. "value: " . $cResult->{'value'} . "\n");
+				
 							
 				$self->_insertIntoDb(
 					table=>'results',
@@ -800,8 +813,7 @@ sub _processBlastXML {
 					locus_id=>$counter,
 					start_bp=>$cResult->{'startBp'},
 					end_bp=>$cResult->{'startBp'},
-					value=>$cResult->{'value'},
-					copy=>$cResult->{'copy'}
+					value=>$cResult->{'value'}
 				);
 			}
 		}

@@ -346,7 +346,7 @@ sub _createTree{
 		JOIN contig ON results.contig_id = contig.id
 		JOIN strain ON contig.strain_id = strain.id
 		JOIN locus ON results.locus_id = locus.id
-		WHERE results.type = '$type' AND results.copy = 1
+		WHERE results.type = '$type'
 		ORDER BY locus.name, results.number ASC
 	};
 

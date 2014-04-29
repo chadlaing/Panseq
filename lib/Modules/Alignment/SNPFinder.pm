@@ -166,11 +166,11 @@ sub _getSingleBaseResult{
 	
 	
 	foreach my $contig(sort keys %{$alignedHashRef}){
-		foreach my $copyNum(sort keys %{$alignedHashRef->{$contig}}){
+		
 			my $base;
 			my %resultHash=();
 					
-			$base = substr($alignedHashRef->{$contig}->{$copyNum},$position,1); 
+			$base = substr($alignedHashRef->{$contig}->{1},$position,1); 
 			my $dashOffset = $self->_dashOffset->{$contig};
 	
 			unless(defined $base){
@@ -201,11 +201,10 @@ sub _getSingleBaseResult{
 				contig=>$contig,
 				startBp=>$finalPosition,
 				value=>$base,
-				locusId=>$resultNumber,
-				copy=>$copyNum
+				locusId=>$resultNumber		
 			);			
 			push @currentResult,\%resultHash;
-		}
+		
 	}
 
 	#only need the case where there is an actual snp

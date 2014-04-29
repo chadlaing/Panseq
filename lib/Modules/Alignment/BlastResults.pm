@@ -81,7 +81,7 @@ sub _alleleCount{
 sub getNextResult{
 	my $self=shift;
 		
-	my @results;
+	my %results;
 	my $line = $self->_getStoredLine(); #on object creation, this is initialized with the first line
 	#$self->logger->debug("stored line: $line");
 
@@ -134,19 +134,19 @@ sub getNextResult{
 				$self->_alleleCount->{$sNameName}=$alleleCount;
 			
 				$self->logger->debug("Adding result for $sNameName, alleleCount $alleleCount");
-				push @results, \@la;
+				push @{$results{$sNameName}}, \@la;
 			}				
 		}		
 		
 		if(!defined $nextLa[0]){
 			$self->logger->debug("Next not defined\n\n");
 			$self->_alleleCount({});
-			return \@results;
+			return \%results;
 		}
 		elsif($la[1] ne $nextLa[1]){
 			$self->logger->debug("$la[1] NE to $nextLa[1]");
 			$self->_alleleCount({});
-			return \@results;			
+			return \%results;			
 		}
 		else{
 			$line = $nextLine;
