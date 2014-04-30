@@ -92,7 +92,7 @@ my %md5Sum=(
 	querySnpTable=>'f729e214ebbd1f044afed910398d5fa5',
 	queryBinaryPhylip=>'4a6fa93762c08dc189f71a2099ebed11',
 	querySnpPhylip=>'d0e24d6ad8da3ceb870d716d6b95ff4b',
-	queryAlleles=>'0281a6770ff31fb4037435bc7f3a2ee2'
+	queryAlleles=>'4fe0d068f6238d2e65e561f8191be0fa'
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
