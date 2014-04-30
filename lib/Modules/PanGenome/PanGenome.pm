@@ -705,15 +705,15 @@ sub _processBlastXML {
 			}			
 			my $contigId = $self->_contigIds->{'NA_' . $name};
 			$self->_insertIntoDb(
-						table=>'results',
-						type=>'binary',
-						contig_id=>$contigId,
-						locus_id=>$counter,
-						number=>$counter,
-						start_bp=>0,
-						end_bp=>0,
-						value=>0
-					);
+				table=>'results',
+				type=>'binary',
+				contig_id=>$contigId,
+				locus_id=>$counter,
+				number=>$counter,
+				start_bp=>0,
+				end_bp=>0,
+				value=>0
+			);
 		}
 		
 		foreach my $resKey(keys %{$result}){
@@ -737,6 +737,7 @@ sub _processBlastXML {
 				}						
 				
 				if($hitNum == 1){
+					$self->logger->debug("hitNum==1, query: " . $hit->[1]);
 					$self->_insertIntoDb(
 						table=>'results',
 						type=>'binary',
@@ -747,49 +748,49 @@ sub _processBlastXML {
 						end_bp=>$hit->[3],
 						value=>1
 					);	
-					
-					if($coreOrAccessory eq 'core'){
-						
-						#generate a MSA of all strains that contain sequence
-						#if the locus is core, we will send this MSA to the SNPFinder
-						my $msaHash = $self->_getHashOfFastaAlignment(
-							$self->_getMsa($result,$counter),
-							$result
-						);
-						
-						#'outfmt'=>'"6 
-						# [0]sseqid 
-						# [1]qseqid 
-						# [2]sstart 
-						# [3]send 
-						# [4]qstart 
-						# [5]qend 
-						# [6]slen 
-						# [7]qlen 
-						# [8]pident 
-						# [9]length"',
-						# [10]sseq,
-						# [11]qseq		
-			
-						#if it is a core result, send to SNP finding
-						$self->logger->debug("Core, adding to DB");
-						my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
-						foreach my $cResult(@{$coreResults}){								
-							$self->_insertIntoDb(
-								table=>'results',
-								type=>'snp',
-								contig_id=>$self->_contigIds->{$cResult->{'contig'}},
-								number=>$cResult->{'locusId'},
-								locus_id=>$counter,
-								start_bp=>$cResult->{'startBp'},
-								end_bp=>$cResult->{'startBp'},
-								value=>$cResult->{'value'}
-							);
-						} #foreach cResult
-					}#if core			
+								
 				} #if hitnum ==1							
 			}#foreach hit	
 		}#foreach resKey
+		
+		if($coreOrAccessory eq 'core'){			
+			#generate a MSA of all strains that contain sequence
+			#if the locus is core, we will send this MSA to the SNPFinder
+			my $msaHash = $self->_getHashOfFastaAlignment(
+				$self->_getMsa($result,$counter),
+				$result
+			);
+			
+			#'outfmt'=>'"6 
+			# [0]sseqid 
+			# [1]qseqid 
+			# [2]sstart 
+			# [3]send 
+			# [4]qstart 
+			# [5]qend 
+			# [6]slen 
+			# [7]qlen 
+			# [8]pident 
+			# [9]length"',
+			# [10]sseq,
+			# [11]qseq		
+	
+			#if it is a core result, send to SNP finding
+			$self->logger->debug("Core, adding to DB");
+			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
+			foreach my $cResult(@{$coreResults}){								
+				$self->_insertIntoDb(
+					table=>'results',
+					type=>'snp',
+					contig_id=>$self->_contigIds->{$cResult->{'contig'}},
+					number=>$cResult->{'locusId'},
+					locus_id=>$counter,
+					start_bp=>$cResult->{'startBp'},
+					end_bp=>$cResult->{'startBp'},
+					value=>$cResult->{'value'}
+				);
+			} #foreach cResult
+		}#if core
 	}#while result
 	$self->logger->info("Total results: $totalResults");
 	$self->_emptySqlBuffers();
