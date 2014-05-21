@@ -57,12 +57,13 @@ The following free, external programs must also be installed:
 
 This will run a test suite against the included test data to ensure that Panseq is configured and working correctly. All tests should pass. The default location for the external programs used by the test suite are as follows:
 
-	#program locations
-	my $blastDirectory = '/usr/bin/';
-	my $mummerDirectory = '/usr/bin/';
-	my $muscleExecutable = '/usr/bin/muscle';
+	blastDirectory = '/usr/bin/';
+	mummerDirectory = '/usr/bin/';
+	muscleExecutable = '/usr/bin/muscle';
 
-If your system setup is different, edit the t/output.t file, beginning at line 16 to change the directories where Blast+ and MUMmer reside, as well as the executable location for Muscle.
+If your system setup is different, pass the optional argument for each external program to the script. For example:
+
+	perl t/output.t --blastDirectory '/home/user/local_blast/' --mummerDirectory '/home/user/local_mummer/'  --muscleExecutable '/home/dir/muscle_executable'
 
 ## Running Panseq
 
@@ -118,6 +119,8 @@ Below is an example configuration file for panseq.pl:
 * 'storeAlleles' if set to 1, will store the allele matching the query sequence for each of the genomes.
 
 * 'nameOrId' defaults to id and determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files: pan_genome.txt core_snps.txt, binary_table.txt and snp_table.txt
+
+* 'frameshift' defaults to 1, and includes frameshift only differences in SNP counts. Old default behavior was to include only nucleotide differences, and can be recovered by setting this option to 0.
 
 ##Detailed explanation of Panseq
 

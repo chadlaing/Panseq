@@ -19,9 +19,9 @@ my $blastDirectory = '/usr/bin/';
 my $mummerDirectory = '/usr/bin/';
 my $muscleExecutable = '/usr/bin/muscle';
 
- GetOptions ('blastDirectory:s' => \$blastDirectory);
- GetOptions ('mummerDirectory:s' => \$mummerDirectory);
- GetOptions ('muscleExecutable:s' => \$muscleExecutable);
+ GetOptions ('blastDirectory:s' => \$blastDirectory,
+             'mummerDirectory:s' => \$mummerDirectory,
+             'muscleExecutable:s' => \$muscleExecutable);
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
