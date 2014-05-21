@@ -50,6 +50,12 @@ sub databaseHandle{
 	$self->{'_databaseHandle'}=shift // return $self->{'_databaseHandle'};
 }
 
+sub frameshift{
+	my $self=shift;
+	$self->{'_frameshift'}=shift // return $self->{'_frameshift'};
+}
+
+
 #methods
 sub _initialize{
 	my($self)=shift;
@@ -81,6 +87,10 @@ sub _initialize{
 		't'=>1,
 		'g'=>1
 	});
+
+	if($self->frameshift){
+		$self->allowableChars->{'-'}=1;
+	}
 
 	#init data structures
 	$self->_dashOffset({});

@@ -36,6 +36,11 @@ sub addMissingQuery{
 	$self->{'_addMissingQuery'} = shift // return $self->{'_addMissingQuery'};	
 }
 
+sub frameshift{
+	my $self=shift;
+	$self->{'_frameshift'} = shift // return $self->{'_frameshift'};
+}
+
 
 sub logger{
 	my $self=shift;
@@ -352,6 +357,10 @@ sub _setDefaults{
 	
 	unless(defined $self->overwrite){
 		$self->overwrite(0);
+	}
+
+	unless(defined $self->frameshift){
+		$self->frameshift(1);
 	}
 }
 

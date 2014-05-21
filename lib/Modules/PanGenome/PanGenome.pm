@@ -1058,6 +1058,7 @@ sub _getCoreResult {
 		 'alignedFastaHash'=>$msaHash,
 		 'startBpHashRef'=>\%startBpHash,
 		 'resultNumber'=>$resultNumber,
+		 'frameshift'=>$self->settings->frameshift
 	 );	
 	 my $snpDataArrayRef = $snpDetective->findSNPs();
 	 #this returns undef if there are no SNPs

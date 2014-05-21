@@ -9,6 +9,7 @@ use Digest::MD5;
 use IO::File;
 use File::Copy;
 use File::Basename;
+use Getopt::Long;
 
 my $type = $ARGV[0] // 'genomes';
 my $removeRun = $ARGV[1] // 1;
@@ -17,6 +18,10 @@ my $removeRun = $ARGV[1] // 1;
 my $blastDirectory = '/usr/bin/';
 my $mummerDirectory = '/usr/bin/';
 my $muscleExecutable = '/usr/bin/muscle';
+
+ GetOptions ('blastDirectory:s' => \$blastDirectory);
+ GetOptions ('mummerDirectory:s' => \$mummerDirectory);
+ GetOptions ('muscleExecutable:s' => \$muscleExecutable);
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
@@ -60,7 +65,7 @@ my %queryConfig=(
 my %genomesConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/genomes/",
 	baseDirectory=>"$SCRIPT_LOCATION/genomes/",
-	numberOfCores=>1,
+	numberOfCores=>4,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"1000",
