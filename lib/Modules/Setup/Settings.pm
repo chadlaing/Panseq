@@ -360,7 +360,7 @@ sub _setDefaults{
 	}
 
 	unless(defined $self->frameshift){
-		$self->frameshift(1);
+		$self->frameshift(0);
 	}
 }
 

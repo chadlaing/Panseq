@@ -120,7 +120,7 @@ Below is an example configuration file for panseq.pl:
 
 * 'nameOrId' defaults to id and determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files: pan_genome.txt core_snps.txt, binary_table.txt and snp_table.txt
 
-* 'frameshift' defaults to 1, and includes frameshift only differences in SNP counts. Old default behavior was to include only nucleotide differences, and can be recovered by setting this option to 0.
+* 'frameshift' defaults to 0, and includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
 
 ##Detailed explanation of Panseq
 

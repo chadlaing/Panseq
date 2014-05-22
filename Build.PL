@@ -30,7 +30,8 @@ my $build=Module::Build->new(
 		'Archive::Zip'=>0,
 		'Test::Pretty'=>0,
 		'DBI'=>0,
-		'DBD::SQLite'=>0
+		'DBD::SQLite'=>0,
+		'Getopt::Long'=>0
 	}
 );
 $build->create_build_script();
