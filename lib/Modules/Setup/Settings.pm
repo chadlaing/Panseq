@@ -244,7 +244,7 @@ sub _getSettingsFromConfigurationFile {
 			next unless $line =~ m/\t/;
 			
 			$line =~ s/\R//g;
-			my @la = split(/\t/,$line);
+			my @la = split(/\s+/,$line);
 
 			my $setting = $la[0] // $self->_noValueSet('name');
 			my $value   = $la[1] // $self->_noValueSet($la[0]);
