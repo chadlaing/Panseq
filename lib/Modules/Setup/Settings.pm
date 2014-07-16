@@ -241,7 +241,7 @@ sub _getSettingsFromConfigurationFile {
 		my $inFile = IO::File->new( '<' . $fileName ) or die "\nCannot open $fileName\n $!";
 		
 		while ( my $line = $inFile->getline ) {
-			next unless $line =~ m/\t/;
+			next unless $line =~ m/\s+/;
 			
 			$line =~ s/\R//g;
 			my @la = split(/\s+/,$line);
