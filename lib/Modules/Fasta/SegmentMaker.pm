@@ -117,6 +117,13 @@ sub segmentSize{
 	$self->{'__segmentSize'} = shift // return $self->{'__segmentSize'};	
 }
 
+sub _fragmentHash{
+	my $self=shift;
+	$self->{'__fragmentHash'} = shift // return $self->{'__fragmentHash'};	
+}
+
+
+
 
 ##methods
 sub _initialize{
@@ -147,6 +154,8 @@ sub _initialize{
 			to be defined. Missing one or more parameters"
 		);
 	}
+
+	$self->_fragmentHash({});
 }
 
 sub segmentTheSequence{
@@ -159,30 +168,54 @@ sub segmentTheSequence{
 		
 	while(my $seq = $inFH->next_seq()){
 		#if twice fragmentation size, print fragmentation size, else print whole thing
-		for(my $i=1; $i<=$seq->length; $i+=$self->segmentSize){
-			my $endCalc = ($i + (2 * $self->segmentSize) -1);
-			my $end =  ($endCalc > $seq->length) ? $seq->length : ($endCalc - $self->segmentSize);
-			my $start = $i;
-			
-			my $id = $seq->id() . $seq->desc();
-			$id =~ s/\s/_/g;
+		#store seq details in hashRef for use in the next_fragment iterator
+		$self->_fragmentHash->{sequence}=$seq;
+		$self->_fragmentHash->{position}=1;
+		my $id = $seq->id() . $seq->desc();
+		$id =~ s/\s/_/g;
+		$self->_fragmentHash->{newId} = $id;
 
-			#uses Roles::GetNewIdStartEnd to implement _getNewIdStartEnd
-			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
-			$relId .= '_(' . $relStart . '..' . $relEnd . ')';
-
-			my $tempSeq = Bio::Seq->new(
-				-seq => $seq->subseq($start,$end),
-				-id => $relId,
-				-accession_number => $seq->accession_number,
-				#-desc => $newDesc
-			);
-			$outputFH->write_seq($tempSeq);
-			last if $end == $seq->length; #this avoids duplicating the last segment of sequence
-		}			
+		while(my $frag = $self->next_fragment()){
+			$outputFH->write_seq($frag);
+		}		
 	}
 	$inFH->close();
 	$outputFH->close();
+}
+			
+
+sub next_fragment{
+	my $self = shift;
+
+	my $bpRemaining = $self->_fragmentHash->{sequence}->length() - $self->_fragmentHash->{position} + 1;
+	
+	my $bpToTake;
+	if($bpRemaining >= (2 * $self->segmentSize)){
+		$bpToTake = $self->segmentSize;
+	}
+	else{
+		$bpToTake = $bpRemaining;
+	}
+
+	my $start = $self->_fragmentHash->{position};
+	my $end = $start + $bpToTake -1;
+
+	if($start > $end){
+		return undef;
+	}
+
+	#uses Roles::GetNewIdStartEnd to implement _getNewIdStartEnd
+	my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($self->_fragmentHash->{newId},$start,$end);
+	$relId .= '_(' . $relStart . '..' . $relEnd . ')';
+
+	my $tempSeq = Bio::Seq->new(
+		-seq => $self->_fragmentHash->{sequence}->subseq($start,$end),
+		-id => $relId,
+		-accession_number => $self->_fragmentHash->{sequence}->accession_number,
+	);
+
+	$self->_fragmentHash->{position}=$end+1;
+	return $tempSeq;
 }
 
 1;

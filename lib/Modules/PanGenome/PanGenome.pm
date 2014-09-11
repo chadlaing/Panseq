@@ -669,7 +669,8 @@ sub _processBlastXML {
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
 	$self->logger->debug("About to get the first result");
 	my $totalResults=0;
-	
+	my $totalSeqLength=0;
+
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;		
 		
@@ -690,7 +691,8 @@ sub _processBlastXML {
 		else{
 			$coreOrAccessory='accessory';
 		}
-	
+		
+		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
 		$self->_insertIntoDb(
 			table=>'locus',
 			id=>$counter,
@@ -793,6 +795,7 @@ sub _processBlastXML {
 		}#if core
 	}#while result
 	$self->logger->info("Total results: $totalResults");
+	$self->logger->info("Total base pairs: $totalSeqLength");
 	$self->_emptySqlBuffers();
 }
 
