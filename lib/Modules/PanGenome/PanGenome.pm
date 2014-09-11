@@ -99,55 +99,12 @@ sub _initialize{
 		}
 	}	
 
-	#construct sqlite DB
-	$self->_sqlString({});
-	$self->_sqlSelectNumber({});
-	$self->_initDb();
-
 	#default values
 	unless(defined $self->panGenomeOutputFile){
 		$self->panGenomeOutputFile($self->settings->baseDirectory . 'pan_genome.txt');
 	}
 
 	$self->_currentResult(0);
-}
-
-sub _initDb{
-	my $self = shift;
-	
-	$self->logger->info("Initializing SQL DB");
-	#define SQLite db
-	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
-	
-	$dbh->do("DROP TABLE IF EXISTS results");
-	$dbh->do("DROP TABLE IF EXISTS strain");
-	$dbh->do("DROP TABLE IF EXISTS contig");
-	$dbh->do("DROP TABLE IF EXISTS locus");
-	$dbh->do("DROP TABLE IF EXISTS allele");
-
-	$dbh->do("CREATE TABLE strain(id INTEGER PRIMARY KEY not NULL, name TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE contig(id INTEGER PRIMARY KEY not NULL, name TEXT, strain_id INTEGER, FOREIGN KEY(strain_id) REFERENCES strain(sid))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE results(id INTEGER PRIMARY KEY not NULL, type TEXT, value TEXT, number INTEGER, start_bp TEXT, end_bp TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id),FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE locus(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, pan TEXT)") or $self->logger->logdie($dbh->errstr);
-	$dbh->do("CREATE TABLE allele(id INTEGER PRIMARY KEY not NULL, name TEXT, sequence TEXT, locus_id INTEGER, contig_id INTEGER, FOREIGN KEY(locus_id) REFERENCES locus(id), FOREIGN KEY(contig_id) REFERENCES contig(id))") or $self->logger->logdie($dbh->errstr);
-	
-	$dbh->disconnect();
-	$self->_sqlString->{'results'}=[];
-	$self->_sqlString->{'locus'}=[];
-	$self->_sqlString->{'allele'}=[];
-	$self->_sqlString->{'strain'}=[];
-	$self->_sqlString->{'contig'}=[];
-	$self->logger->info("SQL DB initialized");
-}
-
-=head2 _sqliteDb
-
-Used for temp file store / retrieval of the core / accessory creation.
-
-=cut
-sub _sqliteDb{
-	my $self = shift;
-	$self->{'__sqliteDb'} = shift // return $self->{'__sqliteDb'};
 }
 
 
@@ -264,16 +221,6 @@ sub _currentResult{
 	$self->{'__currentResult'}=shift // return $self->{'__currentResult'};
 }
 
-sub _sqlSelectNumber{
-	my $self=shift;
-	$self->{'__sqlSelectNumber'}=shift // return $self->{'__sqlSelectNumber'};
-}
-
-sub _sqlString{
-	my $self=shift;
-	$self->{'__sqlString'}=shift // return $self->{'__sqlString'};
-}
-
 sub _contigIds{
 	my $self=shift;
 	$self->{'_contigIds'}=shift // return $self->{'_contigIds'};
@@ -284,58 +231,6 @@ sub _locusId{
 	$self->{'_locusId'}=shift // return $self->{'_locusId'};
 }
 
-sub _populateStrainTable{
-	my $self=shift;
-	my $mfsn=shift;
-
-	my %contigIds;
-	my $counter=1;
-
-	#my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not connect to SQLite DB");
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
-	
-	my $strainId=0;
-	my @names = (sort keys %{$mfsn->sequenceNameHash});
-
-	foreach my $name(@names){
-		$strainId++;		
-
-		$self->_insertIntoDb(
-			table=>'strain',
-			id=>$strainId,
-			name=>$name
-		);
-
-		#add the no value case
-		my $missingContig = 'NA_' . $name;	
-
-		$self->_insertIntoDb(
-			table=>'contig',
-			strain_id=>$strainId,
-			name=>$missingContig
-		);
-		
-		$contigIds{$missingContig}=$counter;
-		$counter++;
-		
-		foreach my $contig(@{$mfsn->sequenceNameHash->{$name}->arrayOfHeaders}){
-			$self->_insertIntoDb(
-				table=>'contig',
-				strain_id=>$strainId,
-				name=>$contig
-			);
-			
-			$contigIds{$contig}=$counter;
-			$counter++;
-		}
-	}
-
-	$self->_emptySqlBuffers();
-	
-	$self->_sqliteDb->disconnect();
-	$self->logger->info("Strain table populated");
-	return \%contigIds;
-}
 
 sub run{
 	my $self=shift;
@@ -356,10 +251,10 @@ sub run{
 	foreach my $xml(sort @{$self->xmlFiles}){
 		$counter++;
 		$forker->start and next;
-			$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
+			
 			$self->_processBlastXML($xml,$counter);
 			#unlink $xml;
-			$self->_sqliteDb->disconnect();
+			
 		$forker->finish;
 	}
 	$forker->wait_all_children;
@@ -372,19 +267,12 @@ sub run{
 	
 	$self->logger->info("Processing blast output files complete");
 
-	#reopen database handle that has been closed from the forking above
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
-
-	$self->_createOutputFile('snp',$self->settings->baseDirectory . 'core_snps.txt');
-	$self->_createOutputFile('binary',$self->settings->baseDirectory . 'pan_genome.txt');
 	if($self->settings->storeAlleles == 1){
 		$self->_createAlleleFiles();
 	}
 	
-	#output the pan-genome with the correct locus IDs
-	$self->_createCoreAccessoryGenomes();
-	$self->_sqliteDb->disconnect();
-
+	
+	
 	$self->logger->info("Pan-genome generation complete");
 }
 
@@ -426,210 +314,6 @@ sub _getPanGenomeHashRef{
 
 
 
-=head2 _addQueryWithNoBlastHits
-
-If a user-supplied queryFile is used in place of pan-genome generation, the possibility
-exists for a "pan" fragment to have a hit in 0 genomes.
-This function allows for the outputting of such data.
-
-=cut
-
-sub _addQueryWithNoBlastHits{
-	my $self=shift;
-	
-	$self->logger->info("Adding query fragments with no blast hits");
-	#get list of all input query names
-	my $queryHashRef = $self->_getPanGenomeHashRef();
-	
-	$self->_sqliteDb(DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logdie("Could not create SQLite DB");
-	my $sql = "SELECT locus.name FROM locus ORDER BY locus.name ASC";
-	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
-	$sth->execute() or $self->logger->logdie($self->_sqliteDb->errstr);
-	
-	my %panHits;
-	while(my $row = $sth->fetchrow_arrayref){
-		$panHits{$row->[0]}=1;
-	}
-	
-	my $missingCounter=0;
-	foreach my $panQuery(sort keys %{$queryHashRef}){	
-		unless(defined $panHits{$panQuery}){
-			#add result if "pan" fragment is completely absent
-			my $id = $self->_getUniqueResultId(777) + $missingCounter;
-			
-			$self->_insertIntoDb(
-				table=>'locus',
-				id=>$id,
-				name=>$panQuery,
-				sequence=>$queryHashRef->{$panQuery},
-				pan=>'accessory'
-			);
-			
-			foreach my $name(@{$self->_orderedNames}){
-				$self->_insertIntoDb(
-					table=>'results',
-					type=>'binary',
-					contig_id=>$self->_contigIds->{'NA_' . $name},
-					locus_id=>$id,
-					number=>$id,
-					start_bp=>0,
-					end_bp=>0,
-					value=>'0'
-				);
-			}
-			$missingCounter++;
-		}
-	}	
-	$self->_emptySqlBuffers();
-	$self->_sqliteDb->disconnect();
-	$self->logger->info("$missingCounter query sequences added with no Blast hits");
-}
-
-=head2 _createCoreAccessoryGenomes
-
-Based on the user settings, output a fasta file for each
-of the core and accessory genomes.
-This is in complement to the panGenome that is output via the
-_outputPangenomeLocusIds() sub.
-
-=cut
-
-sub _createCoreAccessoryGenomes{
-	my $self=shift;
-	
-	$self->logger->info("Creating the core and accessory fasta files");
-	my $sql=qq{
-		SELECT locus.id, locus.name, locus.sequence, locus.pan
-		FROM locus
-		ORDER BY locus.id ASC
-	};
-	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
-	$sth->execute();
-	
-	my $coreFH = IO::File->new('>' . $self->settings->baseDirectory . 'coreGenomeFragments.fasta') or die "Could not open file coreGenomeFragments.fasta";
-	my $accessoryFH = IO::File->new('>' . $self->settings->baseDirectory . 'accessoryGenomeFragments.fasta') or die "Could not open file accessoryGenomeFragments.fasta";
-	my $panFH = IO::File->new('>' . $self->settings->baseDirectory . 'panGenomeFragments.fasta') or die "Could not open file panGenomeFragments.fasta";
-
-	while(my $row = $sth->fetchrow_arrayref){
-		my $output = '>lcl|' . $row->[0] . '|' . $row->[1] . "\n" . $row->[2] . "\n";
-		if($row->[3] eq 'core'){
-			$coreFH->print($output);
-		}
-		elsif($row->[3] eq 'accessory'){
-			$accessoryFH->print($output);
-		}
-		else{
-			$self->logger->logdie("Unknown type $row->[3]");
-		}
-		$panFH->print($output);
-	}
-	
-	$coreFH->close();
-	$accessoryFH->close();
-	$panFH->close();
-}
-
-
-=head2 _createAlleleFiles
-
-Given each input locus, create a file with the allele for each genome if present.
-Note that we use fetchrow_array rather than fethcrow_arrayref, as the same arrayref is returned each time.
-This results in row and nextRow being identical, and things fall apart.
-
-=cut
-
-sub _createAlleleFiles{
-	my $self=shift;
-	
-	$self->logger->info("Creating allele files");
-	my $sql=qq{
-		SELECT strain.name,locus.name,allele.name,allele.sequence
-		FROM allele
-		JOIN contig ON allele.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id
-		JOIN locus ON allele.locus_id = locus.id
-		ORDER BY locus.name,strain.name ASC
-	};
-	
-	my $sth = $self->_sqliteDb->prepare($sql);
-	$sth->execute();
-	
-	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . 'locus_alleles.fasta') or die "Could not open file locus_alleles.fasta";
-	my @nextRow;
-	my @outputBuffer;
-	
-	my @row = $sth->fetchrow_array;	
-	while($row[0]){		
-		@nextRow = $sth->fetchrow_array;
-		push @outputBuffer,('>' . $row[2] . "\n" . $row[3] . "\n");
-		
-	    if((!defined $nextRow[0]) || ($row[1] ne $nextRow[1])){   
-	    	$outFH->print("Locus ". $row[1] ."\n"); 	
-	    	$outFH->print(@outputBuffer);    	
-	    	@outputBuffer=();
-	    }  
-	   
-	    @row=@nextRow;
-	}
-	$outFH->close();
-}
-
-
-=head3 _createOutputFile
-
-Takes output filename and database table name from function call.
-
-=cut
-
-sub _createOutputFile{
-	my $self = shift;
-	my $type = shift;
-	my $outputFile = shift;
-
-	$self->logger->info("Creating output file $outputFile");
-
-	#print all rows from table
-	#SELECT * FROM TableA
-	#INNER JOIN TableB
-	#ON TableA.name = TableB.name
-	my $sql;
-	if($self->settings->storeAlleles){
-		$sql= qq{
-			SELECT locus.id,locus.name,strain.name,results.value,results.start_bp,results.end_bp,contig.name
-		}
-	}
-	else{
-		$sql = qq{
-			SELECT locus.id,strain.name,results.value,results.start_bp,results.end_bp,contig.name
-		};
-	}		
-	$sql .=qq{
-		FROM results
-		JOIN locus ON results.locus_id = locus.id
-		JOIN contig ON results.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id
-		WHERE results.type = '$type'
-		ORDER BY locus.name,strain.name,results.start_bp ASC
-	};
-
-	my $sth = $self->_sqliteDb->prepare($sql) or $self->logger->logdie($self->_sqliteDb->errstr . "\n$sql");
-	$sth->execute() or $self->logger->logdie($self->_sqliteDb->errstr);
-
-	my $outFH = IO::File->new('>' . $outputFile) or $self->logger->logdie("Could not create $outputFile");
-	#print header for output file
-	if($self->settings->storeAlleles){
-		$outFH->print("Locus Id\tLocus Name\tGenome\tAllele\tStart bp\tEnd bp\tContig\n");
-	}
-	else{
-		$outFH->print("Locus Id\tGenome\tAllele\tStart bp\tEnd bp\tContig\n");
-	}	
-	
-	while(my $row = $sth->fetchrow_arrayref){
-	    $outFH->print(join("\t",@{$row}) . "\n");
-	}
-	$outFH->close();	
-}
-
 sub _generateOrderedNamesArray{
 	my $self=shift;
 
@@ -665,11 +349,23 @@ sub _processBlastXML {
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
 	$counter = $self->_getUniqueResultId($counter);
-	#$self->logger->debug("Gather unique id $counter");
+	
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
 	$self->logger->debug("About to get the first result");
 	my $totalResults=0;
 	my $totalSeqLength=0;
+
+
+	#defintion not required, but these are the outputs we are storing
+	my %outputHash = (
+		binary_table=>'',
+		snp_table=>'',
+		coreGenomeFragments=>'',
+		accessoryGenomeFragments=>'',
+		core_snps=>'',
+		pan_genome=>'',
+		locus_alleles=>''
+	);
 
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;		
@@ -693,64 +389,45 @@ sub _processBlastXML {
 		}
 		
 		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
-		$self->_insertIntoDb(
-			table=>'locus',
+		
+		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$resultKeys[0]}->[0]->[1],
 			sequence=>$result->{$resultKeys[0]}->[0]->[11],
 			pan=>$coreOrAccessory
-		);
+		);	
 		
+		my %genomeResults;
 		foreach my $name(@{$self->_orderedNames}){			
-			if(defined $result->{$name}){
-				next;
-			}			
 			my $contigId = $self->_contigIds->{'NA_' . $name};
-			$self->_insertIntoDb(
-				table=>'results',
-				type=>'binary',
+
+			$genomeResults{$name}={
 				contig_id=>$contigId,
-				locus_id=>$counter,
-				number=>$counter,
-				start_bp=>0,
-				end_bp=>0,
-				value=>0
-			);
+				binary=>{
+						start_bp=>0,
+						end_bp=>0,
+						value=>0
+					}
+			}		
 		}
 		
-		foreach my $resKey(keys %{$result}){
+		foreach my $resKey(sort keys %{$result}){
 			my $hitNum = 0;
 			foreach my $hit(@{$result->{$resKey}}){
 				$hitNum++;
-				
 				my $contigId = $self->_contigIds->{$hit->[0]};
-				#if we generate a pan-genome, alleles need to be stored by setting storeAlleles 1 in the config file
-				#if not, we store an empty sequence to save space
-				
+				my $name = $hit->[0];
+
+				$genomeResults{$name}->{contig_id}=$contigId;
 			
-				if($self->settings->storeAlleles){				
-					$self->_insertIntoDb(
-						table=>'allele',
-						locus_id=>$counter,
-						contig_id=>$contigId,
-						name => $hit->[0] . '_-a' . $hitNum,
-						sequence=>$hit->[10]
-					);
+				if($self->settings->storeAlleles){
+					$genomeResults{$name}->{alleles}->{$name . '_a' . $hitNum} = $hit->[10];
 				}						
 				
-				if($hitNum == 1){
-					$self->logger->debug("hitNum==1, query: " . $hit->[1]);
-					$self->_insertIntoDb(
-						table=>'results',
-						type=>'binary',
-						contig_id=>$contigId,
-						locus_id=>$counter,
-						number=>$counter,
-						start_bp=>$hit->[2],
-						end_bp=>$hit->[3],
-						value=>1
-					);	
-								
+				if($hitNum == 1){		
+					$genomeResults->{$name}->{binary}->{start_bp}=$hit->[2];
+					$genomeResults->{$name}->{binary}->{end_bp}=$hit->[3];
+					$genomeResults->{$name}->{binary}->{value}=1;								
 				} #if hitnum ==1							
 			}#foreach hit	
 		}#foreach resKey
@@ -780,7 +457,9 @@ sub _processBlastXML {
 			#if it is a core result, send to SNP finding
 			$self->logger->debug("Core, adding to DB");
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
-			foreach my $cResult(@{$coreResults}){								
+			foreach my $cResult(@{$coreResults}){
+				
+
 				$self->_insertIntoDb(
 					table=>'results',
 					type=>'snp',
@@ -796,7 +475,6 @@ sub _processBlastXML {
 	}#while result
 	$self->logger->info("Total results: $totalResults");
 	$self->logger->info("Total base pairs: $totalSeqLength");
-	$self->_emptySqlBuffers();
 }
 
 
@@ -890,145 +568,6 @@ sub _getHashOfFastaAlignment{
 		}
 	}
 	return (\%results);
-}
-
-
-=head 2 _emptySqlBuffers
-
-We store the SQL statements to do 500 INSERT at a time.
-If any are left in the buffer, add them to the DB.
-
-=cut
-
-sub _emptySqlBuffers{
-	my $self=shift;
-	
-	#the reverse sort is because we need strain to come before contig,
-	#as contig uses the strain ID as a foreign key
-	foreach my $table(reverse sort keys %{$self->_sqlString}){
-		if(defined $self->_sqlString->{$table}->[0]){
-			#$self->logger->debug("$table defined, emptying buffers");
-			my $sqlString = join('',@{$self->_sqlString->{$table}});
-			$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
-			#actually empty the buffer, rahter than just print it out
-			$self->_sqlString->{$table}=[];
-		}
-		else{
-			#$self->logger->debug("$table not defined, not emptying");
-		}
-	}	
-}
-
-=head2 _insertIntoDb
-
-Take in a table name and any key/value pairs for DB entry.
-This is a generalized function that will not check anything beyond the fact
-that a parameter named 'table' exists.
-Stores all the entries in @keys, without 'table'.
-
-=cut
-
-
-sub _insertIntoDb{
-	my $self = shift;
-	my %params = @_;
-	
-	my @keys;
-	foreach my $key(sort keys %params){
-		if($key eq 'table'){
-			next;
-		}
-		push @keys, $key;
-	}
-	my $table = $params{'table'} // $self->logger->logdie("table required in _insertIntoDb");
-	#$self->logger->debug("\nTable: $table");
-	#taken from http://stackoverflow.com/questions/1609637/is-it-possible-to-insert-multiple-rows-at-a-time-in-an-sqlite-database
-	# INSERT INTO 'tablename'
- 	# SELECT 'data1' AS 'column1', 'data2' AS 'column2'
-	# UNION SELECT 'data3', 'data4'
-	# UNION SELECT 'data5', 'data6'
-	# UNION SELECT 'data7', 'data8'
-	# used UNION ALL due to performance increase (see comments of above linked thread)
-	# note that SQLite has default of SQLITE_MAX_COMPOUND_SELECT=500, so we need to account for this
-
-	# Customer
-	# ==================
-	# Customer_ID | Name
-
-	# Order
-	# ==============================
-	# Order_ID | Customer_ID | Price
-	# insert into "order" (customer_id, price) values \
-	# ((select customer_id from customer where name = 'John'), 12.34);
-
-	#http://www.daniweb.com/software-development/perl/threads/339979/assign-query-result-to-variable
-	#The following query should return only one row containing one integer.
-	# $sth=$dbh->prepare("SELECT 5 as lucky_number;") ||
-	# die "Prepare failed: $DBI::errstr\n";
-	# $sth->execute() ||
-	# die "Couldn't execute query: $DBI::errstr\n";
-	# my @record = $sth->fetchrow_array; #Assign result to array variable
-
-	my $sql=[];
-	if(defined $self->_sqlString->{$table}->[0]){
-		$sql = $self->_sqlString->{$table};
-		my $currentSql = "UNION ALL SELECT ";
-		
-		my $counter=0;
-		foreach my $key(@keys){
-			#$self->logger->debug("In SQL, key: $key, value: $params{$key}");
-			if($counter > 0){
-				$currentSql .= ", ";
-			}
-			
-			$currentSql .= "'$params{$key}'";
-			$counter++;
-		}
-		$currentSql .="\n";
-		
-		#$self->logger->debug("Adding to $table currentSql\n$currentSql");
-		push @{$sql},$currentSql;
-	}
-	else{		
-		my $currentSql = "INSERT INTO '$table' (";
-		my $counter=0;
-		foreach my $key(@keys){
-			if($counter > 0){
-				$currentSql .= ", ";
-			}
-			$currentSql .= "$key";
-			$counter++;
-		}
-		$currentSql .= ")\n";
-		
-		$currentSql .= "SELECT ";
-		
-		$counter=0;
-		foreach my $key(@keys){
-			if($counter > 0){
-				$currentSql .= ", ";
-			}
-			
-			$currentSql .= "'$params{$key}' AS '$key'";
-			$counter++;
-		}
-		$currentSql .="\n";
-		
-		#$self->logger->debug("Adding to $table initialSql\n$currentSql");
-		push @{$sql}, $currentSql;
-		#push @{$sql}, qq{INSERT INTO '$table' (value,start_bp,contig_id,locus_id) SELECT '$value' AS 'value', '$startBp' AS 'start_bp', '$contigId' AS 'contig_id', '$locusId' AS 'locus_id'};
-	}
-	
-	if(scalar(@{$sql})==500){
-		my $sqlString = join('',@{$sql});
-		#$self->logger->debug("performing DO with $sqlString");
-		$self->_sqliteDb->do($sqlString) or $self->logger->logdie("Could not perform SQL DO " . $self->_sqliteDb->errstr . "\n$sqlString");
-		$self->_sqlString->{$table}=[];
-	}
-	else{
-		#$self->logger->debug("Adding SQL string to array for table $table");
-		$self->_sqlString->{$table}=$sql;
-	}
 }
 
 
