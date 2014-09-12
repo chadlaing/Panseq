@@ -220,11 +220,6 @@ sub _currentResult{
 	$self->{'__currentResult'}=shift // return $self->{'__currentResult'};
 }
 
-sub _contigIds{
-	my $self=shift;
-	$self->{'_contigIds'}=shift // return $self->{'_contigIds'};
-}
-
 sub _locusId{
 	my $self=shift;
 	$self->{'_locusId'}=shift // return $self->{'_locusId'};
@@ -239,9 +234,6 @@ sub run{
 	my ($mfsn,$orderedNames)=$self->_generateOrderedNamesArray();
 	$self->_mfsn($mfsn);
 	$self->_orderedNames($orderedNames);
-
-	$self->logger->info("Populating the strain table");
-	$self->_contigIds($self->_populateStrainTable($self->_mfsn));
 
 	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
 	my $counter=0;
@@ -265,10 +257,6 @@ sub run{
 	}
 	
 	$self->logger->info("Processing blast output files complete");
-
-	if($self->settings->storeAlleles == 1){
-		$self->_createAlleleFiles();
-	}
 	
 	
 	
@@ -354,18 +342,7 @@ sub _processBlastXML {
 	my $totalResults=0;
 	my $totalSeqLength=0;
 
-
-	#defintion not required, but these are the outputs we are storing
-	my %outputHash = (
-		binary_table=>'',
-		snp_table=>'',
-		coreGenomeFragments=>'',
-		accessoryGenomeFragments=>'',
-		core_snps=>'',
-		pan_genome=>'',
-		locus_alleles=>''
-	);
-
+	my @finalResults;
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;		
 		
@@ -398,7 +375,7 @@ sub _processBlastXML {
 		
 		my %genomeResults;
 		foreach my $name(@{$self->_orderedNames}){			
-			my $contigId = $self->_contigIds->{'NA_' . $name};
+			my $contigId = 'NA_' . $name;
 
 			$genomeResults{$name}={
 				contig_id=>$contigId,
@@ -410,26 +387,23 @@ sub _processBlastXML {
 			}		
 		}
 		
-		my @hitNames;
-		foreach my $resKey(sort keys %{$result}){
-			my $hitNum = 0;
-			foreach my $hit(@{$result->{$resKey}}){
-				$hitNum++;
-				my $contigId = $self->_contigIds->{$hit->[0]};
-				my $name = $hit->[0];
-				push @hitNames, $name;
+		foreach my $name(sort keys %{$result}){
+			my $hitNum=0;
 
-				$genomeResults{$name}->{contig_id}=$contigId;
+			foreach my $hit(@{$result->{$name}}){
+				$hitNum++;
+				my $contigId = $hit->[0];
 			
-				if($self->settings->storeAlleles){
-					$genomeResults{$name}->{alleles}->{$name . '_a' . $hitNum} = $hit->[10];
-				}						
-				
 				if($hitNum == 1){		
 					$genomeResults{$name}->{binary}->{start_bp}=$hit->[2];
 					$genomeResults{$name}->{binary}->{end_bp}=$hit->[3];
 					$genomeResults{$name}->{binary}->{value}=1;								
-				} #if hitnum ==1							
+				} #if hitnum ==1
+				$genomeResults{$name}->{contig_id}=$contigId;
+			
+				if($self->settings->storeAlleles){
+					$genomeResults{$name}->{alleles}->{$name . '_a' . $hitNum} = $hit->[10];
+				}									
 			}#foreach hit	
 		}#foreach resKey
 		
@@ -457,29 +431,97 @@ sub _processBlastXML {
 	
 			#if it is a core result, send to SNP finding
 			$self->logger->debug("Core, adding to DB");
-			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
+			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);	
+
 			foreach my $cResult(@{$coreResults}){
-				
-				$self->logger->warn("coreResults: CONTIG: " . $self->_contigIds->{$cResult->{'contig'}});
-				# $self->_insertIntoDb(
-				# 	table=>'results',
-				# 	type=>'snp',
-				# 	contig_id=>$self->_contigIds->{$cResult->{'contig'}},
-				# 	number=>$cResult->{'locusId'},
-				# 	locus_id=>$counter,
-				# 	start_bp=>$cResult->{'startBp'},
-				# 	end_bp=>$cResult->{'startBp'},
-				# 	value=>$cResult->{'value'}
-				# );
+				my $sName = Modules::Fasta::SequenceName->new($cResult->{contig});
+
+				$genomeResults{$sName->name}={
+					snp=>{
+							start_bp=>$cResult->{startBp},
+							end_bp=>$cResult->{startBp},
+							value=>$cResult->{value},
+							snpId=>$cResult->{locusId}
+						}
+				};
 			} #foreach cResult
 		}#if core
+
+		my %result=(
+			locusInformation=>\%locusInformation,
+			genomeResults=>\%genomeResults
+		);
+		push @finalResults, \%result;
 	}#while result
+
+	$self->_printResults($blastFile, \@finalResults);
 	$self->logger->info("Total results: $totalResults");
 	$self->logger->info("Total base pairs: $totalSeqLength");
-	$self->logger->warn("Done testing");
-	exit(1);
 }
 
+
+sub _printResults{
+	my $self = shift;
+	my $blastFile = shift;
+	my $finalResults = shift;
+
+	$blastFile =~ s/\W//g;
+
+	my $binaryFileName = $self->settings->baseDirectory . 'binary_table.txt' . $blastFile;
+	my $binaryTableFH = IO::File->new('>>' . $binaryFileName) or die "$!";
+	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp_table.txt' . $blastFile) or die "$!";
+	my @tableFiles = ($binaryTableFH, $snpTableFH);
+
+	my $headerFlag=0;
+	if(-s $binaryFileName < 1){
+		$headerFlag=1;
+	}
+	
+	foreach my $finalResult(@{$finalResults}){
+		my $locusInformation = $finalResult->{locusInformation};
+		my $genomeResults = $finalResult->{genomeResults};
+
+		#for table files
+		foreach my $tableFH(@tableFiles){
+			if($headerFlag==1){				
+				foreach my $genome(@{$self->_orderedNames()}){
+					$tableFH->print("\t", $genome);
+				};
+				$headerFlag=0;
+			}
+
+			if($self->settings->nameOrId eq 'name'){
+				$tableFH->print("\n", $locusInformation->{name});
+			}
+			else{
+				$tableFH->print("\n", $locusInformation->{id});
+			}	
+		}
+		
+		foreach my $genome(@{$self->_orderedNames()}){			
+			#Table files
+			my $tableCounter = 0;
+			foreach my $tableFH(@tableFiles){
+				if($tableCounter==0){
+					$tableFH->print($genomeResults->{$genome}->{binary}->{value});
+				}
+				elsif($tableCounter==1){
+					if(defined $genomeResults->{$genome}->{snp}){
+						$tableFH->print("\t", $genomeResults->{$genome}->{snp}->{value});
+					}					
+				}
+				else{
+					$self->logger->fatal("table counter = $tableCounter");
+					exit(1);
+				}
+				$tableCounter++;
+			}#end table
+		}#end genome
+	}
+
+	$binaryTableFH->close();
+	$snpTableFH->close();
+}
 
 =head2 _getMsa
 
