@@ -284,7 +284,6 @@ sub _cleanUp{
 			($file =~ m/_withRefDirectory_temp/) ||
 			($file =~ m/lastNovelRegionsFile/) ||
 			($file =~ m/uniqueNovelRegions/) ||
-			($file =~ m/temp_sql\.db/) ||
 			($file =~ m/\.temp/)
 		){
 			unlink $file;
@@ -320,84 +319,6 @@ sub _createTreeFiles{
 	$forker->wait_all_children();
 }
 
-sub _createTree{
-	my $self=shift;
-	my $type = shift;
-	
-	$self->logger->info("Creating tree $type");
-	#define SQLite db
-	my $dbh = (DBI->connect("dbi:SQLite:dbname=" . $self->settings->baseDirectory . "temp_sql.db","","")) or $self->logger->logdie("Could not connect to SQLite DB");
-	
-	my $sql;
-	$self->logger->info("Name or id: " . $self->settings->nameOrId);
-
-	if($self->settings->nameOrId eq 'name'){
-		$sql = "SELECT strain.name,results.value, locus.name, results.number";
-	}
-	elsif($self->settings->nameOrId eq 'id'){
-		$sql = "SELECT strain.name,results.value, locus.id, results.number";
-	}
-	else{
-		$self->logger->logdie("Incorrect setting " . $self->settings->nameOrId . " in nameOrId. Expected name or id");
-	}
-	
-	$sql .= qq{
-		FROM results
-		JOIN contig ON results.contig_id = contig.id
-		JOIN strain ON contig.strain_id = strain.id
-		JOIN locus ON results.locus_id = locus.id
-		WHERE results.type = '$type'
-		ORDER BY locus.name, results.number ASC
-	};
-
-	my $sth = $dbh->prepare($sql);
-	my $didSucceed = $sth->execute();
-
-	unless($didSucceed){
-		$self->logger->fatal($self->logger->logdie("sth->execute fail" . $dbh->errstr . "\n$sql"));
-	}
-	
-	my $tableFH = IO::File->new('>' . $self->settings->baseDirectory . $type . '_table.txt') or $self->logger->logdie("$!");
-	my %results;
-	my %loci;
-	my $locus;
-	my @genomeOrder;
-	
-	my @row = $sth->fetchrow_array;
-	my $counter=0;
-	while(defined $row[0]){
-		$self->logger->debug("@row");
-		$counter++;
-	  	my @nextRow = $sth->fetchrow_array;
-	  	$loci{$row[0]}=$row[1];
-	  	
-	  	$self->logger->debug("Pushing $row[1] onto $row[0]");
-	    push @{$results{$row[0]}},$row[1];
-
-	    if((!defined $nextRow[0]) || ($row[3] ne $nextRow[3])){
-	    	unless(defined $genomeOrder[0]){
-	    		@genomeOrder = sort keys %loci;
-	    		$tableFH->print("\t" . join("\t",@genomeOrder) . "\n");
-	    	}
-	    	$tableFH->print($row[2]);
-	    	foreach my $genome(@genomeOrder){
-	    		$tableFH->print("\t" . $loci{$genome});
-	    	}
-	    	$tableFH->print("\n");
-	    }
-	    @row=@nextRow;  
-	}
-	
-	
-	$dbh->disconnect();
-	$tableFH->close();	
-
-	my $nameConversion = $self->_printPhylipFile($type,\%results);
-	
-	if($type eq 'binary'){
-		$self->_printConversionInformation($nameConversion);
-	}	
-}
 
 sub _printPhylipFile{
 	my $self=shift;
