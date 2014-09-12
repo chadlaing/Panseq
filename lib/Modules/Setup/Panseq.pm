@@ -52,7 +52,6 @@ use Carp;
 use File::Copy;
 use Archive::Zip;
 use Role::Tiny::With;
-use DBI;
 
 with 'Roles::CombineFilesIntoSingleFile';
 

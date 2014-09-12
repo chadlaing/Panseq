@@ -55,7 +55,6 @@ use Modules::Alignment::SNPFinder;
 use Modules::Alignment::BlastResults;
 use Modules::Fasta::SequenceName;
 use Modules::Fasta::MultiFastaSequenceName;
-use DBI;
 use Role::Tiny::With;
 
 with 'Roles::CombineFilesIntoSingleFile';
@@ -411,12 +410,14 @@ sub _processBlastXML {
 			}		
 		}
 		
+		my @hitNames;
 		foreach my $resKey(sort keys %{$result}){
 			my $hitNum = 0;
 			foreach my $hit(@{$result->{$resKey}}){
 				$hitNum++;
 				my $contigId = $self->_contigIds->{$hit->[0]};
 				my $name = $hit->[0];
+				push @hitNames, $name;
 
 				$genomeResults{$name}->{contig_id}=$contigId;
 			
@@ -425,9 +426,9 @@ sub _processBlastXML {
 				}						
 				
 				if($hitNum == 1){		
-					$genomeResults->{$name}->{binary}->{start_bp}=$hit->[2];
-					$genomeResults->{$name}->{binary}->{end_bp}=$hit->[3];
-					$genomeResults->{$name}->{binary}->{value}=1;								
+					$genomeResults{$name}->{binary}->{start_bp}=$hit->[2];
+					$genomeResults{$name}->{binary}->{end_bp}=$hit->[3];
+					$genomeResults{$name}->{binary}->{value}=1;								
 				} #if hitnum ==1							
 			}#foreach hit	
 		}#foreach resKey
@@ -459,22 +460,24 @@ sub _processBlastXML {
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);		
 			foreach my $cResult(@{$coreResults}){
 				
-
-				$self->_insertIntoDb(
-					table=>'results',
-					type=>'snp',
-					contig_id=>$self->_contigIds->{$cResult->{'contig'}},
-					number=>$cResult->{'locusId'},
-					locus_id=>$counter,
-					start_bp=>$cResult->{'startBp'},
-					end_bp=>$cResult->{'startBp'},
-					value=>$cResult->{'value'}
-				);
+				$self->logger->warn("coreResults: CONTIG: " . $self->_contigIds->{$cResult->{'contig'}});
+				# $self->_insertIntoDb(
+				# 	table=>'results',
+				# 	type=>'snp',
+				# 	contig_id=>$self->_contigIds->{$cResult->{'contig'}},
+				# 	number=>$cResult->{'locusId'},
+				# 	locus_id=>$counter,
+				# 	start_bp=>$cResult->{'startBp'},
+				# 	end_bp=>$cResult->{'startBp'},
+				# 	value=>$cResult->{'value'}
+				# );
 			} #foreach cResult
 		}#if core
 	}#while result
 	$self->logger->info("Total results: $totalResults");
 	$self->logger->info("Total base pairs: $totalSeqLength");
+	$self->logger->warn("Done testing");
+	exit(1);
 }
 
 
