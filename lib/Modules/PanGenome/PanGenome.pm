@@ -260,6 +260,11 @@ sub run{
 		'binary_table',
 		$self->settings->baseDirectory . 'binary_table.txt'
 	);
+
+	$self->_combineFilesOfType(
+		'pan_genome',
+		$self->settings->baseDirectory . 'pan_genome.txt'
+	);
 	
 
 	#add entries for query segments that have no Blast hits
@@ -512,7 +517,9 @@ sub _printResults{
 		};	
 
 		#for pan_genome and core_snps
-
+		my $headerLine = "\tLocusID\tLocusName\tGenome\tAllele\tStart Bp\tEnd Bp\tContig";
+		$panGenomeFH->print($headerLine);
+		$coreSnpsFH->print($headerLine);
 	}
 	
 	foreach my $finalResult(@{$finalResults}){
@@ -533,9 +540,28 @@ sub _printResults{
 
 			if(defined $genomeResults->{$genome}->{binary}){
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
+				
+				#pan-genome output			
+				$panGenomeFH->print(
+					"\n",
+					$locusInformation->{id},
+					"\t",
+					$locusInformation->{name},
+					"\t",
+					$genome,
+					"\t",
+					$genomeResults->{$genome}->{binary}->[0]->{value},
+					"\t",
+					$genomeResults->{$genome}->{binary}->[0]->{start_bp},
+					"\t",
+					$genomeResults->{$genome}->{binary}->[0]->{end_bp},
+					"\t",
+					$genomeResults->{$genome}->{binary}->[0]->{contig_id}
+				);
 			}
 			else{
-				
+				$self->logger->fatal("No binary result for $genome");
+				exit(1);
 			}		
 			
 				
@@ -570,6 +596,9 @@ sub _printResults{
 
 	$snpTableFH->print("\n");
 	$snpTableFH->close();
+
+	$panGenomeFH->print("\n");
+	$panGenomeFH->close();
 }
 
 
