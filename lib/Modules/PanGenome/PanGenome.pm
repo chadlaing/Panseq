@@ -501,15 +501,18 @@ sub _printResults{
 	my $binaryFileName = $self->settings->baseDirectory . 'binary_table.txt' . $blastFile;
 	my $binaryTableFH = IO::File->new('>>' . $binaryFileName) or die "$!";
 	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp_table.txt' . $blastFile) or die "$!";
-	my @tableFiles = ($binaryTableFH, $snpTableFH);
-
+	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . 'pan_genome.txt' . $blastFile) or die "$!";
+	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . 'core_snps.txt' . $blastFile) or die "$!";
 
 	if(-s $binaryFileName < 1){
 		#for table files			
 		foreach my $genome(@{$self->_orderedNames()}){
 			$binaryTableFH->print("\t", $genome);
 			$snpTableFH->print("\t", $genome);
-		};			
+		};	
+
+		#for pan_genome and core_snps
+
 	}
 	
 	foreach my $finalResult(@{$finalResults}){
