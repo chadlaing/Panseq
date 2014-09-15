@@ -509,6 +509,8 @@ sub _printResults{
 	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . 'pan_genome.txt' . $blastFile) or die "$!";
 	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . 'core_snps.txt' . $blastFile) or die "$!";
 
+	my @fileHandles = ($binaryTableFH, $snpTableFH, $panGenomeFH, $coreSnpsFH);
+
 	if(-s $binaryFileName < 1){
 		#for table files			
 		foreach my $genome(@{$self->_orderedNames()}){
@@ -591,14 +593,10 @@ sub _printResults{
 		}
 	}
 
-	$binaryTableFH->print("\n");
-	$binaryTableFH->close();
-
-	$snpTableFH->print("\n");
-	$snpTableFH->close();
-
-	$panGenomeFH->print("\n");
-	$panGenomeFH->close();
+	foreach my $fh(@fileHandles){
+		$fh->print("\n");
+		$fh->close();
+	}	
 }
 
 
