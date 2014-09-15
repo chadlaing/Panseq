@@ -24,6 +24,7 @@ sub _combineFilesIntoSingleFile{
 	my $filesToCombine = shift // $self->logger->logdie("_combineFilesIntoSingleFile requires files in an array ref");
     my $outputFile = shift // $self->logger->logdie("outputFile required in _combineFilesIntoSingleFile $!");
     my $append = shift // 0;
+    my $firstLineAdjust = shift // 0;
 
     my $outFH;
 
@@ -36,6 +37,8 @@ sub _combineFilesIntoSingleFile{
     }
      
     $self->logger->debug("Combining files:");
+
+    my $firstFile = 1;
 	foreach my $file(@{$filesToCombine}){
         unless(-s $file > 0){
             $self->logger->info("Skipping $file as it has size of 0");
@@ -44,8 +47,15 @@ sub _combineFilesIntoSingleFile{
 
         $self->logger->info("Adding $file to $outputFile");
         my $inFH = IO::File->new('<' . $file) or $self->logger->logdie("Cannot open $file $!");
+
+        if($firstLineAdjust && $firstFile > 1){
+            $self->logger->info("Discarding first line");
+            $inFH->getline();
+        }        
         $outFH->print($inFH->getlines);
         $inFH->close();
+
+        $firstFile++;
 	}
     $outFH->close();
     return $outputFile;

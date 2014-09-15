@@ -249,7 +249,19 @@ sub run{
 		$forker->finish;
 	}
 	$forker->wait_all_children;
+
+	#combine into single files
+	$self->_combineFilesOfType(
+		'snp_table',
+		$self->settings->baseDirectory . 'snp_table.txt'
+	);
+
+	$self->_combineFilesOfType(
+		'binary_table',
+		$self->settings->baseDirectory . 'binary_table.txt'
+	);
 	
+
 	#add entries for query segments that have no Blast hits
 	if($self->settings->addMissingQuery){
 		$self->logger->debug("queryFile specified as " . $self->settings->queryFile);
@@ -365,7 +377,6 @@ sub _processBlastXML {
 		}
 		
 		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
-		
 		
 		my %locusInformation = (
 			id=>$counter,
@@ -556,9 +567,37 @@ sub _printResults{
 		}
 	}
 
+	$binaryTableFH->print("\n");
 	$binaryTableFH->close();
+
+	$snpTableFH->print("\n");
 	$snpTableFH->close();
 }
+
+
+sub _combineFilesOfType{
+	my $self = shift;
+	my $fileNamePart = shift;
+	my $outputFile = shift;
+
+	$self->logger->warn("Combining files $fileNamePart");
+	#use Roles::CombineFilesIntoSingleFile
+	my $fileNames = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
+	my @matchedFiles = grep(/$fileNamePart/, @{$fileNames});
+
+	$self->_combineFilesIntoSingleFile(
+		\@matchedFiles,
+		$outputFile,
+		0, #append
+		1 #firstLine
+	); 
+
+	#delete original files
+	foreach my $file(@matchedFiles){
+		unlink $file;
+	}
+}
+
 
 =head2 _getMsa
 
