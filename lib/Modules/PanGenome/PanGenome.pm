@@ -503,31 +503,26 @@ sub _printResults{
 	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp_table.txt' . $blastFile) or die "$!";
 	my @tableFiles = ($binaryTableFH, $snpTableFH);
 
-	my $headerFlag=0;
+
 	if(-s $binaryFileName < 1){
-		$headerFlag=1;
+		#for table files			
+		foreach my $genome(@{$self->_orderedNames()}){
+			$binaryTableFH->print("\t", $genome);
+			$snpTableFH->print("\t", $genome);
+		};			
 	}
 	
 	foreach my $finalResult(@{$finalResults}){
 		my $locusInformation = $finalResult->{locusInformation};
 		my $genomeResults = $finalResult->{genomeResults};
 
-		#for table files
-		foreach my $tableFH(@tableFiles){
-			if($headerFlag==1){				
-				foreach my $genome(@{$self->_orderedNames()}){
-					$tableFH->print("\t", $genome);
-				};			
-			}			
-		}
 		if($self->settings->nameOrId eq 'name'){
 			$binaryTableFH->print("\n", $locusInformation->{name});
 		}
 		else{
 			$binaryTableFH->print("\n", $locusInformation->{id});
 		}
-		$headerFlag=0;
-		
+				
 		my $genomeCounter=1;
 		my $snpArray=[];
 		foreach my $genome(@{$self->_orderedNames()}){			
