@@ -366,10 +366,7 @@ sub _processBlastXML {
 		
 		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
 		
-		my $DEBUG = 0;
-		if('gi|257767827|dbj|AP010963.1|_Escherichia_coli_O111_H__str._11128_plasmid_pO111_3_DNA__complete_sequence_(14506..15005)' eq $result->{$resultKeys[0]}->[0]->[1]){
-			$DEBUG = 1;
-		}
+		
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$resultKeys[0]}->[0]->[1],
@@ -379,9 +376,7 @@ sub _processBlastXML {
 		
 		my %genomeResults;
 		foreach my $name(@{$self->_orderedNames}){	
-			if($DEBUG){
-				$self->logger->warn("adding to array MISSING HIT DEFAULT");
-			}
+			
 			$genomeResults{$name}={
 				binary => [
 					{contig_id=>"NA",					
@@ -402,32 +397,32 @@ sub _processBlastXML {
 				$hitNum++;
 				my $contigId = $hit->[0];
 
-				# if($hitNum == 1){		
-				# 	$genomeResults{$name}->{binary} = [
-				# 		{
-				# 			contig_id=>$contigId,
-				# 			start_bp =>$hit->[2],
-				# 			end_bp =>$hit->[3],
-				# 			value =>1,
-				# 			id=>$counter
-				# 		}
-				# 	]								
-				# }
-				# else{
-				# 	push @{$genomeResults{$name}->{binary}},{
-				# 		{
-				# 			contig_id=>$contigId,
-				# 			start_bp =>$hit->[2],
-				# 			end_bp =>$hit->[3],
-				# 			value =>1,
-				# 			id=>$counter
-				# 		}
-				# 	}
-				# }				
+				if($hitNum == 1){		
+					$genomeResults{$name}->{binary} = [
+						{
+							contig_id=>$contigId,
+							start_bp =>$hit->[2],
+							end_bp =>$hit->[3],
+							value =>1,
+							id=>$counter
+						}
+					]								
+				}
+				else{
+					push @{$genomeResults{$name}->{binary}},{
+						{
+							contig_id=>$contigId,
+							start_bp =>$hit->[2],
+							end_bp =>$hit->[3],
+							value =>1,
+							id=>$counter
+						}
+					}
+				}				
 			
-				# if($self->settings->storeAlleles){
-				# 	push @{$genomeResults{$name}->{alleles}}, {$name . '_a' . $hitNum => $hit->[10]};
-				# }									
+				if($self->settings->storeAlleles){
+					push @{$genomeResults{$name}->{alleles}}, {$name . '_a' . $hitNum => $hit->[10]};
+				}									
 			}#foreach hit	
 		}#foreach name
 		
@@ -476,10 +471,7 @@ sub _processBlastXML {
 			genomeResults=>\%genomeResults
 		);
 		push @finalResults, \%result;
-		$self->logger->warn("Pushing result $counter onto array");
-		foreach my $genome(keys %genomeResults){
-			$self->logger->warn("Pushed result contains: $genome");
-		}
+
 	}#while result
 
 	$self->_printResults($blastFile, \@finalResults);
@@ -531,7 +523,7 @@ sub _printResults{
 			#Table files
 
 			if(defined $genomeResults->{$genome}->{binary}){
-				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{contig_id});
+				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
 			}
 			else{
 				
