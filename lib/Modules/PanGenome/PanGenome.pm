@@ -366,6 +366,10 @@ sub _processBlastXML {
 		
 		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
 		
+		my $DEBUG = 0;
+		if('gi|257767827|dbj|AP010963.1|_Escherichia_coli_O111_H__str._11128_plasmid_pO111_3_DNA__complete_sequence_(14506..15005)' eq $result->{$resultKeys[0]}->[0]->[1]){
+			$DEBUG = 1;
+		}
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$resultKeys[0]}->[0]->[1],
@@ -374,17 +378,21 @@ sub _processBlastXML {
 		);	
 		
 		my %genomeResults;
-		foreach my $name(@{$self->_orderedNames}){			
-			my $contigId = 'NA_' . $name;
-
+		foreach my $name(@{$self->_orderedNames}){	
+			if($DEBUG){
+				$self->logger->warn("adding to array MISSING HIT DEFAULT");
+			}
 			$genomeResults{$name}={
-				contig_id=>$contigId,
-				binary=>{
-						start_bp=>0,
-						end_bp=>0,
-						value=>0
+				binary => [
+					{contig_id=>"NA",					
+					 start_bp=>0,
+					 end_bp=>0,
+					 value=>0,
+					 id=>$counter
 					}
-			}		
+				],
+				alleles=>[]
+			}			
 		}
 		
 		foreach my $name(sort keys %{$result}){
@@ -393,19 +401,35 @@ sub _processBlastXML {
 			foreach my $hit(@{$result->{$name}}){
 				$hitNum++;
 				my $contigId = $hit->[0];
+
+				# if($hitNum == 1){		
+				# 	$genomeResults{$name}->{binary} = [
+				# 		{
+				# 			contig_id=>$contigId,
+				# 			start_bp =>$hit->[2],
+				# 			end_bp =>$hit->[3],
+				# 			value =>1,
+				# 			id=>$counter
+				# 		}
+				# 	]								
+				# }
+				# else{
+				# 	push @{$genomeResults{$name}->{binary}},{
+				# 		{
+				# 			contig_id=>$contigId,
+				# 			start_bp =>$hit->[2],
+				# 			end_bp =>$hit->[3],
+				# 			value =>1,
+				# 			id=>$counter
+				# 		}
+				# 	}
+				# }				
 			
-				if($hitNum == 1){		
-					$genomeResults{$name}->{binary}->{start_bp}=$hit->[2];
-					$genomeResults{$name}->{binary}->{end_bp}=$hit->[3];
-					$genomeResults{$name}->{binary}->{value}=1;								
-				} #if hitnum ==1
-				$genomeResults{$name}->{contig_id}=$contigId;
-			
-				if($self->settings->storeAlleles){
-					$genomeResults{$name}->{alleles}->{$name . '_a' . $hitNum} = $hit->[10];
-				}									
+				# if($self->settings->storeAlleles){
+				# 	push @{$genomeResults{$name}->{alleles}}, {$name . '_a' . $hitNum => $hit->[10]};
+				# }									
 			}#foreach hit	
-		}#foreach resKey
+		}#foreach name
 		
 		if($coreOrAccessory eq 'core'){			
 			#generate a MSA of all strains that contain sequence
@@ -436,14 +460,14 @@ sub _processBlastXML {
 			foreach my $cResult(@{$coreResults}){
 				my $sName = Modules::Fasta::SequenceName->new($cResult->{contig});
 
-				$genomeResults{$sName->name}={
-					snp=>{
+				$genomeResults{$sName->name}->{snp}=
+					{
+						$cResult->{locusId}=>{
 							start_bp=>$cResult->{startBp},
 							end_bp=>$cResult->{startBp},
-							value=>$cResult->{value},
-							snpId=>$cResult->{locusId}
+							value=>$cResult->{value}
 						}
-				};
+					};
 			} #foreach cResult
 		}#if core
 
@@ -452,6 +476,10 @@ sub _processBlastXML {
 			genomeResults=>\%genomeResults
 		);
 		push @finalResults, \%result;
+		$self->logger->warn("Pushing result $counter onto array");
+		foreach my $genome(keys %genomeResults){
+			$self->logger->warn("Pushed result contains: $genome");
+		}
 	}#while result
 
 	$self->_printResults($blastFile, \@finalResults);
@@ -486,37 +514,54 @@ sub _printResults{
 			if($headerFlag==1){				
 				foreach my $genome(@{$self->_orderedNames()}){
 					$tableFH->print("\t", $genome);
-				};
-				$headerFlag=0;
-			}
-
-			if($self->settings->nameOrId eq 'name'){
-				$tableFH->print("\n", $locusInformation->{name});
-			}
-			else{
-				$tableFH->print("\n", $locusInformation->{id});
-			}	
+				};			
+			}			
 		}
+		if($self->settings->nameOrId eq 'name'){
+			$binaryTableFH->print("\n", $locusInformation->{name});
+		}
+		else{
+			$binaryTableFH->print("\n", $locusInformation->{id});
+		}
+		$headerFlag=0;
 		
+		my $genomeCounter=1;
+		my $snpArray=[];
 		foreach my $genome(@{$self->_orderedNames()}){			
 			#Table files
-			my $tableCounter = 0;
-			foreach my $tableFH(@tableFiles){
-				if($tableCounter==0){
-					$tableFH->print($genomeResults->{$genome}->{binary}->{value});
+
+			if(defined $genomeResults->{$genome}->{binary}){
+				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{contig_id});
+			}
+			else{
+				
+			}		
+			
+				
+			if(defined $genomeResults->{$genome}->{snp}){
+				my $snpLocusCounter=0;
+				foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
+					if(!defined $snpArray->[$snpLocusCounter]->[0]){
+						$snpArray->[$snpLocusCounter]->[0] = $snpId;
+					}
+					elsif($snpArray->[$snpLocusCounter]->[0] ne $snpId){
+						$self->logger->fatal("SNP IDs do not match!");
+						exit(1);
+					}				
+					$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};
+					$snpLocusCounter++;
 				}
-				elsif($tableCounter==1){
-					if(defined $genomeResults->{$genome}->{snp}){
-						$tableFH->print("\t", $genomeResults->{$genome}->{snp}->{value});
-					}					
-				}
-				else{
-					$self->logger->fatal("table counter = $tableCounter");
-					exit(1);
-				}
-				$tableCounter++;
-			}#end table
+			}			
+			$genomeCounter++;
 		}#end genome
+		#print the SNPs
+		foreach my $row(0..scalar(@{$snpArray})-1){
+			$snpTableFH->print("\n", $snpArray->[$row]->[0]);
+			
+			foreach my $column(1..scalar(@{$snpArray->[$row]})-1){
+				$snpTableFH->print("\t", $snpArray->[$row]->[$column]);
+			}
+		}
 	}
 
 	$binaryTableFH->close();

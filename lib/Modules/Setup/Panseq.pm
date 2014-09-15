@@ -119,7 +119,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	$self->_cleanUp();
+	#$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -305,10 +305,10 @@ sub _createTreeFiles{
 	for my $num(1..2){
 		$forker->start and next;
 			if($num==1){
-				$self->_createTree('snp');
+				#$self->_createTree('snp');
 			}
 			elsif($num==2){
-				$self->_createTree('binary');
+				#$self->_createTree('binary');
 			}
 			else{
 				$self->logger->logconfess("num value is $num, should not exceed 2");
