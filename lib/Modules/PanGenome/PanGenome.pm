@@ -271,6 +271,25 @@ sub run{
 		$self->settings->baseDirectory . 'core_snps.txt'
 	);	
 
+
+	#combine separate genome snp/binary phylip strings
+	for my $i(1 .. scalar(@{$self->_orderedNames()})){
+		
+		my $snpString = 'snp.phylip_' . $i;
+		$self->_combineFilesOfType(
+			$snpString,
+			$self->settings->baseDirectory . $snpString,
+			0 #do not discard first line
+		);
+
+		my $binaryString = 'binary.phylip_' . $i;
+		$self->_combineFilesOfType(
+			$binaryString,
+			$self->settings->baseDirectory . $binaryString,
+			0 # do not discard first line
+		);
+	}
+
 	#add entries for query segments that have no Blast hits
 	if($self->settings->addMissingQuery){
 		$self->logger->debug("queryFile specified as " . $self->settings->queryFile);
@@ -466,7 +485,6 @@ sub _processBlastXML {
 			# [11]qseq		
 	
 			#if it is a core result, send to SNP finding
-			$self->logger->debug("Core, adding to DB");
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);	
 
 			foreach my $cResult(@{$coreResults}){
@@ -507,6 +525,8 @@ sub _printResults{
 	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp_table.txt' . $blastFile) or die "$!";
 	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . 'pan_genome.txt' . $blastFile) or die "$!";
 	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . 'core_snps.txt' . $blastFile) or die "$!";
+	
+	
 
 	my @fileHandles = ($binaryTableFH, $snpTableFH, $panGenomeFH, $coreSnpsFH);
 
@@ -541,7 +561,11 @@ sub _printResults{
 
 			if(defined $genomeResults->{$genome}->{binary}){
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
-				
+
+				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'binary.phylip' . '_' . $genomeCounter . $blastFile ) or die "$!";
+				$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
+				$binaryPhylipFH->close();	
+
 				#pan-genome output			
 				$panGenomeFH->print(
 					"\n",
@@ -565,8 +589,11 @@ sub _printResults{
 				exit(1);
 			}		
 			
-				
+			
 			if(defined $genomeResults->{$genome}->{snp}){
+				#phylip file print
+				my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp.phylip' . '_' . $genomeCounter . $blastFile ) or die "$!";
+
 				my $snpLocusCounter=0;
 				foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
 					if(!defined $snpArray->[$snpLocusCounter]->[0]){
@@ -578,7 +605,9 @@ sub _printResults{
 					}				
 					$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};
 					$snpLocusCounter++;
-			
+					
+					$snpPhylipFH->print($genomeResults->{$genome}->{snp}->{$snpId}->{value});
+
 					$coreSnpsFH->print(
 						"\n", 
 						$snpId,
@@ -596,8 +625,9 @@ sub _printResults{
 						$genomeResults->{$genome}->{binary}->[0]->{contig_id}						
 					);
 				}
+				$snpPhylipFH->close();
 			}			
-			$genomeCounter++;			
+			$genomeCounter++;	
 		}#end genome
 		#print the SNPs
 		foreach my $row(0..scalar(@{$snpArray})-1){
@@ -620,17 +650,18 @@ sub _combineFilesOfType{
 	my $self = shift;
 	my $fileNamePart = shift;
 	my $outputFile = shift;
+	my $firstLine = shift // 1;
 
 	$self->logger->warn("Combining files $fileNamePart");
 	#use Roles::CombineFilesIntoSingleFile
 	my $fileNames = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
-	my @matchedFiles = grep(/$fileNamePart/, @{$fileNames});
+	my @matchedFiles = sort grep(/\Q$fileNamePart\E/, @{$fileNames});
 
 	$self->_combineFilesIntoSingleFile(
 		\@matchedFiles,
 		$outputFile,
 		0, #append
-		1 #firstLine
+		$firstLine #firstLine (1 discards, 0 keeps)
 	); 
 
 	#delete original files
