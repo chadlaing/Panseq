@@ -265,7 +265,11 @@ sub run{
 		'pan_genome',
 		$self->settings->baseDirectory . 'pan_genome.txt'
 	);
-	
+
+	$self->_combineFilesOfType(
+		'core_snps',
+		$self->settings->baseDirectory . 'core_snps.txt'
+	);	
 
 	#add entries for query segments that have no Blast hits
 	if($self->settings->addMissingQuery){
@@ -274,9 +278,6 @@ sub run{
 	}
 	
 	$self->logger->info("Processing blast output files complete");
-	
-	
-	
 	$self->logger->info("Pan-genome generation complete");
 }
 
@@ -470,12 +471,10 @@ sub _processBlastXML {
 
 			foreach my $cResult(@{$coreResults}){
 				my $sName = Modules::Fasta::SequenceName->new($cResult->{contig});
-
 				$genomeResults{$sName->name}->{snp}=
 					{
 						$cResult->{locusId}=>{
 							start_bp=>$cResult->{startBp},
-							end_bp=>$cResult->{startBp},
 							value=>$cResult->{value}
 						}
 					};
@@ -579,9 +578,26 @@ sub _printResults{
 					}				
 					$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};
 					$snpLocusCounter++;
+			
+					$coreSnpsFH->print(
+						"\n", 
+						$snpId,
+						"\t",
+						$locusInformation->{name},
+						"\t",
+						$genome,
+						"\t",
+						$genomeResults->{$genome}->{snp}->{$snpId}->{value},
+						"\t",
+						$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
+						"\t",
+						$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
+						"\t",
+						$genomeResults->{$genome}->{binary}->[0]->{contig_id}						
+					);
 				}
 			}			
-			$genomeCounter++;
+			$genomeCounter++;			
 		}#end genome
 		#print the SNPs
 		foreach my $row(0..scalar(@{$snpArray})-1){

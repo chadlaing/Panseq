@@ -207,6 +207,7 @@ sub _getSingleBaseResult{
 				$finalPosition = ($startBp + $position - $dashOffset);	
 			}
 			
+			#$self->logger->warn("startBp: $finalPosition");
 			%resultHash=(
 				contig=>$contig,
 				startBp=>$finalPosition,
