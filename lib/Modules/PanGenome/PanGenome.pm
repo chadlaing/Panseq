@@ -281,6 +281,11 @@ sub run{
 		$self->settings->baseDirectory . 'accessoryGenomeFragments.fasta'
 	);
 
+	$self->_combineFilesOfType(
+		'locus_alleles',
+		$self->settings->baseDirectory . 'locus_alleles.fasta'
+	);
+
 
 	#combine separate genome snp/binary phylip strings
 	for my $i(1 .. scalar(@{$self->_orderedNames()})){
@@ -420,13 +425,15 @@ sub _processBlastXML {
 		
 		#this contains any gaps due to the alignment
 		#we want the "original" sequence for the locus
-		my $querySeq = $result->{$resultKeys[0]}->[0]->[11];
-		$querySeq =~ tr/[\-]/[]/;
+		$result->{$resultKeys[0]}->[0]->[11] =~ tr/[\-]//d;
+
+		#my $querySeq = $result->{$resultKeys[0]}->[0]->[11];
+		#$querySeq =~ tr/[\-]/[]/;
 
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$resultKeys[0]}->[0]->[1],
-			sequence=>$querySeq,
+			sequence=>$result->{$resultKeys[0]}->[0]->[11],
 			pan=>$coreOrAccessory
 		);	
 		
@@ -452,6 +459,9 @@ sub _processBlastXML {
 			foreach my $hit(@{$result->{$name}}){
 				$hitNum++;
 				my $contigId = $hit->[0];
+
+				#remove gaps from stored alleles
+				$hit->[10] =~ tr/[\-]//d;
 
 				my %binaryHash = (
 					contig_id=>$contigId,
