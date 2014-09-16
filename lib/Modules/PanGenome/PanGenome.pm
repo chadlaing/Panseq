@@ -269,7 +269,17 @@ sub run{
 	$self->_combineFilesOfType(
 		'core_snps',
 		$self->settings->baseDirectory . 'core_snps.txt'
-	);	
+	);
+
+	$self->_combineFilesOfType(
+		'coreGenomeFragments',
+		$self->settings->baseDirectory . 'coreGenomeFragments.fasta'
+	);
+
+	$self->_combineFilesOfType(
+		'accessoryGenomeFragments',
+		$self->settings->baseDirectory . 'accessoryGenomeFragments.fasta'
+	);
 
 
 	#combine separate genome snp/binary phylip strings
@@ -408,10 +418,15 @@ sub _processBlastXML {
 		
 		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
 		
+		#this contains any gaps due to the alignment
+		#we want the "original" sequence for the locus
+		my $querySeq = $result->{$resultKeys[0]}->[0]->[11];
+		$querySeq =~ tr/[\-]/[]/;
+
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$resultKeys[0]}->[0]->[1],
-			sequence=>$result->{$resultKeys[0]}->[0]->[11],
+			sequence=>$querySeq,
 			pan=>$coreOrAccessory
 		);	
 		
@@ -438,27 +453,21 @@ sub _processBlastXML {
 				$hitNum++;
 				my $contigId = $hit->[0];
 
+				my %binaryHash = (
+					contig_id=>$contigId,
+					start_bp =>$hit->[2],
+					end_bp =>$hit->[3],
+					value =>1,
+					id=>$counter
+				);
+
 				if($hitNum == 1){		
 					$genomeResults{$name}->{binary} = [
-						{
-							contig_id=>$contigId,
-							start_bp =>$hit->[2],
-							end_bp =>$hit->[3],
-							value =>1,
-							id=>$counter
-						}
+						\%binaryHash
 					]								
 				}
 				else{
-					push @{$genomeResults{$name}->{binary}},{
-						{
-							contig_id=>$contigId,
-							start_bp =>$hit->[2],
-							end_bp =>$hit->[3],
-							value =>1,
-							id=>$counter
-						}
-					}
+					push @{$genomeResults{$name}->{binary}},\%binaryHash
 				}				
 			
 				if($self->settings->storeAlleles){
@@ -530,10 +539,11 @@ sub _printResults{
 	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp_table.txt' . $blastFile) or die "$!";
 	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . 'pan_genome.txt' . $blastFile) or die "$!";
 	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . 'core_snps.txt' . $blastFile) or die "$!";
-	
-	
+	my $accessoryFH = IO::File->new('>>' . $self->settings->baseDirectory . 'accessoryGenomeFragments.fasta' . $blastFile) or die "$!";
+	my $coreFH = IO::File->new('>>' . $self->settings->baseDirectory . 'coreGenomeFragments.fasta' . $blastFile) or die "$!";
+	my $allelesFH = IO::File->new('>>' . $self->settings->baseDirectory . 'locus_alleles.fasta' . $blastFile) or die "$!";	
 
-	my @fileHandles = ($binaryTableFH, $snpTableFH, $panGenomeFH, $coreSnpsFH);
+	my @fileHandles = ($binaryTableFH, $snpTableFH, $panGenomeFH, $coreSnpsFH, $accessoryFH, $coreFH, $allelesFH);
 
 	if(-s $binaryFileName < 1){
 		#for table files			
@@ -558,6 +568,23 @@ sub _printResults{
 		else{
 			$binaryTableFH->print("\n", $locusInformation->{id});
 		}
+
+		#fragment files
+		if($locusInformation->{pan} eq 'core'){
+			$coreFH->print('>lcl|', $locusInformation->{id}, '|', $locusInformation->{name}, "\n", $locusInformation->{sequence}, "\n");
+		}
+		elsif($locusInformation->{pan} eq 'accessory'){
+			$accessoryFH->print('>lcl|', $locusInformation->{id}, '|', $locusInformation->{name}, "\n", $locusInformation->{sequence}, "\n");
+		}
+		else{
+			$self->logger->fatal("Unknown pan-genome fragment type!");
+			exit(1);
+		}
+
+		#alleles file if required
+		if($self->settings->storeAlleles){
+			$allelesFH->print('Locus ', $locusInformation->{name});
+		}
 				
 		my $genomeCounter=1;
 		my $snpArray=[];
@@ -565,6 +592,11 @@ sub _printResults{
 			#Table files
 
 			if(defined $genomeResults->{$genome}->{binary}){
+				#alleles file
+				if($self->settings->storeAlleles){
+					$allelesFH->print('>', $genomeResults->{$genome}->{binary}->[0]->{contig_id}, "\n", );
+				}
+
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
 
 				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'binary.phylip' . '_' . $genomeCounter . $blastFile ) or die "$!";
