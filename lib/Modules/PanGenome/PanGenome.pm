@@ -461,6 +461,11 @@ sub _processBlastXML {
 					id=>$counter
 				);
 
+				if($self->settings->storeAlleles){
+					#push @{$genomeResults{$name}->{alleles}}, {$name . '_a' . $hitNum => $hit->[10]};
+					$binaryHash{sequence}=$hit->[10];
+				}
+
 				if($hitNum == 1){		
 					$genomeResults{$name}->{binary} = [
 						\%binaryHash
@@ -470,9 +475,7 @@ sub _processBlastXML {
 					push @{$genomeResults{$name}->{binary}},\%binaryHash
 				}				
 			
-				if($self->settings->storeAlleles){
-					push @{$genomeResults{$name}->{alleles}}, {$name . '_a' . $hitNum => $hit->[10]};
-				}									
+													
 			}#foreach hit	
 		}#foreach name
 		
@@ -583,7 +586,7 @@ sub _printResults{
 
 		#alleles file if required
 		if($self->settings->storeAlleles){
-			$allelesFH->print('Locus ', $locusInformation->{name});
+			$allelesFH->print("\n", 'Locus ', $locusInformation->{name}, "\n");
 		}
 				
 		my $genomeCounter=1;
@@ -593,8 +596,8 @@ sub _printResults{
 
 			if(defined $genomeResults->{$genome}->{binary}){
 				#alleles file
-				if($self->settings->storeAlleles){
-					$allelesFH->print('>', $genomeResults->{$genome}->{binary}->[0]->{contig_id}, "\n", );
+				if($self->settings->storeAlleles && $genomeResults->{$genome}->{binary}->[0]->{value} == 1){
+					$allelesFH->print('>', $genomeResults->{$genome}->{binary}->[0]->{contig_id}, "\n", $genomeResults->{$genome}->{binary}->[0]->{sequence}, "\n");
 				}
 
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
