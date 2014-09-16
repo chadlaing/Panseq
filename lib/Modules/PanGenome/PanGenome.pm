@@ -640,6 +640,47 @@ sub _combineFilesOfType{
 }
 
 
+=head2 _numberOfSpacesToAdd
+
+Phylip requires the name to be exactly 10 characters, including spaces.
+This is that.
+
+=cut
+
+sub _numberOfSpacesToAdd{
+	my $self=shift;
+	my $counter = shift;
+	
+	my $numberOfSpaces = 10 - length($counter);
+	return(" " x $numberOfSpaces);	
+}
+
+
+=head2 _printConversionInformation
+
+Phylip format is limited to a 10-character name field.
+In printing the Phylip format, we substitute numbers for names.
+This creates a tab-delimited table that lists the conversion information.
+
+=cut
+
+sub _printConversionInformation{
+	my $self=shift;	
+
+	my $conversionFH = IO::File->new('>' . $self->settings->baseDirectory . 'phylip_name_conversion.txt') or die "$!";
+	$conversionFH->print(
+		'Number' . "\t" . 'Name' . "\n"
+	);
+
+	my $counter=1;
+	foreach my $genome(@{$self->_orderedNames()}){
+		$conversionFH->print($counter . "\t" . $genome . "\n");
+		$counter++;
+	}
+	$conversionFH->close();	
+}
+
+
 =head2 _getMsa
 
 Take in a Modules::Alignment::BlastResult and generate a MSA of all the TOP hit sequences.
