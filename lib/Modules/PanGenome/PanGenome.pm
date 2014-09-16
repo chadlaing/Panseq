@@ -290,6 +290,11 @@ sub run{
 		);
 	}
 
+
+	#generate final phylip files
+	$self->_combinePhylipFiles('snp.phylip');
+	$self->_combinePhylipFiles('binary.phylip');
+
 	#add entries for query segments that have no Blast hits
 	if($self->settings->addMissingQuery){
 		$self->logger->debug("queryFile specified as " . $self->settings->queryFile);
@@ -652,7 +657,6 @@ sub _combineFilesOfType{
 	my $outputFile = shift;
 	my $firstLine = shift // 1;
 
-	$self->logger->warn("Combining files $fileNamePart");
 	#use Roles::CombineFilesIntoSingleFile
 	my $fileNames = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
 	my @matchedFiles = sort grep(/\Q$fileNamePart\E/, @{$fileNames});
@@ -668,6 +672,37 @@ sub _combineFilesOfType{
 	foreach my $file(@matchedFiles){
 		unlink $file;
 	}
+}
+
+
+sub _combinePhylipFiles{
+	my $self = shift;
+	my $type = shift;
+
+	#use Roles::CombineFilesIntoSingleFile
+	my $fileNames = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
+	my @matchedFiles = sort grep(/\Q$type\E/, @{$fileNames});
+
+	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $type) or die "$!";
+
+	my $counter = 1;
+	foreach my $phylipFile(@matchedFiles){
+		my $inFH = IO::File->new('<' . $phylipFile) or die "$!";
+		
+		#only a single string per file, therefore all the data is in the first line
+		my $fileContent = $inFH->getline();
+		$fileContent =~ s/\R//g;
+
+		if($counter == 1){
+			#number of genome
+			$outFH->print(scalar(@matchedFiles), ' ', length($fileContent), "\n");
+		}
+		$outFH->print($counter, $self->_numberOfSpacesToAdd($counter), ' ', $fileContent, "\n");
+		$counter++;
+		$inFH->close();
+		unlink $phylipFile;
+	}
+	$outFH->close();
 }
 
 
