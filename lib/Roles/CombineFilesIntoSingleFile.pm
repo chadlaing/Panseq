@@ -49,7 +49,6 @@ sub _combineFilesIntoSingleFile{
         my $inFH = IO::File->new('<' . $file) or $self->logger->logdie("Cannot open $file $!");
 
         if($firstLineAdjust && $firstFile > 1){
-            $self->logger->info("Discarding first line");
             $inFH->getline();
         }        
         $outFH->print($inFH->getlines);

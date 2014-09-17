@@ -425,15 +425,13 @@ sub _processBlastXML {
 		
 		#this contains any gaps due to the alignment
 		#we want the "original" sequence for the locus
-		$result->{$resultKeys[0]}->[0]->[11] =~ tr/[\-]//d;
-
-		#my $querySeq = $result->{$resultKeys[0]}->[0]->[11];
-		#$querySeq =~ tr/[\-]/[]/;
+		my $qsn = Modules::Fasta::SequenceName->new($result->{$resultKeys[0]}->[0]->[1]);
+		$result->{$qsn->name}->[0]->[11] =~ tr/[\-]//d;
 
 		my %locusInformation = (
 			id=>$counter,
-			name=>$result->{$resultKeys[0]}->[0]->[1],
-			sequence=>$result->{$resultKeys[0]}->[0]->[11],
+			name=>$result->{$qsn->name}->[0]->[1],
+			sequence=>$result->{$qsn->name}->[0]->[11],
 			pan=>$coreOrAccessory
 		);	
 		
@@ -453,11 +451,13 @@ sub _processBlastXML {
 			}			
 		}
 		
-		foreach my $name(sort keys %{$result}){
-			my $hitNum=0;
+		foreach my $name(@resultKeys){
+			my $hitNum=1;
 
 			foreach my $hit(@{$result->{$name}}){
-				$hitNum++;
+				if($hitNum > $self->settings->allelesToKeep){
+					last;
+				}
 				my $contigId = $hit->[0];
 
 				#remove gaps from stored alleles
@@ -472,7 +472,6 @@ sub _processBlastXML {
 				);
 
 				if($self->settings->storeAlleles){
-					#push @{$genomeResults{$name}->{alleles}}, {$name . '_a' . $hitNum => $hit->[10]};
 					$binaryHash{sequence}=$hit->[10];
 				}
 
@@ -485,7 +484,7 @@ sub _processBlastXML {
 					push @{$genomeResults{$name}->{binary}},\%binaryHash
 				}				
 			
-													
+				$hitNum++;							
 			}#foreach hit	
 		}#foreach name
 		
@@ -605,9 +604,17 @@ sub _printResults{
 			#Table files
 
 			if(defined $genomeResults->{$genome}->{binary}){
-				#alleles file
-				if($self->settings->storeAlleles && $genomeResults->{$genome}->{binary}->[0]->{value} == 1){
-					$allelesFH->print('>', $genomeResults->{$genome}->{binary}->[0]->{contig_id}, "\n", $genomeResults->{$genome}->{binary}->[0]->{sequence}, "\n");
+				#alleles file, print out if multiple copies
+				if($self->settings->storeAlleles){
+					for my $i(0 .. scalar(@{$genomeResults->{$genome}->{binary}}) -1){
+						if(defined $genomeResults->{$genome}->{binary}->[$i]->{sequence}){
+							my $contigId = $genomeResults->{$genome}->{binary}->[$i]->{contig_id};
+							if($i > 1){
+								$contigId .= 'a_' . $i;
+							}
+							$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{binary}->[$i]->{sequence}, "\n");
+						}						
+					}					
 				}
 
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});

@@ -215,7 +215,6 @@ sub _launchPanseq{
 		$self->_performPanGenomeAnalyses($files,$novelIterator);
 		#with File::Copy
 		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'panGenome.fasta');
-		$self->_createTreeFiles();
 	}else{
 		#with File::Copy
 		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'novelRegions.fasta');
@@ -290,33 +289,6 @@ sub _cleanUp{
 	}
 }
 
-=head3 _createTreeFiles
-
-Create both a core-snp and pan-genome +/- file for use in phylogenetic analyses.
-If more than one processor available, make both at the same time.
-
-=cut
-
-sub _createTreeFiles{
-	my $self = shift;
-
-	my $forker= Parallel::ForkManager->new($self->settings->numberOfCores);
-
-	for my $num(1..2){
-		$forker->start and next;
-			if($num==1){
-				#$self->_createTree('snp');
-			}
-			elsif($num==2){
-				#$self->_createTree('binary');
-			}
-			else{
-				$self->logger->logconfess("num value is $num, should not exceed 2");
-			}
-		$forker->finish();
-	}
-	$forker->wait_all_children();
-}
 
 
 =head2 _performPanGenomeAnalyses
