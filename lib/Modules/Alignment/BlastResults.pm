@@ -8,7 +8,6 @@ use lib "$FindBin::Bin/../../";
 use IO::File;
 use Log::Log4perl;
 use Carp;
-use Modules::Fasta::SequenceName;
 
 sub new {
 	my ($class) = shift;
@@ -117,34 +116,35 @@ sub getNextResult{
 		# [10]sseq,
 		# [11]qseq
 
-		my $sName = Modules::Fasta::SequenceName->new($la[0]);
-		my $sNameName= $sName->name;				
-		
+
+		my $sName = $self->settings->getGenomeNameFromContig($la[0]);
+		$self->logger->warn("sName: $sName");
+			
 		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){			
 			$self->logger->debug("Passes percent identity cutoff");
 			
-			my $alleleCount = $self->_alleleCount->{$sNameName} // 0;
-			$self->logger->debug("$sNameName has $alleleCount alleles");
+			my $alleleCount = $self->_alleleCount->{$sName} // 0;
+			$self->logger->debug("$sName has $alleleCount alleles");
 			if($alleleCount >= $self->settings->allelesToKeep){
 				$self->logger->debug("$la[1] defined for $la[0], doing nothing")
 				#nothing
 			}
 			else{
 				$alleleCount++;				
-				$self->_alleleCount->{$sNameName}=$alleleCount;
+				$self->_alleleCount->{$sName}=$alleleCount;
 			
-				$self->logger->debug("Adding result for $sNameName, alleleCount $alleleCount");
-				push @{$results{$sNameName}}, \@la;
+				$self->logger->debug("Adding result for $sName, alleleCount $alleleCount");
+				push @{$results{$sName}}, \@la;
 			}				
 		}		
 		
 		if(!defined $nextLa[0]){
-			$self->logger->debug("Next not defined\n\n");
+			$self->logger->debug("RETURN: Next not defined\n\n");
 			$self->_alleleCount({});
 			return \%results;
 		}
 		elsif($la[1] ne $nextLa[1]){
-			$self->logger->debug("$la[1] NE to $nextLa[1]");
+			$self->logger->debug("RETURN: $la[1] NE to $nextLa[1]");
 			$self->_alleleCount({});
 			return \%results;			
 		}

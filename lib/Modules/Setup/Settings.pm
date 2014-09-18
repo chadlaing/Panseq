@@ -31,6 +31,16 @@ sub _initialize{
 
 #class variables
 
+sub orderedGenomeNames{
+	my $self = shift;
+	$self->{'_orderedGenomeNames'} = shift // return $self->{'_orderedGenomeNames'};
+}
+
+sub _genomeNameFromContig{
+	my $self=shift;
+	$self->{'__contigNameGenome'} = shift // return $self->{'__contigNameGenome'};
+}
+
 sub addMissingQuery{
 	my $self=shift;
 	$self->{'_addMissingQuery'} = shift // return $self->{'_addMissingQuery'};	
@@ -362,6 +372,15 @@ sub _setDefaults{
 	unless(defined $self->frameshift){
 		$self->frameshift(0);
 	}
+}
+
+
+sub getGenomeNameFromContig{
+	my $self=shift;
+	my $inputName=shift // die "getGenomeNameFromContig requires input!";
+
+	$inputName =~ s/_\(\d+\.\.\d+.+//;
+	return $self->_genomeNameFromContig->{$inputName};
 }
 
 1;

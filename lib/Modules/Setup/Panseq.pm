@@ -44,6 +44,7 @@ use Modules::Fasta::SegmentMaker;
 use Modules::Fasta::FastaFileSplitter;
 use Modules::PanGenome::PanGenome;
 use Modules::LociSelector::LociSelector;
+use Modules::Fasta::MultiFastaSequenceName;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
@@ -180,6 +181,14 @@ sub _launchPanseq{
 		'referenceDirectory'=>$self->settings->referenceDirectory // undef
 	);
 
+	$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta');
+	
+	#gets orderedGenomeNames and genomeNameFromContig
+	#we will add these to settings
+	my $mfsn = Modules::Fasta::MultiFastaSequenceName->new(fileName => $files->singleQueryFile);
+	$self->settings->orderedGenomeNames($mfsn->orderedGenomeNames);
+	$self->settings->_genomeNameFromContig($mfsn->genomeNameFromContig);
+
 	if(defined $self->settings->queryFile){
 		#sanitize the input file for proper fasta format
 		#use the sanitized file for future work
@@ -194,14 +203,14 @@ sub _launchPanseq{
 		
 		$novelIterator=Modules::NovelRegion::NovelIterator->new(
 			'panGenomeFile'=>$sanitizedFileName,
-			'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
+			'queryFile'=>$files->singleQueryFile,
 			'settings'=>$self->settings
 		); 
 	}
 	else{
 		#get novel regions
 		$novelIterator = Modules::NovelRegion::NovelIterator->new(
-			'queryFile'=>$files->singleQueryFile($self->settings->baseDirectory . 'singleQueryFile.fasta'),
+			'queryFile'=>$files->singleQueryFile,
 			'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
 			'novelRegionsFile'=>$self->settings->baseDirectory . 'novelRegions.fasta',
 			'settings'=>$self->settings

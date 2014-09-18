@@ -44,7 +44,6 @@ package Modules::PanGenome::PanGenome;
 use strict;
 use warnings;
 use diagnostics;
-
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;
@@ -53,8 +52,6 @@ use Log::Log4perl;
 use Parallel::ForkManager;
 use Modules::Alignment::SNPFinder;
 use Modules::Alignment::BlastResults;
-use Modules::Fasta::SequenceName;
-use Modules::Fasta::MultiFastaSequenceName;
 use Role::Tiny::With;
 
 with 'Roles::CombineFilesIntoSingleFile';
@@ -150,31 +147,6 @@ sub queryFile{
 	$self->{'_singleQueryFile'}=shift // return $self->{'_singleQueryFile'};
 }
 
-=head3 _mfsn 
-
-"multi-fasta sequence name" object.
-Stores all of the Modules::Fasta::SequenceName->names for the queryFile
-
-=cut
-
-sub _mfsn{
-	my $self=shift;
-	$self->{'__mfsn'}=shift // return $self->{'__mfsn'};
-}
-
-
-=head3 _orderedNames
-
-An ordered list of names from the _mfsn hash as an array reference.
-Computed as a class variable to prevent needless re-computation
-every time an array needs to iterate over all names.
-
-=cut
-
-sub _orderedNames{
-	my $self=shift;
-	$self->{'__orderedNames'}=shift // return $self->{'__orderedNames'};
-}
 
 
 
@@ -230,10 +202,6 @@ sub run{
 	my $self=shift;
 	
 	$self->logger->info("Analyzing the pan-genome");
-	$self->logger->info("Gathering ordered genome names");
-	my ($mfsn,$orderedNames)=$self->_generateOrderedNamesArray();
-	$self->_mfsn($mfsn);
-	$self->_orderedNames($orderedNames);
 
 	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
 	my $counter=0;
@@ -288,16 +256,16 @@ sub run{
 
 
 	#combine separate genome snp/binary phylip strings
-	for my $i(1 .. scalar(@{$self->_orderedNames()})){
+	for my $i(1 .. scalar(@{$self->settings->orderedGenomeNames})){
 		
-		my $snpString = 'snp.phylip_' . $i;
+		my $snpString = 'snp.phylip_' . $i . '_';
 		$self->_combineFilesOfType(
 			$snpString,
 			$self->settings->baseDirectory . $snpString,
 			0 #do not discard first line
 		);
 
-		my $binaryString = 'binary.phylip_' . $i;
+		my $binaryString = 'binary.phylip_' . $i . '_';
 		$self->_combineFilesOfType(
 			$binaryString,
 			$self->settings->baseDirectory . $binaryString,
@@ -357,19 +325,6 @@ sub _getPanGenomeHashRef{
 }
 
 
-
-sub _generateOrderedNamesArray{
-	my $self=shift;
-
-	#generate a hash of all names in the query file
-	my $multiFastaSN = Modules::Fasta::MultiFastaSequenceName->new(
-		'fileName'=>$self->queryFile
-	);
-	
-	return ($multiFastaSN,[sort keys %{$multiFastaSN->sequenceNameHash}])
-	#order the hash for a consistent order of names
-}
-
 =head2 _getUniqueResultId
 
 Given the time in s since the epoch as a starting point, return a 1000 character range of SNPs to work with
@@ -405,7 +360,7 @@ sub _processBlastXML {
 		
 		my @resultKeys = keys %{$result};
 		my $numberOfResults = scalar @resultKeys;
-		
+		$self->logger->warn("NOR: $numberOfResults");
 		unless($numberOfResults > 0){
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
@@ -420,23 +375,25 @@ sub _processBlastXML {
 		else{
 			$coreOrAccessory='accessory';
 		}
+		$self->logger->debug("coreOrAccrssory: $coreOrAccessory");
 		
 		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
 		
 		#this contains any gaps due to the alignment
 		#we want the "original" sequence for the locus
-		my $qsn = Modules::Fasta::SequenceName->new($result->{$resultKeys[0]}->[0]->[1]);
-		$result->{$qsn->name}->[0]->[11] =~ tr/[\-]//d;
+		my $resultName = $result->{$resultKeys[0]}->[0]->[1];
+		my $qsn = $self->settings->getGenomeNameFromContig($resultName);
+		#$self->logger->warn("resultName: $resultName, qsn: $qsn\n");
 
 		my %locusInformation = (
 			id=>$counter,
-			name=>$result->{$qsn->name}->[0]->[1],
-			sequence=>$result->{$qsn->name}->[0]->[11],
+			name=>$result->{$qsn}->[0]->[1],
+			sequence=>$result->{$qsn}->[0]->[11],
 			pan=>$coreOrAccessory
 		);	
 		
 		my %genomeResults;
-		foreach my $name(@{$self->_orderedNames}){	
+		foreach my $name(@{$self->settings->orderedGenomeNames}){	
 			
 			$genomeResults{$name}={
 				binary => [
@@ -514,8 +471,8 @@ sub _processBlastXML {
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);	
 
 			foreach my $cResult(@{$coreResults}){
-				my $sName = Modules::Fasta::SequenceName->new($cResult->{contig});
-				$genomeResults{$sName->name}->{snp}=
+				my $sName = $self->settings->getGenomeNameFromContig($cResult->{contig});
+				$genomeResults{$sName}->{snp}=
 					{
 						$cResult->{locusId}=>{
 							start_bp=>$cResult->{startBp},
@@ -559,7 +516,7 @@ sub _printResults{
 
 	if(-s $binaryFileName < 1){
 		#for table files			
-		foreach my $genome(@{$self->_orderedNames()}){
+		foreach my $genome(@{$self->settings->orderedGenomeNames}){
 			$binaryTableFH->print("\t", $genome);
 			$snpTableFH->print("\t", $genome);
 		};	
@@ -600,7 +557,10 @@ sub _printResults{
 				
 		my $genomeCounter=1;
 		my $snpArray=[];
-		foreach my $genome(@{$self->_orderedNames()}){			
+		my @genomesMissingSnps;
+		my $numberOfSnps;
+
+		foreach my $genome(@{$self->settings->orderedGenomeNames}){			
 			#Table files
 
 			if(defined $genomeResults->{$genome}->{binary}){
@@ -619,7 +579,7 @@ sub _printResults{
 
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
 
-				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'binary.phylip' . '_' . $genomeCounter . $blastFile ) or die "$!";
+				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'binary.phylip' . '_' . $genomeCounter . '_' . $blastFile ) or die "$!";
 				$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
 				$binaryPhylipFH->close();	
 
@@ -646,44 +606,56 @@ sub _printResults{
 				exit(1);
 			}		
 			
+			$self->logger->warn("locusInformation pan: " . $locusInformation->{pan});
+			if($locusInformation->{pan} eq 'core'){
 			
-			if(defined $genomeResults->{$genome}->{snp}){
-				#phylip file print
-				my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp.phylip' . '_' . $genomeCounter . $blastFile ) or die "$!";
+				if(defined $genomeResults->{$genome}->{snp}){
+					#phylip file print
+					my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp.phylip' . '_' . $genomeCounter . '_' . $blastFile ) or die "$!";
 
-				my $snpLocusCounter=0;
-				foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
-					if(!defined $snpArray->[$snpLocusCounter]->[0]){
-						$snpArray->[$snpLocusCounter]->[0] = $snpId;
+					my $snpLocusCounter=0;
+					foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
+						if(!defined $snpArray->[$snpLocusCounter]->[0]){
+							$snpArray->[$snpLocusCounter]->[0] = $snpId;
+						}
+						elsif($snpArray->[$snpLocusCounter]->[0] ne $snpId){
+							$self->logger->fatal("SNP IDs do not match!");
+							exit(1);
+						}				
+						$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};					
+
+						$snpPhylipFH->print($genomeResults->{$genome}->{snp}->{$snpId}->{value});
+
+						$coreSnpsFH->print(
+							"\n", 
+							$snpId,
+							"\t",
+							$locusInformation->{name},
+							"\t",
+							$genome,
+							"\t",
+							$genomeResults->{$genome}->{snp}->{$snpId}->{value},
+							"\t",
+							$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
+							"\t",
+							$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
+							"\t",
+							$genomeResults->{$genome}->{binary}->[0]->{contig_id}						
+						);
+						$snpLocusCounter++;
 					}
-					elsif($snpArray->[$snpLocusCounter]->[0] ne $snpId){
-						$self->logger->fatal("SNP IDs do not match!");
-						exit(1);
-					}				
-					$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};
-					$snpLocusCounter++;
 					
-					$snpPhylipFH->print($genomeResults->{$genome}->{snp}->{$snpId}->{value});
-
-					$coreSnpsFH->print(
-						"\n", 
-						$snpId,
-						"\t",
-						$locusInformation->{name},
-						"\t",
-						$genome,
-						"\t",
-						$genomeResults->{$genome}->{snp}->{$snpId}->{value},
-						"\t",
-						$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
-						"\t",
-						$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
-						"\t",
-						$genomeResults->{$genome}->{binary}->[0]->{contig_id}						
-					);
+					unless(defined $numberOfSnps){
+						$numberOfSnps = $snpLocusCounter;
+					}				
+					$snpPhylipFH->close();
+				} #defined SNP for genome
+				else{
+					#no SNPs for genome eg. core but this genome missing
+					push @genomesMissingSnps, $genome;
+					$self->logger->warn("Missing $genome for SNPs, number of SNPs: $numberOfSnps");
 				}
-				$snpPhylipFH->close();
-			}			
+			} #end if core
 			$genomeCounter++;	
 		}#end genome
 		#print the SNPs
@@ -742,7 +714,7 @@ sub _combinePhylipFiles{
 		my $inFH = IO::File->new('<' . $phylipFile) or die "$!";
 		
 		#only a single string per file, therefore all the data is in the first line
-		my $fileContent = $inFH->getline();
+		my $fileContent = $inFH->getline() // $self->logger->logdie("Empty file");
 		$fileContent =~ s/\R//g;
 
 		if($counter == 1){
@@ -752,7 +724,7 @@ sub _combinePhylipFiles{
 		$outFH->print($counter, $self->_numberOfSpacesToAdd($counter), ' ', $fileContent, "\n");
 		$counter++;
 		$inFH->close();
-		unlink $phylipFile;
+		#unlink $phylipFile;
 	}
 	$outFH->close();
 }
@@ -791,7 +763,7 @@ sub _printConversionInformation{
 	);
 
 	my $counter=1;
-	foreach my $genome(@{$self->_orderedNames()}){
+	foreach my $genome(@{$self->settings->orderedGenomeNames}){
 		$conversionFH->print($counter . "\t" . $genome . "\n");
 		$counter++;
 	}
@@ -850,8 +822,7 @@ sub _getMsa{
 =head2 _getHashOfFastaAlignment
 
 Given the FASTA alignment produced by Muscle, create a hash where the
-name is based on the Modules::Fasta::SequenceName->name and
-
+name is the contig
 
 =cut
 
@@ -883,9 +854,9 @@ sub _getHashOfFastaAlignment{
 	my @gn = keys %results;
 	my $alignmentLength = length($results{$gn[0]});
 	#add all the missing genomes as '-'
-	foreach my $genome(@{$self->_orderedNames}){
+	foreach my $genome(@{$self->settings->orderedGenomeNames}){
 		unless(defined $blastResult->{$genome}){
-			$results{'NA_' . $genome} = '-' x $alignmentLength;
+			$results{$genome} = '-' x $alignmentLength;
 		}
 	}
 	return (\%results);

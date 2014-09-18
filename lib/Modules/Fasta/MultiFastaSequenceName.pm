@@ -51,7 +51,6 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
-use Bio::SeqIO;
 use Modules::Fasta::SequenceName;
 use Log::Log4perl;
 
@@ -93,9 +92,6 @@ sub _initialize{
 			$self->logger->logconfess("$key is not a valid parameter in Modules::NovelRegion::NovelRegionFinder");
 		}
 	}
-
-	#init hash
-	$self->sequenceNameHash({});
 
 	#required variables
 	unless(defined $self->fileName){
@@ -139,30 +135,36 @@ Modlues::Fasta::SequenceName->arrayOfHeaders method
 
 =cut
 
-sub sequenceNameHash{
+sub genomeNameFromContig{
 	my $self=shift;
 	$self->{'__sequenceNameHash'}=shift // return $self->{'__sequenceNameHash'};
 }
 
+sub orderedGenomeNames{
+	my $self=shift;
+	$self->{'_orderedGenomeNames'}=shift // return $self->{'_orderedGenomeNames'};
+}
 
 sub _processMultiFastaFile{
 	my $self=shift;
 
-	my $inFH = Bio::SeqIO->new(-file=>'<'.$self->fileName, -format=>'fasta') or die "$!";
-	while(my $seq = $inFH->next_seq){
-		my $header = $seq->id . $seq->desc;
-		my $sn = Modules::Fasta::SequenceName->new($header);
-
-		if(defined $self->sequenceNameHash->{$sn->name}){
-			push @{$self->sequenceNameHash->{$sn->name}->arrayOfHeaders}, $header;
-			$self->logger->debug("Adding $header to: " . $sn->name);
+	my %genomeNames;
+	my %contigToGenome;
+	my $inFH = IO::File->new('<' . $self->fileName) or die "$!";
+	while(my $line = $inFH->getline()){
+		unless($line =~ m/^>/){
+			next;
 		}
-		else{
-			$self->sequenceNameHash->{$sn->name}=$sn;
-			$self->logger->debug("New sequence: " . $sn->name);
-		}
+		$line =~ s/\R//g;
+		$line =~ s/>//;
+		my $sn = Modules::Fasta::SequenceName->new($line);
+		$genomeNames{$sn->name}=1;
+		$contigToGenome{$line}=$sn->name;
 	}
 	$inFH->close();
+
+	$self->orderedGenomeNames([sort keys %genomeNames]);
+	$self->genomeNameFromContig(\%contigToGenome);
 }
 
 

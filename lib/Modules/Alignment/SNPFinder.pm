@@ -3,7 +3,6 @@ package Modules::Alignment::SNPFinder;
 
 use FindBin;
 use lib "$FindBin::Bin/../../";
-use Modules::Fasta::SequenceName;
 use Log::Log4perl;
 
 sub new{

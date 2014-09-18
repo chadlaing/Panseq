@@ -60,7 +60,6 @@ use File::Copy;
 use Carp;
 use Modules::Alignment::NucmerRun;
 use Modules::NovelRegion::NovelRegionFinder;
-use Modules::Fasta::MultiFastaSequenceName;
 use Parallel::ForkManager;
 use Log::Log4perl;
 use Role::Tiny::With;
@@ -228,15 +227,7 @@ To ensure this happens, run a self vs. self of the novel regions as a last step.
 sub run{
 	my $self=shift;
 
-	#generate a hash of all query sequences
-	my $multiFastaSN = Modules::Fasta::MultiFastaSequenceName->new(
-		'fileName'=>$self->queryFile
-	);
-
-	#get all names of genomes from the queryFile
-	my @genomeNames = map {$_} (sort keys %{$multiFastaSN->sequenceNameHash});
-
-	my $numberOfGenomes = scalar(@genomeNames);
+	my $numberOfGenomes = scalar(@{$self->settings->orderedGenomeNames});
 	$self->logger->info("We have " . $numberOfGenomes . " genomes this run");
 	if($numberOfGenomes ==0){
 		$self->logger->fatal("Input error. Require at least 1 genome");
@@ -259,7 +250,7 @@ sub run{
 	);
 
 	#create a file for each genome in the baseDirectory, for use in the nucmer comparisons
-	my $allFastaFiles = $self->_createAllFastaFilesForNucmer(\@genomeNames, $multiFastaSN, $self->_retriever);
+	my $allFastaFiles = $self->_createAllFastaFilesForNucmer($self->settings->orderedGenomeNames, $self->_retriever);
 	my $numberOfRemainingFiles = scalar(@{$allFastaFiles});
 	my $filesPerComparison=2;
 
@@ -668,7 +659,6 @@ Also creates a single fasta file of the reference sequences if they exist.
 sub _createAllFastaFilesForNucmer{
 	my $self = shift;
 	my $genomeNames=shift;
-	my $mfsn=shift;
 	my $retriever = shift;
 	
 	my @outputFiles;
@@ -676,7 +666,6 @@ sub _createAllFastaFilesForNucmer{
 		my $outputFile = $self->_getCleanFileName($genome);
 		
 		$self->_createFileFromGenomeName(
-			'mfsn'=>$mfsn,
 			'genome'=>$genome,
 			'retriever'=>$retriever,
 			'outputFile'=>$outputFile
@@ -714,13 +703,17 @@ or a genome that has the fewest contigs. Returns the name of the best seed.
 
 sub _getBestSeed{
 	my $self=shift;
-	my $mfsn = shift;
 	my $retriever = shift;
 
 	my %numberOfContigs;
 
-	foreach my $genome (sort keys %{$mfsn->sequenceNameHash}){
-		$numberOfContigs{(scalar(@{$mfsn->sequenceNameHash->{$genome}->arrayOfHeaders}))}=$genome;
+	foreach my $contig (keys %{$self->settings->_genomeNameFromContig}){
+		if(defined $numberOfContigs{$self->settings->_genomeNameFromContig->{$contig}}){
+			$numberOfContigs{$self->settings->_genomeNameFromContig->{$contig}} += 1;
+		}
+		else{
+			$numberOfContigs{$self->settings->_genomeNameFromContig->{$contig}} =1;
+		}
 	}
 
 	my $smallestGenome;
@@ -741,7 +734,6 @@ query sequences in multi-fasta format.
 
 Takes in named parameters as follows:
 	->createFileFromGenomeName(
-		'mfsn'=>$multiFastaSN,
 		'genome'=>$seedName,
 		'retriever'=>$retriever,
 		'outputFile'=>$self->panGenomeFile
@@ -749,9 +741,6 @@ Takes in named parameters as follows:
 
 'retriever' is a Modules::Fasta::SequenceRetriever object that is already loaded with the
 multiple fasta query file. 
-
-'mfsn' is a Modules::Fasta::MultiFastaSequenceName object, already loaded with the SequenceNames
-of the input query file.
 
 'outputFile' is the file to write the output to.
 
@@ -766,21 +755,21 @@ sub _createFileFromGenomeName{
 	my %params = @_;
 
 	#check the params
-	unless(defined $params{'mfsn'}
-		&& defined $params{'genome'}
+	unless(defined $params{'genome'}
 		&& defined $params{'retriever'}
 		&& defined $params{'outputFile'}
 	){
 		$self->logger->logconfess('_createFileFromGenomeName requires the following:
-			"mfsn"=><obj>,
 			"genome"=><name>,
 			"retriever"=><obj>,
 			"outputFile"=><name>
 		');
 	}
 
+	my @headersOfGenome = grep /$params{'genome'}/, (keys %{$self->settings->_genomeNameFromContig});
+
 	my $outFH = IO::File->new('>' . $params{'outputFile'}) or die "Cannot open " . $params{'outputFile'} . "$!\n";
-	foreach my $header(@{$params{'mfsn'}->sequenceNameHash->{$params{'genome'}}->arrayOfHeaders}){
+	foreach my $header(@headersOfGenome){
 		$outFH->print('>' . $header . "\n" . $params{'retriever'}->extractRegion($header) . "\n");
 	}
 	$outFH->close();
