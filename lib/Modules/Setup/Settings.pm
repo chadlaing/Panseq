@@ -380,7 +380,9 @@ sub getGenomeNameFromContig{
 	my $inputName=shift // die "getGenomeNameFromContig requires input!";
 
 	$inputName =~ s/_\(\d+\.\.\d+.+//;
-	return $self->_genomeNameFromContig->{$inputName};
+
+	my $returnValue = $self->_genomeNameFromContig->{$inputName} // $inputName;
+	return $returnValue;
 }
 
 1;

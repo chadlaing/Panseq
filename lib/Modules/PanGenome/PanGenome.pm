@@ -53,6 +53,7 @@ use Parallel::ForkManager;
 use Modules::Alignment::SNPFinder;
 use Modules::Alignment::BlastResults;
 use Role::Tiny::With;
+use Data::Dumper;
 
 with 'Roles::CombineFilesIntoSingleFile';
 
@@ -356,9 +357,12 @@ sub _processBlastXML {
 
 	my @finalResults;
 	while(my $result = $blastResult->getNextResult){
+		$self->logger->debug("init result: " . Dumper($result));
 		$totalResults++;		
 		
+
 		my @resultKeys = keys %{$result};
+		$self->logger->debug("result keys:" . Dumper(@resultKeys));
 		my $numberOfResults = scalar @resultKeys;
 		$self->logger->debug("NOR: $numberOfResults");
 		unless($numberOfResults > 0){
@@ -381,16 +385,32 @@ sub _processBlastXML {
 		
 		#this contains any gaps due to the alignment
 		#we want the "original" sequence for the locus
-		my $resultName = $result->{$resultKeys[0]}->[0]->[1];
-		my $qsn = $self->settings->getGenomeNameFromContig($resultName);
-		#$self->logger->warn("resultName: $resultName, qsn: $qsn\n");
+		my $queryName = $result->{$resultKeys[0]}->[0]->[1];
+		
 
+		#if we are using a query file that has different input sequences,
+		#checking the qsn name will auto-vivify empty hash entities
+		#which creates downstream troubles
+		#if we are using an input query, we cannot guarantee the query will hit
+		#so grab the first result and use it for the locus information, rather
+		#than using the query name to guarantee the whole perfect match as would
+		#be the case in a pan-genome assessment
+		my $qsn;
+		if(defined $self->settings->queryFile){
+			$qsn = $resultKeys[0];
+		}
+		else{
+			$qsn = $self->settings->getGenomeNameFromContig($queryName);
+		}
+
+		$self->logger->debug("pre-locusInformation: qsn: " . Dumper($qsn) . Dumper($result));
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$qsn}->[0]->[1],
 			sequence=>$result->{$qsn}->[0]->[11],
 			pan=>$coreOrAccessory
 		);	
+		$self->logger->debug("post-locusInformation: " . Dumper($result));
 		
 		my %genomeResults;
 		foreach my $name(@{$self->settings->orderedGenomeNames}){	
@@ -408,6 +428,7 @@ sub _processBlastXML {
 			}			
 		}
 		
+		$self->logger->debug("pre-foreach my name resultkeys: " . Dumper($result));
 		foreach my $name(@resultKeys){
 			my $hitNum=1;
 
@@ -452,6 +473,7 @@ sub _processBlastXML {
 		if($coreOrAccessory eq 'core'){			
 			#generate a MSA of all strains that contain sequence
 			#if the locus is core, we will send this MSA to the SNPFinder
+			$self->logger->debug("pre-msa call: " . Dumper($result));
 			my $msaHash = $self->_getHashOfFastaAlignment(
 				$self->_getMsa($result,$counter),
 				$result
@@ -749,7 +771,17 @@ sub _combinePhylipFiles{
 		my $inFH = IO::File->new('<' . $phylipFile) or die "$!";
 		
 		#only a single string per file, therefore all the data is in the first line
-		my $fileContent = $inFH->getline() // $self->logger->logconfess("Empty file");
+		my $fileContent = $inFH->getline();
+
+		unless(defined $fileContent){
+			if($type eq 'binary'){
+				$self->logger->logconfess("Binary file is empty. Fatal error");
+			}
+			else{
+				$self->logger->warn("SNP file empty");
+				next;
+			}
+		}
 		$fileContent =~ s/\R//g;
 
 		if($counter == 1){
@@ -836,6 +868,7 @@ sub _getMsa{
 	# [9]length"',
 	# [10]sseq,
 	# [11]qseq
+	$self->logger->debug("msa: " . Dumper ($result));
 	foreach my $resKey(keys %{$result}){
 		$tempInFH->print('>' . $result->{$resKey}->[0]->[0] . "\n" . $result->{$resKey}->[0]->[10] . "\n");
 	}

@@ -174,6 +174,7 @@ Uses Bio::SeqIO for this purpose.
 =cut
 
 sub _createDatabase{
+
 	my($self)=shift;
 	
 	if(defined $self->_databaseName){
@@ -181,6 +182,7 @@ sub _createDatabase{
 		$self->logger->info("Database already created" );
 	}
 	else{
+		no warnings;
 		$self->logger->info("Creating database");
 		
 		my $originalFH = Bio::SeqIO->new(-file=>'<'.$self->inputFile, -format=>'fasta') or die "$!";
