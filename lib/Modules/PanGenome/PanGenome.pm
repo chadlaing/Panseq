@@ -360,7 +360,7 @@ sub _processBlastXML {
 		
 		my @resultKeys = keys %{$result};
 		my $numberOfResults = scalar @resultKeys;
-		$self->logger->warn("NOR: $numberOfResults");
+		$self->logger->debug("NOR: $numberOfResults");
 		unless($numberOfResults > 0){
 			$self->logger->warn("No results for query sequence $totalResults, skipping");
 			next;
@@ -428,17 +428,21 @@ sub _processBlastXML {
 					id=>$counter
 				);
 
-				if($self->settings->storeAlleles){
-					$binaryHash{sequence}=$hit->[10];
-				}
+				
 
 				if($hitNum == 1){		
 					$genomeResults{$name}->{binary} = [
 						\%binaryHash
-					]								
+					];
+					if($self->settings->storeAlleles){
+						$genomeResults{$name}->{alleles}=[$hit->[10]];
+					}							
 				}
 				else{
-					push @{$genomeResults{$name}->{binary}},\%binaryHash
+					push @{$genomeResults{$name}->{binary}},\%binaryHash;
+					if($self->settings->storeAlleles){
+						push @{$genomeResults{$name}->{alleles}}, $hit->[10];
+					}
 				}				
 			
 				$hitNum++;							
@@ -471,7 +475,9 @@ sub _processBlastXML {
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);	
 
 			foreach my $cResult(@{$coreResults}){
-				my $sName = $self->settings->getGenomeNameFromContig($cResult->{contig});
+				#$self->logger->warn("cResult contig: " . $cResult->{contig});
+				my $sName = $self->settings->getGenomeNameFromContig($cResult->{contig}) // $self->logger->logdie("Could not find genome for " . $cResult->{contig});
+				#my $sName = $cResult->{contig};
 				$genomeResults{$sName}->{snp}=
 					{
 						$cResult->{locusId}=>{
@@ -606,14 +612,11 @@ sub _printResults{
 				exit(1);
 			}		
 			
-			$self->logger->warn("locusInformation pan: " . $locusInformation->{pan});
 			if($locusInformation->{pan} eq 'core'){
 			
 				if(defined $genomeResults->{$genome}->{snp}){
-					#phylip file print
-					my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp.phylip' . '_' . $genomeCounter . '_' . $blastFile ) or die "$!";
-
 					my $snpLocusCounter=0;
+					
 					foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
 						if(!defined $snpArray->[$snpLocusCounter]->[0]){
 							$snpArray->[$snpLocusCounter]->[0] = $snpId;
@@ -622,50 +625,22 @@ sub _printResults{
 							$self->logger->fatal("SNP IDs do not match!");
 							exit(1);
 						}				
-						$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};					
-
-						$snpPhylipFH->print($genomeResults->{$genome}->{snp}->{$snpId}->{value});
-
-						$coreSnpsFH->print(
-							"\n", 
-							$snpId,
-							"\t",
-							$locusInformation->{name},
-							"\t",
-							$genome,
-							"\t",
-							$genomeResults->{$genome}->{snp}->{$snpId}->{value},
-							"\t",
-							$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
-							"\t",
-							$genomeResults->{$genome}->{snp}->{$snpId}->{start_bp},
-							"\t",
-							$genomeResults->{$genome}->{binary}->[0]->{contig_id}						
-						);
+						$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};							
 						$snpLocusCounter++;
-					}
-					
-					unless(defined $numberOfSnps){
-						$numberOfSnps = $snpLocusCounter;
-					}				
-					$snpPhylipFH->close();
+					}						
 				} #defined SNP for genome
-				else{
-					#no SNPs for genome eg. core but this genome missing
-					push @genomesMissingSnps, $genome;
-					$self->logger->warn("Missing $genome for SNPs, number of SNPs: $numberOfSnps");
-				}
 			} #end if core
 			$genomeCounter++;	
 		}#end genome
 		#print the SNPs
-		foreach my $row(0..scalar(@{$snpArray})-1){
-			$snpTableFH->print("\n", $snpArray->[$row]->[0]);
-			
-			foreach my $column(1..scalar(@{$snpArray->[$row]})-1){
-				$snpTableFH->print("\t", $snpArray->[$row]->[$column]);
-			}
-		}
+		$self->_printSnpData(
+			snpArray => $snpArray,
+			name => $locusInformation->{name},
+			genomeResults => $genomeResults,
+			snpTableFH => $snpTableFH,
+			coreSnpsFH => $coreSnpsFH,
+			blastFile => $blastFile
+		);
 	}
 
 	foreach my $fh(@fileHandles){
@@ -674,6 +649,66 @@ sub _printResults{
 	}	
 }
 
+
+sub _printSnpData{
+	my $self = shift;
+	my %params = @_;
+	
+	my $snpArray = $params{snpArray};
+
+	my %snpString;
+	foreach my $snp(0..scalar(@{$snpArray})-1){	
+		my $snpId = $snpArray->[$snp]->[0];	
+		my $snpString = "\n" . $snpId;
+
+		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
+			my $snpChar = $snpArray->[$snp]->[$genome] // '-';				
+			$snpString .= "\t" . $snpChar;
+
+			if(defined $snpString{$genome}){
+				$snpString{$genome} .= $snpChar;
+			}
+			else{
+				$snpString{$genome} = $snpChar;
+			}
+
+			my $genome = $self->settings->orderedGenomeNames->[$genome -1];
+			my $startBp;
+			if(defined $params{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}){
+				$startBp = $params{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp};
+			}
+			else{
+				$startBp = 0;
+			}
+			#per SNP printing
+			
+			$params{coreSnpsFH}->print(
+				"\n", 
+				$snpId,
+				"\t",
+				$params{name},
+				"\t",
+				$genome,
+				"\t",
+				$snpChar,
+				"\t",
+				$startBp,
+				"\t",
+				$startBp,
+				"\t",
+				$params{genomeResults}->{$genome}->{binary}->[0]->{contig_id}						
+			);
+		} #foreach
+		$params{snpTableFH}->print($snpString);
+	}
+
+	foreach my $genome(keys %snpString){
+		#phylip file print
+		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp.phylip' . '_' . $genome . '_' . $params{blastFile} ) or die "$!";
+		$snpPhylipFH->print($snpString{$genome});
+		$snpPhylipFH->close();
+	}
+}
 
 sub _combineFilesOfType{
 	my $self = shift;
@@ -714,7 +749,7 @@ sub _combinePhylipFiles{
 		my $inFH = IO::File->new('<' . $phylipFile) or die "$!";
 		
 		#only a single string per file, therefore all the data is in the first line
-		my $fileContent = $inFH->getline() // $self->logger->logdie("Empty file");
+		my $fileContent = $inFH->getline() // $self->logger->logconfess("Empty file");
 		$fileContent =~ s/\R//g;
 
 		if($counter == 1){
@@ -853,12 +888,7 @@ sub _getHashOfFastaAlignment{
 	}
 	my @gn = keys %results;
 	my $alignmentLength = length($results{$gn[0]});
-	#add all the missing genomes as '-'
-	foreach my $genome(@{$self->settings->orderedGenomeNames}){
-		unless(defined $blastResult->{$genome}){
-			$results{$genome} = '-' x $alignmentLength;
-		}
-	}
+	
 	return (\%results);
 }
 

@@ -118,8 +118,7 @@ sub getNextResult{
 
 
 		my $sName = $self->settings->getGenomeNameFromContig($la[0]);
-		$self->logger->warn("sName: $sName");
-			
+					
 		if($self->_getPercentId($la[7],$la[8],$la[4],$la[5]) > $self->settings->percentIdentityCutoff){			
 			$self->logger->debug("Passes percent identity cutoff");
 			
