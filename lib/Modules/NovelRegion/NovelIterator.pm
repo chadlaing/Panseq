@@ -271,8 +271,8 @@ sub run{
 	}
 	
 	#run the novel regions final file against itself to remove seed-genome duplication
-	$self->logger->info("Running the novel regions to remove duplicates");
-	$finalFile = $self->_performFinalNucmer($finalFile,$finalFile);	
+	#$self->logger->info("Running the novel regions to remove duplicates");
+	#$finalFile = $self->_performFinalNucmer($finalFile,$finalFile);	
 
 	#need to run against the referenceDirectory files if they exist
 	if($self->settings->novelRegionFinderMode eq 'unique'){
@@ -377,76 +377,69 @@ sub _processRemainingFilesWithNucmer{
 
 	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
 
-	my @filesToRun;
-	
+	my @filesToRun;	
 	my $counter=1;
-	my $reset=0;
-	my @outputFileNames;
-	my $lastFile=undef;
+	my @outputFileNames;	
 
-	foreach my $fastaFile (@{$allFastaFiles}){
-		$lastFile = $fastaFile;
-		push @filesToRun, $fastaFile;		
-
-		if(scalar(@filesToRun) == $filesPerComparison){
-			$lastFile = undef;
-			$reset=1;
-			my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
-			push @outputFileNames, $newFileName;
-
-			$forker->start and next;				
-				my ($queryFile, $referenceFile) = $self->_getQueryReferenceFileFromList(\@filesToRun,$newFileName);				
-				my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
-
-				my $namesFile;
-				if($self->settings->novelRegionFinderMode eq 'unique'){
-					
-					my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();			
-					$namesFile = $combiner->combineFilesIntoSingleFile(
-						[$queryFile,$referenceFile],
-						$self->settings->baseDirectory . 'uniqueNovelRegions.fasta'
-					);					
-				}
-				else{
-					$namesFile = $queryFile;
-				}
-
-				my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_novelRegions'));	
-				
-				#combines them into the $newFileName specified above, which is added to the @filesFromNucmer array
-				#this array is returned and used to feed back into this processing sub
-				my $combinedFile = $self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
-				$self->logger->info("Combined file: $combinedFile");			
-
-				#remove temp files
-				unlink $coordsFile;
-				unlink $newFileName . '_filtered.delta';
-				unlink $newFileName . '_query_dbtemp.index';				
-
-				#keep the last novelRegionsFile under new name
-				#with File::Copy
-				move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
-				unlink $queryFile;
-				unlink $referenceFile;	
-					
-			$forker->finish;
+	my $fastaFile;
+	my $numFilesMinusOne = scalar(@{$allFastaFiles})-1;
+	foreach my $i (0 .. $numFilesMinusOne){
+		$fastaFile = $allFastaFiles->[$i];
+		push @filesToRun, $fastaFile;	
+		unless(@filesToRun == $filesPerComparison){
+			next;
 		}
+	
+		my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
+		push @outputFileNames, $newFileName;
+
+		$forker->start and next;				
+			my ($referenceFile, $queryFile) = @filesToRun; 				
+			my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
+
+			my $namesFile;
+			if($self->settings->novelRegionFinderMode eq 'unique'){
+				
+				my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();			
+				$namesFile = $combiner->combineFilesIntoSingleFile(
+					[$queryFile,$referenceFile],
+					$self->settings->baseDirectory . 'uniqueNovelRegions.fasta'
+				);					
+			}
+			else{
+				$namesFile = $queryFile;
+			}
+
+			my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_novelRegions'));	
+		
+			my $combinedFile = $self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
+			$self->logger->info("Combined file: $combinedFile");			
+
+			#remove temp files
+			unlink $coordsFile;
+			unlink $newFileName . '_filtered.delta';
+			unlink $newFileName . '_query_dbtemp.index';				
+
+			#keep the last novelRegionsFile under new name
+			#with File::Copy
+			move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
+			unlink $queryFile;
+			unlink $referenceFile;					
+		$forker->finish;		
 	}
 	continue{
 		$counter++;
-		if($reset ==1){
-			$self->logger->info("Resetting filesToRun from size of " . scalar(@filesToRun));
+
+		if(scalar(@filesToRun) == $filesPerComparison){
 			@filesToRun=();
-			$reset=0;
+		}
+		else{
+			if($i == $numFilesMinusOne){
+				push @outputFileNames, $fastaFile;
+			}
 		}
 	}
 	$forker->wait_all_children;
-	
-	#if a file hasn't been compared, return in list
-	if(defined $lastFile){
-		$self->logger->info("Adding $lastFile to the list of returned files");
-		push @outputFileNames, $lastFile;
-	}
 	return \@outputFileNames;
 }
 
@@ -548,45 +541,6 @@ sub _printNovelRegionsFromQueue{
 	unlink $databaseFile;
 	return $outputFile;
 }
-
-
-=head2 _getQueryReferenceFileFromList
-
-Takes in a list of file names.
-Makes the first item of the list the reference file.
-Combines the remaining files into a single "queryFile".
-Returns the name of this queryFile.
-We combine query files, as nucmer "streams" this file past the reference file,
-so larger query files are better than larger reference files.
-The individual files combined into the single query file are deleted.
-
-=cut
-
-sub _getQueryReferenceFileFromList{
-	my $self = shift;
-	my $listOfFiles = shift;
-	my $name=shift;
-	my @allFiles = sort @{$listOfFiles};
-
-	my $ref = shift @allFiles;
-	$self->logger->info("Reference file for nucmer run is $ref");
-	$self->logger->info("Files combined for query run: @allFiles");
-	#with Roles::CombineFilesIntoSingleFile
-	my $queryFileName = $name . '_query';
-
-	my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
-	$combiner->combineFilesIntoSingleFile(
-		\@allFiles,
-		$queryFileName
-	); 
-
-	#remove the non-combined query files
-	foreach my $file(@allFiles){
-		unlink $file;
-	}
-	return ($queryFileName,$ref);
-}
-
 
 =head2 _processNucmerQueue
 
