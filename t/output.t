@@ -157,7 +157,7 @@ sub _getFilesFromDirectory{
     return @dir;
 }
 
-#need to have test output ber consistent
+#need to have test output be consistent
 sub _removeIDColumn{
 	my $directory = shift;
 	
@@ -167,8 +167,7 @@ sub _removeIDColumn{
     	unless(
     		$file eq 'pan_genome.txt'
     		|| $file eq 'core_snps.txt'
-    		|| $file eq 'binary_table.txt'
-    		|| $file eq 'snp_table.txt'
+            || $file eq 'snp_table.txt'
     	){
     		next;
     	}
