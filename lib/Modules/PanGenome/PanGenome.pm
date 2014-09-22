@@ -52,10 +52,8 @@ use Log::Log4perl;
 use Parallel::ForkManager;
 use Modules::Alignment::SNPFinder;
 use Modules::Alignment::BlastResults;
-use Role::Tiny::With;
+use Modules::Setup::CombineFilesIntoSingleFile;
 use Data::Dumper;
-
-with 'Roles::CombineFilesIntoSingleFile';
 
 #object creation
 sub new {
@@ -357,12 +355,10 @@ sub _processBlastXML {
 
 	my @finalResults;
 	while(my $result = $blastResult->getNextResult){
-		$self->logger->debug("init result: " . Dumper($result));
 		$totalResults++;		
 		
 
 		my @resultKeys = keys %{$result};
-		$self->logger->debug("result keys:" . Dumper(@resultKeys));
 		my $numberOfResults = scalar @resultKeys;
 		$self->logger->debug("NOR: $numberOfResults");
 		unless($numberOfResults > 0){
@@ -402,15 +398,15 @@ sub _processBlastXML {
 		else{
 			$qsn = $self->settings->getGenomeNameFromContig($queryName);
 		}
-
-		$self->logger->debug("pre-locusInformation: qsn: " . Dumper($qsn) . Dumper($result));
+		
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$qsn}->[0]->[1],
 			sequence=>$result->{$qsn}->[0]->[11],
 			pan=>$coreOrAccessory
 		);	
-		$self->logger->debug("post-locusInformation: " . Dumper($result));
+		$self->logger->debug("locusInformation: " . Dumper(%locusInformation));
+		
 		
 		my %genomeResults;
 		foreach my $name(@{$self->settings->orderedGenomeNames}){	
@@ -428,7 +424,6 @@ sub _processBlastXML {
 			}			
 		}
 		
-		$self->logger->debug("pre-foreach my name resultkeys: " . Dumper($result));
 		foreach my $name(@resultKeys){
 			my $hitNum=1;
 
@@ -473,7 +468,6 @@ sub _processBlastXML {
 		if($coreOrAccessory eq 'core'){			
 			#generate a MSA of all strains that contain sequence
 			#if the locus is core, we will send this MSA to the SNPFinder
-			$self->logger->debug("pre-msa call: " . Dumper($result));
 			my $msaHash = $self->_getHashOfFastaAlignment(
 				$self->_getMsa($result,$counter),
 				$result
@@ -559,7 +553,9 @@ sub _printResults{
 		my $locusInformation = $finalResult->{locusInformation};
 		my $genomeResults = $finalResult->{genomeResults};
 
+		$self->logger->debug("foreach finalresult: " . Dumper($locusInformation));
 		if($self->settings->nameOrId eq 'name'){
+			$self->logger->debug("printing: li->name " . Dumper($locusInformation->{name}));
 			$binaryTableFH->print("\n", $locusInformation->{name});
 		}
 		else{
@@ -738,11 +734,13 @@ sub _combineFilesOfType{
 	my $outputFile = shift;
 	my $firstLine = shift // 1;
 
-	#use Roles::CombineFilesIntoSingleFile
-	my $fileNames = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
+	my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
+	my $fileNames = $namer->getFileNamesFromDirectory($self->settings->baseDirectory);
 	my @matchedFiles = sort grep(/\Q$fileNamePart\E/, @{$fileNames});
+	$self->logger->debug("Matched files: @matchedFiles");
 
-	$self->_combineFilesIntoSingleFile(
+	my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+	$combiner->combineFilesIntoSingleFile(
 		\@matchedFiles,
 		$outputFile,
 		0, #append
@@ -751,17 +749,16 @@ sub _combineFilesOfType{
 
 	#delete original files
 	foreach my $file(@matchedFiles){
-		unlink $file;
+		#unlink $file;
 	}
 }
-
 
 sub _combinePhylipFiles{
 	my $self = shift;
 	my $type = shift;
 
-	#use Roles::CombineFilesIntoSingleFile
-	my $fileNames = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
+	my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
+	my $fileNames = $namer->getFileNamesFromDirectory($self->settings->baseDirectory);
 	my @matchedFiles = sort grep(/\Q$type\E/, @{$fileNames});
 
 	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $type) or die "$!";
@@ -868,7 +865,6 @@ sub _getMsa{
 	# [9]length"',
 	# [10]sseq,
 	# [11]qseq
-	$self->logger->debug("msa: " . Dumper ($result));
 	foreach my $resKey(keys %{$result}){
 		$tempInFH->print('>' . $result->{$resKey}->[0]->[0] . "\n" . $result->{$resKey}->[0]->[10] . "\n");
 	}

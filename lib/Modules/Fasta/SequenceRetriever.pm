@@ -182,7 +182,6 @@ sub _createDatabase{
 		$self->logger->info("Database already created" );
 	}
 	else{
-		no warnings;
 		$self->logger->info("Creating database");
 		
 		my $originalFH = Bio::SeqIO->new(-file=>'<'.$self->inputFile, -format=>'fasta') or die "$!";

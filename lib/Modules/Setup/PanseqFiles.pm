@@ -50,11 +50,9 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
+use Modules::Setup::CombineFilesIntoSingleFile;
 use File::Copy;
 use Log::Log4perl;
-use Role::Tiny::With;
-
-with 'Roles::CombineFilesIntoSingleFile';
 
 #object creation
 sub new {
@@ -128,12 +126,13 @@ sub _initialize{
             next;
         }
 
+        my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
     	if($key eq 'queryDirectory'){
-    		$self->queryFileNames($self->_getFileNamesFromDirectory($params{$key}));
+    		$self->queryFileNames($namer->getFileNamesFromDirectory($params{$key}));
     		$self->logger->debug("Gathering query file names from $params{$key}");
     	}
     	elsif($key eq 'referenceDirectory'){
-    		$self->referenceFileNames($self->_getFileNamesFromDirectory($params{$key}));
+    		$self->referenceFileNames($namer->getFileNamesFromDirectory($params{$key}));
     		$self->logger->debug("Gathering reference file names from $params{$key}");
     	}
     	else{
@@ -157,7 +156,6 @@ sub _initialize{
 All files from the query directory are combined into a single fasta file.
 If this file exists, the name is returned.
 If it does not, the files are combined and the name of the combined file is returned.
-Use of Roles::CombineFilesIntoSingleFile
 
 =cut
 
@@ -169,7 +167,9 @@ sub singleQueryFile{
 	}
 	else{
 		my $combinedFileName = shift // undef;
-		$self->_singleQueryFileName($self->_combineAndSanitizeFastaFiles($self->queryFileNames, $combinedFileName));
+
+        my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+		$self->_singleQueryFileName($combiner->combineAndSanitizeFastaFiles($self->queryFileNames, $combinedFileName));
 	}
 
 }
@@ -179,7 +179,7 @@ sub singleQueryFile{
 All files from the reference directory are combined into a single fasta file.
 If this file exists, the name is returned.
 If it does not, the files are combined and the name of the combined file is returned.
-Use of Roles::CombineFilesIntoSingleFile
+
 
 =cut
 
@@ -191,7 +191,9 @@ sub singleReferenceFile{
     }
     else{
         my $combinedFileName = shift // undef;
-        $self->_singleReferenceFileName($self->_combineAndSanitizeFastaFiles($self->referenceFileNames, $combinedFileName));
+
+        my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+        $self->_singleReferenceFileName($combiner->combineAndSanitizeFastaFiles($self->referenceFileNames, $combinedFileName));
     }
 
 }
@@ -201,7 +203,6 @@ sub singleReferenceFile{
 
 The combination of the query and reference directory into a single file.
 If this file exists, the name is returned.
-Uses Roles::CombineFilesIntoSingleFile.
 
 =cut
 
@@ -214,7 +215,9 @@ sub allQueryAndReferenceFilesAsSingleFile{
     else{
         my $combinedFileName = shift // undef;
         my $filesToCombine = [@{$self->queryFileNames},@{$self->referenceFileNames}];
-        $self->_singleReferenceFileName($self->_combineAndSanitizeFastaFiles($filesToCombine, $combinedFileName));
+
+        my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+        $self->_singleReferenceFileName($combiner->combineAndSanitizeFastaFiles($filesToCombine, $combinedFileName));
     }
 }
 

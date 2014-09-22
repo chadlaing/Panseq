@@ -62,9 +62,6 @@ use Modules::Alignment::NucmerRun;
 use Modules::NovelRegion::NovelRegionFinder;
 use Parallel::ForkManager;
 use Log::Log4perl;
-use Role::Tiny::With;
-
-with 'Roles::CombineFilesIntoSingleFile';
 
 #object creation
 sub new {
@@ -284,8 +281,9 @@ sub run{
 		my $finalReferenceFile;
 		if(defined $self->referenceFile && -s $self->referenceFile > 0){		
 			$self->logger->info("Comparing novel regions against reference file");
-			#with Roles::CombineFilesIntoSingleFile
-			$finalReferenceFile= $self->_combineFilesIntoSingleFile(
+			
+			my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+			$finalReferenceFile= $combiner->combineFilesIntoSingleFile(
 				[$self->_lastNovelRegionsFile, $self->referenceFile],
 				$self->settings->baseDirectory . 'finalReferenceFile_unique.fasta'
 			);
@@ -402,8 +400,9 @@ sub _processRemainingFilesWithNucmer{
 
 				my $namesFile;
 				if($self->settings->novelRegionFinderMode eq 'unique'){
-					#with Roles::CombineFilesIntoSingleFile ([files to combine],outputFile)					
-					$namesFile = $self->_combineFilesIntoSingleFile(
+					
+					my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();			
+					$namesFile = $combiner->combineFilesIntoSingleFile(
 						[$queryFile,$referenceFile],
 						$self->settings->baseDirectory . 'uniqueNovelRegions.fasta'
 					);					
@@ -475,8 +474,8 @@ sub _combineNovelRegionsAndReferenceFile{
 		$refFileToAdd = $referenceFile;
 	}
 
-	#with Roles::CombineFilesIntoSingleFile
-	$self->_combineFilesIntoSingleFile(
+	my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+	$combiner->combineFilesIntoSingleFile(
 		[$novelRegionsFile, $refFileToAdd],
 		$outputFile
 	);
@@ -574,7 +573,9 @@ sub _getQueryReferenceFileFromList{
 	$self->logger->info("Files combined for query run: @allFiles");
 	#with Roles::CombineFilesIntoSingleFile
 	my $queryFileName = $name . '_query';
-	$self->_combineFilesIntoSingleFile(
+
+	my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+	$combiner->combineFilesIntoSingleFile(
 		\@allFiles,
 		$queryFileName
 	); 

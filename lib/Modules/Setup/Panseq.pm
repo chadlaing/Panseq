@@ -45,6 +45,7 @@ use Modules::Fasta::FastaFileSplitter;
 use Modules::PanGenome::PanGenome;
 use Modules::LociSelector::LociSelector;
 use Modules::Fasta::MultiFastaSequenceName;
+use Modules::Setup::CombineFilesIntoSingleFile;
 use Parallel::ForkManager;
 use Tie::Log4perl;
 use Log::Log4perl;
@@ -52,9 +53,6 @@ use File::Path qw/make_path remove_tree/;
 use Carp;
 use File::Copy;
 use Archive::Zip;
-use Role::Tiny::With;
-
-with 'Roles::CombineFilesIntoSingleFile';
 
 #object creation
 sub new {
@@ -192,11 +190,13 @@ sub _launchPanseq{
 	if(defined $self->settings->queryFile){
 		#sanitize the input file for proper fasta format
 		#use the sanitized file for future work
-		#with Roles::CombineFilesIntoSingleFile->_combineAndSanitizeFastaFiles
-
+		
 		#requires ($arrayRef, outputFileName)
 		my $sanitizedFileName = $self->settings->baseDirectory . 'sanitized_queryFile.fasta';
-		$self->_combineAndSanitizeFastaFiles(
+
+		my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
+
+		$combiner->combineAndSanitizeFastaFiles(
 			[$self->settings->queryFile],
 			$sanitizedFileName
 		);
@@ -270,14 +270,14 @@ sub _createDirectories{
 =head3 _cleanUp
 
 Removes any files left-over from the run.
-Uses Roles::CombineFilesIntoSingleFile for _getFileNamesFromDirectory
 
 =cut
 
 sub _cleanUp{
 	my $self=shift;
 	
-	my $fileNamesRef = $self->_getFileNamesFromDirectory($self->settings->baseDirectory);
+	my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
+	my $fileNamesRef = $namer->getFileNamesFromDirectory($self->settings->baseDirectory);
 
 	foreach my $file(@{$fileNamesRef}){
 		if(
