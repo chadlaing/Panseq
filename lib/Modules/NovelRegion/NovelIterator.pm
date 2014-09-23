@@ -62,7 +62,7 @@ use Modules::Alignment::NucmerRun;
 use Modules::NovelRegion::NovelRegionFinder;
 use Parallel::ForkManager;
 use Log::Log4perl;
-use File::Basename;
+use Digest::MD5;
 
 #object creation
 sub new {
@@ -344,10 +344,11 @@ sub _processRemainingFilesWithNucmer{
 			next;
 		}
 		
-		#get filename only with File::Basename
+		#get digest of filename
+		my $digester = Digest::MD5->new();
 		my ($referenceFile, $queryFile) = @filesToRun;
-		my $rf = lc(fileparse($referenceFile));
-		my $qf = uc(fileparse($queryFile));
+		my $rf = $digester->add($referenceFile)->hexdigest;
+		my $qf = $digester->add($queryFile)->hexdigest;
 
 		my $newFileName = $self->settings->baseDirectory . q{_} . $qf . '_NR_plus_'. $rf . q{_};
 		push @outputFileNames, $newFileName;
