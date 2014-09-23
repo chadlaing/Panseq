@@ -62,7 +62,6 @@ use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;
 use Bio::SeqIO;
-use Modules::Fasta::SequenceName;
 use Carp;
 use Log::Log4perl;
 use Role::Tiny::With;
