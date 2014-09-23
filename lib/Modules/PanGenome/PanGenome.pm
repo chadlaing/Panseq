@@ -353,7 +353,6 @@ sub _processBlastXML {
 	my $totalResults=0;
 
 	my @finalResults;
-	my $MAX_RESULTS = 10;
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;		
 
@@ -506,7 +505,7 @@ sub _processBlastXML {
 		);
 		push @finalResults, \%result;
 
-		if(scalar(@finalResults) == $MAX_RESULTS){
+		if(scalar(@finalResults) == $self->settings->maxNumberResultsInMemory){
 			$self->_printResults($blastFile,\@finalResults);
 			@finalResults=();
 		}

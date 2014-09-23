@@ -30,6 +30,10 @@ sub _initialize{
 
 
 #class variables
+sub maxNumberResultsInMemory{
+	my $self = shift;
+	$self->{'_maxNumberResultsInMemory'} = shift // return $self->{'_maxNumberResultsInMemory'};
+}
 
 sub orderedGenomeNames{
 	my $self = shift;
@@ -376,6 +380,10 @@ sub _setDefaults{
 
 	unless(defined $self->frameshift){
 		$self->frameshift(0);
+	}
+
+	unless(defined $self->maxNumberResultsInMemory){
+		$self->maxNumberResultsInMemory(100);
 	}
 }
 

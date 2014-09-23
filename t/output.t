@@ -107,25 +107,25 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'3b9802ecb882499b94f000de245c26c7',
-	plasmidsPanGenome=>'f5f1afcc13c726a891d2d1bb52fbcd33',
-	plasmidsBinaryTable=>'fbfffe4e58a1dfc1cd04cb29b5146c0d',
-	plasmidsSnpTable=>'b36ddaf8ca3d1fca2fff44192cc7091f',
-	plasmidsBinaryPhylip=>'db5e15a38d9b7b7be53811df302d7558',
-	plasmidsSnpPhylip=>'847014dfd971fef5abb384dc876eca73',
+	plasmidsCoreSnps=>'afc0ccd1d1f8212b05ae78edb986fadf',
+	plasmidsPanGenome=>'55475bf1f04dde9a52a9235190af53ef',
+	plasmidsBinaryTable=>'04f2367db87c989b26c27d61c6908fa6',
+	plasmidsSnpTable=>'4a8126a105bab8e7eeb0bde17b39e8b6',
+	plasmidsBinaryPhylip=>'61c0c9a22041385779a5742944075729',
+	plasmidsSnpPhylip=>'192df76ef39eb53a46405d7f17c60dcf',
 	genomesCoreSnps=>'3c4ecd33b9debdf3a612002addd173c6',
 	genomesPanGenome=>'68b4bf2184d211b13ed9081b5229089b',
 	genomesBinaryTable=>'1f1aaef9c674a5e847cae718964b0385',
 	genomesSnpTable=>'4c5289bccfe1923512be89fbc0ca466c',
 	genomesBinaryPhylip=>'4b341c515a3aa54377b7a7f8a9e71d17',
 	genomesSnpPhylip=>'83b52d545f6da09b26f97bd28f8109e9',
-	queryCoreSnps=>'0d5adf0121501a885780d210aef11214',
-	queryPanGenome=>'10a70b7c74c8e6d01298f9023eae80b3',
-	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
-	querySnpTable=>'27dc08b4023a052cc8680af0ad7ddf5d',
-	queryBinaryPhylip=>'183fea98a21e4f9eae54e486f1f08821',
-	querySnpPhylip=>'94f340c6f989514c06758472f708c5f2',
-	queryAlleles=>'fd83f5a3eaa060da7488d6ab11193786'
+	queryCoreSnps=>'8cff24ffeef699c9c07e98c9f486b46e',
+	queryPanGenome=>'b770d4b30d6417ed43050f1254184bcb',
+	queryBinaryTable=>'6cbe3340030974ce52f228031a4b30de',
+	querySnpTable=>'3b10e7b6925e12a26eefc0d05763f1a6',
+	queryBinaryPhylip=>'09e40c2e1be9d06d76c478418459982e',
+	querySnpPhylip=>'8aaa390906f3ffbafc09413c441c48be',
+	queryAlleles=>'41bfcb9626577dd46a2e0d1f2459c55d'
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
