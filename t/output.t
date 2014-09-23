@@ -1,29 +1,29 @@
 #!/usr/bin/env perl
 
 
-#     /usr/bin/time --verbose output
-#     User time (seconds): 595.71
-#     System time (seconds): 26.30
-#     Percent of CPU this job got: 98%
-#     Elapsed (wall clock) time (h:mm:ss or m:ss): 10:30.36
-#     Average shared text size (kbytes): 0
-#     Average unshared data size (kbytes): 0
-#     Average stack size (kbytes): 0
-#     Average total size (kbytes): 0
-#     Maximum resident set size (kbytes): 235328
-#     Average resident set size (kbytes): 0
-#     Major (requiring I/O) page faults: 0
-#     Minor (reclaiming a frame) page faults: 12499636
-#     Voluntary context switches: 7815
-#     Involuntary context switches: 7427
-#     Swaps: 0
-#     File system inputs: 0
-#     File system outputs: 828888
-#     Socket messages sent: 0
-#     Socket messages received: 0
-#     Signals delivered: 0
-#     Page size (bytes): 4096
-#     Exit status: 0
+# Command being timed: "Panseq/t/output.t"
+# User time (seconds): 696.37
+# System time (seconds): 32.72
+# Percent of CPU this job got: 98%
+# Elapsed (wall clock) time (h:mm:ss or m:ss): 12:17.05
+# Average shared text size (kbytes): 0
+# Average unshared data size (kbytes): 0
+# Average stack size (kbytes): 0
+# Average total size (kbytes): 0
+# Maximum resident set size (kbytes): 236900
+# Average resident set size (kbytes): 0
+# Major (requiring I/O) page faults: 75
+# Minor (reclaiming a frame) page faults: 13096120
+# Voluntary context switches: 7528
+# Involuntary context switches: 7030
+# Swaps: 0
+# File system inputs: 7696
+# File system outputs: 835440
+# Socket messages sent: 0
+# Socket messages received: 0
+# Signals delivered: 0
+# Page size (bytes): 4096
+# Exit status: 0
 
 
 use strict;
@@ -113,12 +113,12 @@ my %md5Sum=(
 	plasmidsSnpTable=>'4a8126a105bab8e7eeb0bde17b39e8b6',
 	plasmidsBinaryPhylip=>'61c0c9a22041385779a5742944075729',
 	plasmidsSnpPhylip=>'192df76ef39eb53a46405d7f17c60dcf',
-	genomesCoreSnps=>'3c4ecd33b9debdf3a612002addd173c6',
-	genomesPanGenome=>'68b4bf2184d211b13ed9081b5229089b',
-	genomesBinaryTable=>'1f1aaef9c674a5e847cae718964b0385',
-	genomesSnpTable=>'4c5289bccfe1923512be89fbc0ca466c',
-	genomesBinaryPhylip=>'4b341c515a3aa54377b7a7f8a9e71d17',
-	genomesSnpPhylip=>'83b52d545f6da09b26f97bd28f8109e9',
+	genomesCoreSnps=>'1ba7505faa64d1528cc5dba2dc420d34',
+	genomesPanGenome=>'91dab20c6e944f580b9bd0ca59c2432d',
+	genomesBinaryTable=>'b12ce2866684554a73b394d2ab71135f',
+	genomesSnpTable=>'d612977784292d1286260e5e15a7892d',
+	genomesBinaryPhylip=>'31aac5a26e78c41f06513f7181d86e2f',
+	genomesSnpPhylip=>'2fe33bbd9d66d857ec7c42498e94f134',
 	queryCoreSnps=>'8cff24ffeef699c9c07e98c9f486b46e',
 	queryPanGenome=>'b770d4b30d6417ed43050f1254184bcb',
 	queryBinaryTable=>'6cbe3340030974ce52f228031a4b30de',

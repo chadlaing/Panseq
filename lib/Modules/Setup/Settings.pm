@@ -383,7 +383,7 @@ sub _setDefaults{
 	}
 
 	unless(defined $self->maxNumberResultsInMemory){
-		$self->maxNumberResultsInMemory(100);
+		$self->maxNumberResultsInMemory(500);
 	}
 }
 
