@@ -122,6 +122,26 @@ Below is an example configuration file for panseq.pl:
 
 * 'frameshift' defaults to 0, and includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
 
+## What format should my uploaded sequences be in? ##
+
+Panseq currently only accepts fasta or multi-fasta formatted files. More than one genome may be in a single file, but for all genomes consisting of more than one contig, a distinct identifier must be present in the fasta header of each contig belonging to the same genome. For example, you have just assembled a new genome and are eager to analyze it. Your file consists of a number of contigs, similar to:
+
+	>contig000001
+	ACTGTTT...
+
+	>contig000002
+	CGGGATT...
+
+The unique identifier could be the strain name or anything else of your choosing, but it must be included using the "local" designation: lcl|unique_identifer|. To reformat the above contigs, find and replace all ">" characters in your multi-fasta file with >lcl|unique_identifer|. Thus, if the unique identifier were "strain1", the reformatted contigs would look as follows:
+
+	>lcl|strain1|contig000001
+	ACTGTTT...
+
+	>lcl|strain1|contig000002
+	CGGGATT...
+
+Common database file formats are supported by default, such as ref|, gb|, emb|, dbj|, and gi| and do not need to be modified as described above. For legacy purposes, the name=|unique_identifier| is supported in addition to lcl|unique_identifier|. Please note that spaces are not permitted in the unique identifier. Only letters (A-Z, a-z), digits (0-9) and the underscore "_" are valid characters. 
+
 ##Detailed explanation of Panseq
 
 ###Novel Region Finder

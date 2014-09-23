@@ -350,7 +350,7 @@ sub _processRemainingFilesWithNucmer{
 		my $rf = $digester->add($referenceFile)->hexdigest;
 		my $qf = $digester->add($queryFile)->hexdigest;
 
-		my $newFileName = $self->settings->baseDirectory . q{_} . $qf . '_NR_plus_'. $rf . q{_};
+		my $newFileName = $self->settings->baseDirectory . $qf . '_' . $rf;
 		push @outputFileNames, $newFileName;
 
 		$forker->start and next;								
@@ -369,7 +369,7 @@ sub _processRemainingFilesWithNucmer{
 				$namesFile = $queryFile;
 			}
 
-			my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_novelRegions'));	
+			my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_NR'));	
 			
 			#special case for mode unique
 			$self->logger->debug("combinedFile inputs:\nnrf: $novelRegionsFile\nrf : $referenceFile\nnfn: $newFileName");

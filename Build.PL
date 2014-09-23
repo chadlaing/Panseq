@@ -26,11 +26,8 @@ my $build=Module::Build->new(
 		'Bio::Seq' => 0,
 		'File::Basename'=>0,
 		'Tie::Log4perl'=>0,
-		'Statistics::R'=>0,
 		'Archive::Zip'=>0,
 		'Test::Pretty'=>0,
-		'DBI'=>0,
-		'DBD::SQLite'=>0,
 		'Getopt::Long'=>0
 	}
 );
