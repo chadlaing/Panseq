@@ -351,12 +351,10 @@ sub _processBlastXML {
 	my $blastResult = Modules::Alignment::BlastResults->new($blastFile,$self->settings);
 	$self->logger->debug("About to get the first result");
 	my $totalResults=0;
-	my $totalSeqLength=0;
 
 	my @finalResults;
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;		
-		
 
 		my @resultKeys = keys %{$result};
 		my $numberOfResults = scalar @resultKeys;
@@ -376,8 +374,6 @@ sub _processBlastXML {
 			$coreOrAccessory='accessory';
 		}
 		$self->logger->debug("coreOrAccrssory: $coreOrAccessory");
-		
-		$totalSeqLength += (length ($result->{$resultKeys[0]}->[0]->[11]));
 		
 		#this contains any gaps due to the alignment
 		#we want the "original" sequence for the locus
@@ -400,7 +396,7 @@ sub _processBlastXML {
 			$qsn = $self->settings->getGenomeNameFromContig($queryName);
 			$self->logger->debug("no queryFile, using $qsn as qsn, queryName: $queryName");
 		}
-		
+
 		my %locusInformation = (
 			id=>$counter,
 			name=>$result->{$qsn}->[0]->[1],
@@ -516,7 +512,6 @@ sub _processBlastXML {
 
 	$self->_printResults($blastFile, \@finalResults);
 	$self->logger->info("Total results: $totalResults");
-	$self->logger->info("Total base pairs: $totalSeqLength");
 }
 
 
