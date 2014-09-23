@@ -353,6 +353,7 @@ sub _processBlastXML {
 	my $totalResults=0;
 
 	my @finalResults;
+	my $MAX_RESULTS = 10;
 	while(my $result = $blastResult->getNextResult){
 		$totalResults++;		
 
@@ -404,8 +405,7 @@ sub _processBlastXML {
 			pan=>$coreOrAccessory
 		);	
 		$self->logger->debug("locusInformation: " . Dumper(%locusInformation));
-		
-		
+	
 		my %genomeResults;
 		foreach my $name(@{$self->settings->orderedGenomeNames}){	
 			
@@ -440,9 +440,7 @@ sub _processBlastXML {
 					end_bp =>$hit->[3],
 					value =>1,
 					id=>$counter
-				);
-
-				
+				);				
 
 				if($hitNum == 1){		
 					$genomeResults{$name}->{binary} = [
@@ -508,8 +506,12 @@ sub _processBlastXML {
 		);
 		push @finalResults, \%result;
 
-	}#while result
+		if(scalar(@finalResults) == $MAX_RESULTS){
+			$self->_printResults($blastFile,\@finalResults);
+			@finalResults=();
+		}
 
+	}#while result
 	$self->_printResults($blastFile, \@finalResults);
 	$self->logger->info("Total results: $totalResults");
 }
@@ -659,7 +661,6 @@ sub _printResults{
 	}
 
 	foreach my $fh(@fileHandles){
-		$fh->print("\n");
 		$fh->close();
 	}	
 }
@@ -746,7 +747,7 @@ sub _combineFilesOfType{
 
 	#delete original files
 	foreach my $file(@matchedFiles){
-		unlink $file;
+		#unlink $file;
 	}
 }
 
