@@ -186,6 +186,7 @@ sub _launchPanseq{
 	my $mfsn = Modules::Fasta::MultiFastaSequenceName->new(fileName => $files->singleQueryFile);
 	$self->settings->orderedGenomeNames($mfsn->orderedGenomeNames);
 	$self->settings->_genomeNameFromContig($mfsn->genomeNameFromContig);
+	$self->settings->contigNamesFromGenome($mfsn->contigNamesFromGenome);
 
 	my $iterativeNovelRegions;
 	if(defined $self->settings->queryFile){

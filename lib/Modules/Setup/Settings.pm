@@ -36,6 +36,11 @@ sub orderedGenomeNames{
 	$self->{'_orderedGenomeNames'} = shift // return $self->{'_orderedGenomeNames'};
 }
 
+sub contigNamesFromGenome{
+	my $self = shift;
+	$self->{'_contigNamesFromGenome'} = shift // return $self->{'_contigNamesFromGenome'};
+}
+
 sub _genomeNameFromContig{
 	my $self=shift;
 	$self->{'__contigNameGenome'} = shift // return $self->{'__contigNameGenome'};

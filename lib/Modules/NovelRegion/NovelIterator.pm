@@ -683,10 +683,8 @@ sub _createFileFromGenomeName{
 		');
 	}
 
-	my @headersOfGenome = grep /$params{'genome'}/, (keys %{$self->settings->_genomeNameFromContig});
-
 	my $outFH = IO::File->new('>' . $params{'outputFile'}) or die "Cannot open " . $params{'outputFile'} . "$!\n";
-	foreach my $header(@headersOfGenome){
+	foreach my $header(@{$self->settings->contigNamesFromGenome->{$params{'genome'}}}){
 		$outFH->print('>' . $header . "\n" . $params{'retriever'}->extractRegion($header) . "\n");
 	}
 	$outFH->close();

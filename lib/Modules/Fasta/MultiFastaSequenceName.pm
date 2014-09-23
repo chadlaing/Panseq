@@ -140,6 +140,11 @@ sub genomeNameFromContig{
 	$self->{'__sequenceNameHash'}=shift // return $self->{'__sequenceNameHash'};
 }
 
+sub contigNamesFromGenome{
+	my $self=shift;
+	$self->{'_contigNamesFromGenome'}=shift // return $self->{'_contigNamesFromGenome'};
+}
+
 sub orderedGenomeNames{
 	my $self=shift;
 	$self->{'_orderedGenomeNames'}=shift // return $self->{'_orderedGenomeNames'};
@@ -150,6 +155,7 @@ sub _processMultiFastaFile{
 
 	my %genomeNames;
 	my %contigToGenome;
+	my %genomeToContigs;
 	my $inFH = IO::File->new('<' . $self->fileName) or die "$!";
 	while(my $line = $inFH->getline()){
 		unless($line =~ m/^>/){
@@ -160,11 +166,13 @@ sub _processMultiFastaFile{
 		my $sn = Modules::Fasta::SequenceName->new($line);
 		$genomeNames{$sn->name}=1;
 		$contigToGenome{$line}=$sn->name;
+		push @{$genomeToContigs{$sn->name}}, $line;
 	}
 	$inFH->close();
 
 	$self->orderedGenomeNames([sort keys %genomeNames]);
 	$self->genomeNameFromContig(\%contigToGenome);
+	$self->contigNamesFromGenome(\%genomeToContigs);
 }
 
 
