@@ -111,7 +111,6 @@ sub _initialize{
 
 	#initialize anonymous hashes and arrays
 	$self->_queryFastaHeadersHash({});
-	$self->_queryNameObjectHash({});
 	$self->_comparisonHash({});
 
 	#set default parameters
@@ -131,6 +130,17 @@ sub logger{
 	$self->{'_logger'} = shift // return $self->{'_logger'};
 }
 
+=head2 settings
+
+An object containing all of the settings from the user.
+
+=cut
+
+sub settings{
+	my $self=shift;
+	$self->{'_settings'}=shift // return $self->{'_settings'};
+}
+
 
 =head3 coordsFile
 
@@ -144,18 +154,6 @@ sub coordsFile{
 	$self->{'_coordsFile'}=shift // return $self->{'_coordsFile'};
 }
 
-
-=head3 minimumNovelRegionSize
-
-Specifies the size in bp that a novel region must be greater than or equal to.
-Only those novel regions passing this threshold will be out put to the results file.
-
-=cut
-
-sub minimumNovelRegionSize{
-	my $self=shift;
-	$self->{'_minimumNovelRegionSize'}=shift // return $self->{'_minimumNovelRegionSize'};
-}
 
 
 =head3 queryFile
@@ -179,19 +177,6 @@ A hash in the form of {headerName}=lengthOfSequence, for every fasta sequence in
 sub _queryFastaHeadersHash{
 	my $self=shift;
 	$self->{'__queryFastaHeadersHash'}=shift // return $self->{'__queryFastaHeadersHash'};
-}
-
-
-=head3 _queryNameObjectHash
-
-A hash in the form {NameObject->name}=NameObject, where
-NameObject are those from Modules::Fasta::SequenceName.
-
-=cut
-
-sub _queryNameObjectHash{
-	my $self=shift;
-	$self->{'__queryNameObjectHash'}=shift // return $self->{'__queryNameObjectHash'};
 }
 
 
@@ -266,11 +251,7 @@ sub _processQueryFiles{
 
 	while(my $seq = $inFH->next_seq){
 		my $header = $seq->id . $seq->desc;
-		my $sn = Modules::Fasta::SequenceName->new($header);
 		$self->_queryFastaHeadersHash->{$header}=$seq->length();
-		$self->_queryNameObjectHash->{$sn->name}=$sn;
-
-		$self->logger->debug("Processing $header into: " . $sn->name . ' length: ' . $seq->length);
 	}
 	$inFH->close();
 }
@@ -321,7 +302,7 @@ sub printNovelRegions{
 			
 			#$self->logger->info("Length: $length cutoff: " . $self->minimumNovelRegionSize);
 
-			next unless $length >= $self->minimumNovelRegionSize;	
+			next unless $length >= $self->settings->minimumNovelRegionSize;	
 
 			#uses Roles::GetNewIdStartEnd to implement _getNewIdStartEnd
 			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
@@ -374,7 +355,8 @@ sub _updateComparisonHash {
 	#start,end,key,value
 	$self->_addToComparisonHash($la[2],$la[3],$la[10],$la[9]);
 
-	if($self->mode eq 'unique'){
+	if($self->settings->novelRegionFinderMode eq 'unique'){
+		$self->logger->debug("Adding REF:SEQ for unique");
 		$self->_addToComparisonHash($la[0],$la[1],$la[9],$la[10]);
 	}
 }
@@ -513,8 +495,7 @@ sub _getNoDuplicates {
 	
 	foreach my $query ( sort keys %{$self->_queryFastaHeadersHash}) {
 		$self->logger->debug("query: $query");
-		my $queryName = Modules::Fasta::SequenceName->new($query);
-		my $qName = $queryName->name;
+		my $qName = $self->settings->getGenomeNameFromContig($query);
 		
 		if($qName eq '_ignore'){
 			next;
@@ -527,8 +508,7 @@ sub _getNoDuplicates {
 		
 		foreach my $ref (sort keys %{ $self->_comparisonHash->{$query} } ) {
 			
-			my $referenceName = Modules::Fasta::SequenceName->new($ref);
-			my $rName = $referenceName->name;
+			my $rName = $self->settings->getGenomeNameFromContig($ref);
 			#the only reason the same sequence should be in the query and ref file
 			if($qName eq $rName){
 				$self->logger->debug("query $query is the same");
@@ -674,18 +654,17 @@ sub _getNegativeImageCoords {
 sub _dispatcher {
 	my ($self) = shift;
 
-	if ( defined $self->mode ) {
+	if ( defined $self->settings->novelRegionFinderMode ) {
 
 		my $novelCoordsHashRef;
-
-		if ( $self->mode eq 'no_duplicates' ) {
+		if ( $self->settings->novelRegionFinderMode eq 'no_duplicates' ) {
 			$self->logger->info("Getting non-redundant query regions");
 			$novelCoordsHashRef = $self->_getNoDuplicates();
 		}
 		#elsif ( $self->novelRegionFinderMode eq 'common_to_all' ) {
 		# 	$novelCoordsHashRef = $self->getCommonToAll();
 		# }
-		elsif ( $self->mode eq 'unique' ) {
+		elsif ( $self->settings->novelRegionFinderMode eq 'unique' ) {
 			$self->logger->info("Getting unique regions of query strains");
 		 	$novelCoordsHashRef = $self->_getNoDuplicates();
 		}

@@ -62,6 +62,7 @@ use Modules::Alignment::NucmerRun;
 use Modules::NovelRegion::NovelRegionFinder;
 use Parallel::ForkManager;
 use Log::Log4perl;
+use File::Basename;
 
 #object creation
 sub new {
@@ -150,32 +151,6 @@ sub referenceFile{
 	$self->{'_referenceFile'}=shift // return $self->{'_referenceFile'};
 }
 
-
-=head2 panGenomeFile
-
-The file that contains the built-up pan-genome.
-The _getSeedName method looks for a closed sequence or one with the fewest contigs, and this will be output
-to the panGenomeFile to use as a seed
-
-=cut
-
-sub panGenomeFile{
-	my $self=shift;
-	$self->{'_seedFile'}=shift // return $self->{'_seedFile'};
-}
-
-=head2 novelRegionsFile
-
-Each iteration, the novel regions are output to this file.
-The pangenome is built up by the iterative addition of the novelRegionsFile.
-
-=cut
-
-sub novelRegionsFile{
-	my $self=shift;
-	$self->{'_novelRegionsFile'}=shift // return $self->{'_novelRegionsFile'};
-}
-
 =head2 _lastNovelRegionsFile
 
 Each iteration, the novel regions are output to this file.
@@ -234,11 +209,8 @@ sub run{
 	#we need to run as many nucmer comparisons in parallel as possible
 	#the total number of comparisons possible is <number of strains left> / 2
 	#the total number of comparisons we can run at one time is in  $self->settings->numberOfCores
-	#If there are more comparisons than cores, we add additional strains to each comparison group 
-	#so that all strains are distributed across all cores.
 	#At the end, we return the non-redundant "pan-genome" from each core into a new list.
-	#we iterate over this list in the same manner until 3 or fewer "pan-genomes" remain, 
-	#at which point a single-core comparison of the remaining strains returns the final pan-genome.
+	#we iterate over this list until only a single file is left, the "pan-genome"
 
 	$self->_retriever(Modules::Fasta::SequenceRetriever->new(
 			'inputFile'=> $self->queryFile,
@@ -251,6 +223,7 @@ sub run{
 	my $numberOfRemainingFiles = scalar(@{$allFastaFiles});
 	my $filesPerComparison=2;
 
+	my $iterativeResultFile;
 	while(scalar(@{$allFastaFiles}) > 1){
 		$self->logger->info("Remaining files: " . scalar(@{$allFastaFiles}));
 
@@ -258,22 +231,22 @@ sub run{
 			$allFastaFiles,
 			$filesPerComparison
 		);
+
+		$self->logger->debug("end of while:\n" . "@{$allFastaFiles}");
+	}
+	continue{
+		if(scalar(@{$allFastaFiles})==1){
+			$iterativeResultFile = $allFastaFiles->[0];
+		}
 	}	
 
-	my $finalFile;
-	if(scalar(@{$allFastaFiles})==1){
-		#we need to check the _pan file against the reference directory files, if it exists
-		$finalFile = $allFastaFiles->[0];
-	}
-	else{
+	#double check
+	unless(scalar(@{$allFastaFiles})==1){
 		$self->logger->fatal("Failed to generate a single pan-genome file. Found " . scalar(@{$allFastaFiles}) . " files");
 		exit(1);
 	}
-	
-	#run the novel regions final file against itself to remove seed-genome duplication
-	#$self->logger->info("Running the novel regions to remove duplicates");
-	#$finalFile = $self->_performFinalNucmer($finalFile,$finalFile);	
 
+	my $finalFile = $iterativeResultFile;
 	#need to run against the referenceDirectory files if they exist
 	if($self->settings->novelRegionFinderMode eq 'unique'){
 		$self->logger->info("Gathering unique novel regions.");
@@ -294,41 +267,22 @@ sub run{
 		}	
 
 		my $coordsFile = $self->_processNucmerQueue($self->_lastNovelRegionsFile,$finalReferenceFile, $self->settings->baseDirectory . 'unique_regions');
-		my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $self->_lastNovelRegionsFile, ($finalFile . '_novelRegions'));
+		my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $self->_lastNovelRegionsFile, ($iterativeResultFile . '_novelRegions'));
 		$self->logger->info("Novel regions file $novelRegionsFile has size " . -s $novelRegionsFile);
-		$self->panGenomeFile($novelRegionsFile);	
+		$finalFile = $novelRegionsFile;	
 	}
 	elsif($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
-			$finalFile = $self->_performFinalNucmer($finalFile,$self->referenceFile);
+			$finalFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . 'vs_refDir');
 		}
-		$self->panGenomeFile($finalFile);
 	}
 	else{
 		$self->logger->fatal("Unknown novelRegionFinderMode: " . $self->novelRegionFinderMode);
 		exit(1);
 	}
+	return $finalFile;
 }
 
-=head2
-
-If there is a referenceFile directory, we need to perform a final novel regions comparison
-of the "pan-genome" for the "Selected Query" files against these reference files. If we don't,
-the final reference file from the iterative pan-genome generation is automatically included, even
-if it is not novel with respect to the reference directory sequences.
-
-=cut
-
-sub _performFinalNucmer{
-	my $self = shift;
-	my $queryFile = shift;
-	my $referenceFile = shift;
-
-	my $newFileName = $queryFile . '_final';
-	my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
-	my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_novelRegions'));	
-	return $novelRegionsFile;
-}
 
 =head2 _processRemainingFilesWithNucmer
 
@@ -389,12 +343,16 @@ sub _processRemainingFilesWithNucmer{
 		unless(@filesToRun == $filesPerComparison){
 			next;
 		}
-	
-		my $newFileName = $self->settings->baseDirectory . 'nucmerTempFile' . $counter . $self->_getTempName . '_pan';
+		
+		#get filename only with File::Basename
+		my ($referenceFile, $queryFile) = @filesToRun;
+		my $rf = lc(fileparse($referenceFile));
+		my $qf = uc(fileparse($queryFile));
+
+		my $newFileName = $self->settings->baseDirectory . q{_} . $qf . '_NR_plus_'. $rf . q{_};
 		push @outputFileNames, $newFileName;
 
-		$forker->start and next;				
-			my ($referenceFile, $queryFile) = @filesToRun; 				
+		$forker->start and next;								
 			my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
 
 			my $namesFile;
@@ -411,7 +369,9 @@ sub _processRemainingFilesWithNucmer{
 			}
 
 			my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_novelRegions'));	
-		
+			
+			#special case for mode unique
+			$self->logger->debug("combinedFile inputs:\nnrf: $novelRegionsFile\nrf : $referenceFile\nnfn: $newFileName");
 			my $combinedFile = $self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
 			$self->logger->info("Combined file: $combinedFile");			
 
@@ -422,9 +382,9 @@ sub _processRemainingFilesWithNucmer{
 
 			#keep the last novelRegionsFile under new name
 			#with File::Copy
-			move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
-			unlink $queryFile;
-			unlink $referenceFile;					
+			copy($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
+			#unlink $queryFile;
+			#unlink $referenceFile;					
 		$forker->finish;		
 	}
 	continue{
@@ -435,7 +395,9 @@ sub _processRemainingFilesWithNucmer{
 		}
 		else{
 			if($i == $numFilesMinusOne){
+				$self->logger->debug("Adding $fastaFile to outputFileNames");
 				push @outputFileNames, $fastaFile;
+				$self->logger->debug("@outputFileNames");
 			}
 		}
 	}
@@ -517,10 +479,9 @@ sub _printNovelRegionsFromQueue{
 	my $outputFile = shift;
 
 	my $nrf = Modules::NovelRegion::NovelRegionFinder->new(
-		'mode'=>$self->settings->novelRegionFinderMode,
+		'settings'=>$self->settings,
 		'coordsFile'=>$coordsFile,
 		'queryFile'=>$queryFile,
-		'minimumNovelRegionSize'=>$self->settings->minimumNovelRegionSize
 	);
 	$nrf->findNovelRegions();
 
@@ -571,6 +532,7 @@ sub _processNucmerQueue{
 		'logFile'=> $outputFile . 'mummerlog.txt'
 	);	
 	$self->logger->info("Nucmer query file: $queryFile");
+	$self->logger->debug("Nucmer ref file: $referenceFile");
 	$nucmer->run();	
 	unlink $outputFile . '.delta';
 	unlink $outputFile . '.index';

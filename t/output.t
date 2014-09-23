@@ -40,6 +40,7 @@ my %plasmidsConfig=(
 	percentIdentityCutoff=>'90',
 	coreGenomeThreshold=>'2',
 	runMode=>'pan',
+    nameOrId=>'name',
 	overwrite=>1
 );
 
@@ -66,6 +67,7 @@ my %genomesConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/genomes/",
 	baseDirectory=>"$SCRIPT_LOCATION/genomes/",
 	numberOfCores=>1,
+    nameOrId=>'name',
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"1000",

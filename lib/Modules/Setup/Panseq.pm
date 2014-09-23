@@ -118,7 +118,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	#$self->_cleanUp();
+	#f$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -187,46 +187,42 @@ sub _launchPanseq{
 	$self->settings->orderedGenomeNames($mfsn->orderedGenomeNames);
 	$self->settings->_genomeNameFromContig($mfsn->genomeNameFromContig);
 
+	my $iterativeNovelRegions;
 	if(defined $self->settings->queryFile){
 		#sanitize the input file for proper fasta format
 		#use the sanitized file for future work
 		
 		#requires ($arrayRef, outputFileName)
 		my $sanitizedFileName = $self->settings->baseDirectory . 'sanitized_queryFile.fasta';
-
 		my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
 
-		$combiner->combineAndSanitizeFastaFiles(
+		$iterativeNovelRegions = $combiner->combineAndSanitizeFastaFiles(
 			[$self->settings->queryFile],
 			$sanitizedFileName
 		);
-		
-		$novelIterator=Modules::NovelRegion::NovelIterator->new(
-			'panGenomeFile'=>$sanitizedFileName,
-			'queryFile'=>$files->singleQueryFile,
-			'settings'=>$self->settings
-		); 
 	}
 	else{
 		#get novel regions
 		$novelIterator = Modules::NovelRegion::NovelIterator->new(
 			'queryFile'=>$files->singleQueryFile,
 			'referenceFile'=>$files->singleReferenceFile($self->settings->baseDirectory . 'singleReferenceFile.fasta'),
-			'novelRegionsFile'=>$self->settings->baseDirectory . 'novelRegions.fasta',
 			'settings'=>$self->settings
 		);
-		$novelIterator->run();
+
+		#this includes the combined reference of the last run
+		#->_lastNovelRegionsFile does not include the combined reference
+		$iterativeNovelRegions = $novelIterator->run();
 	}
 
 	$self->logger->info("Panseq mode set as " . $self->settings->runMode);
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
-		$self->_performPanGenomeAnalyses($files,$novelIterator);
+		$self->_performPanGenomeAnalyses($files,$iterativeNovelRegions);
 		#with File::Copy
-		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'panGenome.fasta');
+		copy($iterativeNovelRegions,$self->settings->baseDirectory . 'panGenome.fasta');
 	}else{
 		#with File::Copy
-		move($novelIterator->panGenomeFile,$self->settings->baseDirectory . 'novelRegions.fasta');
+		move($novelIterator->_lastNovelRegionsFile, $self->settings->baseDirectory . 'novelRegions.fasta');
 	}
 }
 
@@ -316,10 +312,9 @@ object is returned.
 sub _performPanGenomeAnalyses{
 	my $self=shift;
 	my $files=shift;
-	my $novelIterator=shift;
+	my $panGenomeFile=shift;
 
 	#fragmentationSize defaults to 0 if no fragmentation is to be done
-	my $panGenomeFile = $novelIterator->panGenomeFile;
 	my $segmenter;
 
 	if($self->settings->fragmentationSize > 0){

@@ -87,18 +87,12 @@ sub combineFilesIntoSingleFile{
         my $cinFH = IO::File->new('<' . $file) or $self->logger->logdie("Cannot open $file $!");
 
         if($firstLineAdjust && ($firstFile > 1)){
-            $self->logger->debug("IN THE ADVANCE");
             $cinFH->getline();
         }
 
-         my $testerWester = IO::File->new('>>' . '/home/chad/testerwester') or die "$!";
         while(my $cline = $cinFH->getline){
-            $cline =~ s/\R//g;
-            $self->logger->debug("cline: $cline");
-            $coutFH->print($cline,"\n");
-            $testerWester->print($cline, "\n");
+            $coutFH->print("$cline");
         }
-        $testerWester->close();
         $cinFH->close();
         $firstFile++;
 	}

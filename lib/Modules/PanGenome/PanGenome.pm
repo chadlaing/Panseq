@@ -211,7 +211,7 @@ sub run{
 		$forker->start and next;
 			
 			$self->_processBlastXML($xml,$counter);
-			#unlink $xml;
+			unlink $xml;
 			
 		$forker->finish;
 	}
@@ -394,9 +394,11 @@ sub _processBlastXML {
 		my $qsn;
 		if(defined $self->settings->queryFile){
 			$qsn = $resultKeys[0];
+			$self->logger->debug("queryFile defined, Using $qsn as qsn, queryName: $queryName");
 		}
 		else{
 			$qsn = $self->settings->getGenomeNameFromContig($queryName);
+			$self->logger->debug("no queryFile, using $qsn as qsn, queryName: $queryName");
 		}
 		
 		my %locusInformation = (
@@ -586,7 +588,7 @@ sub _printResults{
 
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){			
 			#Table files
-
+			$self->logger->debug("genomes in final result" . @{$self->settings->orderedGenomeNames});
 			if(defined $genomeResults->{$genome}->{binary}){
 				#alleles file, print out if multiple copies
 				if($self->settings->storeAlleles){
@@ -749,7 +751,7 @@ sub _combineFilesOfType{
 
 	#delete original files
 	foreach my $file(@matchedFiles){
-		#unlink $file;
+		unlink $file;
 	}
 }
 
@@ -788,7 +790,7 @@ sub _combinePhylipFiles{
 		$outFH->print($counter, $self->_numberOfSpacesToAdd($counter), ' ', $fileContent, "\n");
 		$counter++;
 		$inFH->close();
-		#unlink $phylipFile;
+		unlink $phylipFile;
 	}
 	$outFH->close();
 }
