@@ -52,7 +52,6 @@ package Modules::NovelRegion::NovelIterator;
 #includes
 use strict;
 use warnings;
-use diagnostics;
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;
