@@ -115,19 +115,23 @@ my %md5Sum=(
 	plasmidsSnpTable=>'4a8126a105bab8e7eeb0bde17b39e8b6',
 	plasmidsBinaryPhylip=>'db5e15a38d9b7b7be53811df302d7558',
 	plasmidsSnpPhylip=>'847014dfd971fef5abb384dc876eca73',
+    plasmidsCoreFragments=>'2fa21523c2c0e9abde0836f2a754640e',
+    plasmidsAccessoryFragments=>'f17e29fd8ca3dbaac3033ce188018465',
 	genomesCoreSnps=>'1ba7505faa64d1528cc5dba2dc420d34',
 	genomesPanGenome=>'91dab20c6e944f580b9bd0ca59c2432d',
 	genomesBinaryTable=>'b12ce2866684554a73b394d2ab71135f',
 	genomesSnpTable=>'d612977784292d1286260e5e15a7892d',
-	genomesBinaryPhylip=>'31aac5a26e78c41f06513f7181d86e2f',
-	genomesSnpPhylip=>'2fe33bbd9d66d857ec7c42498e94f134',
+	genomesBinaryPhylip=>'4b341c515a3aa54377b7a7f8a9e71d17',
+	genomesSnpPhylip=>'83b52d545f6da09b26f97bd28f8109e9',
+    genomesCoreFragments=>'117d52a380e05eddd33a31d07a4f7829',
+    genomesAccessoryFragments=>'6dca4cb62aabfbca4d54279d959fc451',
 	queryCoreSnps=>'8cff24ffeef699c9c07e98c9f486b46e',
 	queryPanGenome=>'b770d4b30d6417ed43050f1254184bcb',
 	queryBinaryTable=>'6cbe3340030974ce52f228031a4b30de',
 	querySnpTable=>'3b10e7b6925e12a26eefc0d05763f1a6',
 	queryBinaryPhylip=>'183fea98a21e4f9eae54e486f1f08821',
 	querySnpPhylip=>'94f340c6f989514c06758472f708c5f2',
-	queryAlleles=>'41bfcb9626577dd46a2e0d1f2459c55d'
+	queryAlleles=>'7aec36d7ee53447e0dd5e82be3d2f9bc'
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
@@ -159,6 +163,8 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	
 	#remove the ID column for testing, as it changes every run
 	_removeIDColumn("$SCRIPT_LOCATION/$test/");
+
+    #remove fast headers for Fragments files, as they include the IDs, which change every run
 	
 	my $md5 = _getMD5("$SCRIPT_LOCATION/$test/");
 	is($md5->{'coreSnps'},$md5Sum{"${test}CoreSnps"},"${test}CoreSnps generated correctly");
@@ -171,12 +177,18 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	if($test eq 'query'){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
 	}
+    else{
+        is($md5->{'accessoryFragments'},$md5Sum{"${test}AccessoryFragments"},"${test}AccessoryFragments generated correctly");
+        is($md5->{'coreFragments'},$md5Sum{"${test}CoreFragments"},"${test}CoreFragments generated correctly");
+    }
 	
 	if($removeRun == 1){
 		_removeRun($test);
 	}
 	
 }
+
+
 
 sub _getFilesFromDirectory{
 	my $directory = shift;
@@ -198,6 +210,8 @@ sub _removeIDColumn{
     		$file eq 'pan_genome.txt'
     		|| $file eq 'core_snps.txt'
             || $file eq 'snp_table.txt'
+            || $file eq 'accessoryGenomeFragments.fasta'
+            || $file eq 'coreGenomeFragments.fasta'
     	){
     		next;
     	}
@@ -208,11 +222,24 @@ sub _removeIDColumn{
     	my $tempFH = IO::File->new('<' . $originalFileName) or die "Could not open $originalFileName";
     	my $tempOut = IO::File->new('>'. $directory . $file . 'mod') or die "Could not create modded file $modFileName";
     	
-    	while(my $line = $tempFH->getline){
-    		my @la = split("\t",$line);
-    		shift @la;
-    		$tempOut->print(join("\t",@la));
-    	}
+        if($file eq 'accessoryGenomeFragments.fasta' || $file eq 'coreGenomeFragments.fasta'){
+            while(my $line = $tempFH->getline){
+                if($line =~ m/^>/){
+                    next;
+                }
+                else{
+                    $tempOut->print($line);
+                }
+            }
+        }
+        else{
+            while(my $line = $tempFH->getline){
+                my @la = split("\t",$line);
+                shift @la;
+                $tempOut->print(join("\t",@la));
+            }
+        }
+    	
     	$tempOut->close();
     	$tempFH->close();
     	
@@ -261,7 +288,13 @@ sub _getMD5{
         }
         elsif($fileName eq 'locus_alleles.fasta'){
         	$md5Hash{'locusAlleles'}=$md5sum;
-        }        
+        }
+        elsif($fileName eq 'accessoryGenomeFragments.fasta'){
+            $md5Hash{'accessoryFragments'}=$md5sum;
+        }
+        elsif($fileName eq 'coreGenomeFragments.fasta'){
+            $md5Hash{'coreFragments'}=$md5sum;
+        }
         $inFH->close();
     }
     return \%md5Hash;	

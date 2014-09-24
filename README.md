@@ -37,7 +37,6 @@ Panseq requires Perl 5.10 or greater, the provided Perl modules, and the followi
 * Bio::DB::Fasta
 * Bio::Seq
 * Tie::Log4perl
-* Statistics::R
 
 To install, and automatically retrieve the CPAN packages, do the following:
 
@@ -86,8 +85,13 @@ Below is an example configuration file for panseq.pl:
 	percentIdentityCutoff	85
 	coreGenomeThreshold	2
 	runMode 	pan
+-----------Advanced Option -----------------
+	queryFile	/home/phac/fileOfQuerySequence.fasta
 	storeAlleles	1
+	allelesToKeep	2
 	nameOrId	name
+	frameshift	1
+	overwrite	1
 
 
 * ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
@@ -116,13 +120,19 @@ Below is an example configuration file for panseq.pl:
 
 * 'runMode' can be either 'novel' or 'pan', for novel-region finding and pan-genome analyses respectively.
 
-* 'storeAlleles' if set to 1, will store the allele matching the query sequence for each of the genomes.
+* 'queryFile' is an input file of fasta-formatted sequences. If the mode is set to 'pan', this causes the sequences in queryFile to be used instead of generating a pan-genome. Thus, the distribution and SNPs of the input sequences will be determined for all genomes in the queryDirectory.
 
-* 'nameOrId' defaults to id and determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files: pan_genome.txt core_snps.txt, binary_table.txt and snp_table.txt
+* 'storeAlleles' if set to 1, will store the allele matching the query sequence for each of the genomes and output them to locus_alleles.txt
+
+* 'allelesToKeep' if set, and if storeAlleles is selected, determines the number of alleles per genome to keep, if multiple exist. They will be output to the locus_alleles.txt file, and every allele after the first will be appended with a _a# tag, where # is the allele number (eg. _a2).
+
+* 'nameOrId' defaults to id and determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files binary_table.txt and snp_table.txt
 
 * 'frameshift' defaults to 0, and includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
 
-## What format should my uploaded sequences be in? ##
+* 'overwrite' defaults to 0, and determined whether or not the specified baseDirectory will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
+
+## Format of multi-fasta files ##
 
 Panseq currently only accepts fasta or multi-fasta formatted files. More than one genome may be in a single file, but for all genomes consisting of more than one contig, a distinct identifier must be present in the fasta header of each contig belonging to the same genome. For example, you have just assembled a new genome and are eager to analyze it. Your file consists of a number of contigs, similar to:
 
