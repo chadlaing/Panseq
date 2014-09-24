@@ -681,9 +681,9 @@ lib/Modules/PanGenome/PanGenome.pm
 lib/Modules/Setup/Panseq.pm
 lib/Modules/Setup/PanseqFiles.pm
 lib/Modules/Setup/Settings.pm
+lib/Modules/Setup/CombineFilesIntoSingleFile.pm
 lib/Modules/Stats/FET.pm
 lib/panseq.pl
-lib/Roles/CombineFilesIntoSingleFile.pm
 lib/Roles/FlexiblePrinter.pm
 lib/Roles/GetNewIdStartEnd.pm
 lib/treeNumberToName.pl
