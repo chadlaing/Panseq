@@ -2,33 +2,32 @@
 
 
 # Command being timed: "Panseq/t/output.t"
-# User time (seconds): 696.37
-# System time (seconds): 32.72
+# User time (seconds): 612.94
+# System time (seconds): 28.34
 # Percent of CPU this job got: 98%
-# Elapsed (wall clock) time (h:mm:ss or m:ss): 12:17.05
+# Elapsed (wall clock) time (h:mm:ss or m:ss): 10:49.48
 # Average shared text size (kbytes): 0
 # Average unshared data size (kbytes): 0
 # Average stack size (kbytes): 0
 # Average total size (kbytes): 0
-# Maximum resident set size (kbytes): 236900
+# Maximum resident set size (kbytes): 236760
 # Average resident set size (kbytes): 0
-# Major (requiring I/O) page faults: 75
-# Minor (reclaiming a frame) page faults: 13096120
-# Voluntary context switches: 7528
-# Involuntary context switches: 7030
+# Major (requiring I/O) page faults: 0
+# Minor (reclaiming a frame) page faults: 13048945
+# Voluntary context switches: 8018
+# Involuntary context switches: 7143
 # Swaps: 0
-# File system inputs: 7696
-# File system outputs: 835440
+# File system inputs: 0
+# File system outputs: 738744
 # Socket messages sent: 0
 # Socket messages received: 0
 # Signals delivered: 0
 # Page size (bytes): 4096
 # Exit status: 0
 
-
 use strict;
 use warnings;
-use Test::More tests=>19;
+use Test::More tests=>23;
 use Test::Pretty;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
