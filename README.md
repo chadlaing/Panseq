@@ -88,7 +88,7 @@ Below is an example configuration file for panseq.pl:
 	percentIdentityCutoff	85
 	coreGenomeThreshold	2
 	runMode 	pan
------------Advanced Option -----------------
+Advanced Options
 	queryFile	/home/phac/fileOfQuerySequence.fasta
 	storeAlleles	1
 	allelesToKeep	2
