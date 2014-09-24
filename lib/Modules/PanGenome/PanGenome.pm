@@ -374,7 +374,6 @@ sub _processBlastXML {
 		}
 		$self->logger->debug("coreOrAccrssory: $coreOrAccessory");
 		
-		#this contains any gaps due to the alignment
 		#we want the "original" sequence for the locus
 		my $queryName = $result->{$resultKeys[0]}->[0]->[1];
 		

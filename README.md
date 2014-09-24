@@ -37,6 +37,9 @@ Panseq requires Perl 5.10 or greater, the provided Perl modules, and the followi
 * Bio::DB::Fasta
 * Bio::Seq
 * Tie::Log4perl
+* Archive::Zip
+* Test::Pretty
+* Digest::MD5
 
 To install, and automatically retrieve the CPAN packages, do the following:
 
@@ -92,6 +95,7 @@ Below is an example configuration file for panseq.pl:
 	nameOrId	name
 	frameshift	1
 	overwrite	1
+	maxNumberResultsInMemory 	500
 
 
 * ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
@@ -131,6 +135,8 @@ Below is an example configuration file for panseq.pl:
 * 'frameshift' defaults to 0, and includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
 
 * 'overwrite' defaults to 0, and determined whether or not the specified baseDirectory will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
+
+* 'maxNumberResultsInMemory' sets the number of pan-genome results to process before emptying the memory buffers and printing to file. The default is 500. Set this number higher if you want to limit the number of I/O operations. If you run into memory issues, lower this number.
 
 ## Format of multi-fasta files ##
 
