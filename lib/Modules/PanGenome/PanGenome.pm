@@ -588,13 +588,14 @@ sub _printResults{
 				#alleles file, print out if multiple copies
 				if($self->settings->storeAlleles){
 					for my $i(0 .. scalar(@{$genomeResults->{$genome}->{binary}}) -1){
-						if(defined $genomeResults->{$genome}->{binary}->[$i]->{sequence}){
+						$self->logger->debug("Allele $i");
+						if(defined $genomeResults->{$genome}->{alleles}->[$i]){
 							my $contigId = $genomeResults->{$genome}->{binary}->[$i]->{contig_id};
-							if($i > 1){
-								$contigId .= 'a_' . $i;
-							}
-							$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{binary}->[$i]->{sequence}, "\n");
-						}						
+							if($i > 0){
+								$contigId .= '_a' . ($i +1);
+							}						
+							$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{alleles}->[$i], "\n");
+						}					
 					}					
 				}
 

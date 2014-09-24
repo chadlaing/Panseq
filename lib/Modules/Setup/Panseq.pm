@@ -220,7 +220,7 @@ sub _launchPanseq{
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
 		$self->_performPanGenomeAnalyses($files,$iterativeNovelRegions);
 		#with File::Copy
-		copy($iterativeNovelRegions,$self->settings->baseDirectory . 'panGenome.fasta');
+		move($iterativeNovelRegions,$self->settings->baseDirectory . 'panGenome.fasta');
 	}else{
 		#with File::Copy
 		move($novelIterator->_lastNovelRegionsFile, $self->settings->baseDirectory . 'novelRegions.fasta');

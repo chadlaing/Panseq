@@ -67,7 +67,9 @@ my %plasmidsConfig=(
 	coreGenomeThreshold=>'2',
 	runMode=>'pan',
     nameOrId=>'name',
-	overwrite=>1
+	overwrite=>1,
+    storeAlleles=>1,
+    allelesToKeep=>2
 );
 
 my %queryConfig=(
