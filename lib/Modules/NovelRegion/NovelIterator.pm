@@ -383,8 +383,8 @@ sub _processRemainingFilesWithNucmer{
 			#keep the last novelRegionsFile under new name
 			#with File::Copy
 			copy($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
-			#unlink $queryFile;
-			#unlink $referenceFile;					
+			unlink $queryFile;
+			unlink $referenceFile;					
 		$forker->finish;		
 	}
 	continue{

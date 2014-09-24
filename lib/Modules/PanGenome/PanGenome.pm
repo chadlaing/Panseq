@@ -745,7 +745,7 @@ sub _combineFilesOfType{
 
 	#delete original files
 	foreach my $file(@matchedFiles){
-		#unlink $file;
+		unlink $file;
 	}
 }
 
