@@ -89,6 +89,7 @@ Below is an example configuration file for panseq.pl:
 	coreGenomeThreshold	2
 	runMode 	pan
 Advanced Options
+
 	queryFile	/home/phac/fileOfQuerySequence.fasta
 	storeAlleles	1
 	allelesToKeep	2
