@@ -355,7 +355,7 @@ sub _performPanGenomeAnalyses{
 			my $blastLine = $self->settings->blastDirectory . 'blastn -query ' . $splitFile . ' -out ' . $blastOutFile
 				. ' -db ' . $self->settings->baseDirectory . $dbCreator->title 
 				. ' -outfmt "6 sseqid qseqid sstart send qstart qend slen qlen pident length sseq qseq"' 
-				. ' -evalue 0.001 -word_size 20 -num_threads 1'
+				. ' -evalue 0.001 -word_size ' . $self->settings->blastWordSize . ' -num_threads 1'
 				. ' -max_target_seqs 100000';
 			$self->logger->info("Running blast with the following: $blastLine");
 			system($blastLine);

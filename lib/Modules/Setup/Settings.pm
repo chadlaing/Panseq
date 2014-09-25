@@ -28,8 +28,10 @@ sub _initialize{
     $self->_setDefaults();
 }
 
-
-#class variables
+sub blastWordSize{
+    my $self = shift;
+    $self->{'_blastWordSize'} = shift // return $self->{'_blastWordSize'};   
+}
 sub maxNumberResultsInMemory{
 	my $self = shift;
 	$self->{'_maxNumberResultsInMemory'} = shift // return $self->{'_maxNumberResultsInMemory'};
@@ -59,7 +61,6 @@ sub frameshift{
 	my $self=shift;
 	$self->{'_frameshift'} = shift // return $self->{'_frameshift'};
 }
-
 
 sub logger{
 	my $self=shift;
@@ -384,6 +385,10 @@ sub _setDefaults{
 
 	unless(defined $self->maxNumberResultsInMemory){
 		$self->maxNumberResultsInMemory(500);
+	}
+
+	unless(defined $self->blastWordSize){
+		$self->blastWordSize(20);
 	}
 }
 

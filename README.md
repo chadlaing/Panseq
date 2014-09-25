@@ -97,6 +97,7 @@ Advanced Options
 	frameshift	1
 	overwrite	1
 	maxNumberResultsInMemory 	500
+	blastWordSize	11
 
 
 * ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
@@ -138,6 +139,9 @@ Advanced Options
 * 'overwrite' defaults to 0, and determined whether or not the specified baseDirectory will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
 
 * 'maxNumberResultsInMemory' sets the number of pan-genome results to process before emptying the memory buffers and printing to file. The default is 500. Set this number higher if you want to limit the number of I/O operations. If you run into memory issues, lower this number.
+
+* 'blastWordSize' sets the word size for the blastn portion of Panseq. The default value is 20, but for small values of 'fragmentationSize' or 'percentIdentityCutoff', hits may be missed unless this value is lowered. (The default value for the blastn program is 11; Panseq sets this to 20 as the default).
+
 
 ## Format of multi-fasta files ##
 
