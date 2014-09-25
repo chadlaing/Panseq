@@ -36,17 +36,20 @@ use File::Copy;
 use File::Basename;
 use Getopt::Long;
 
-my $type = $ARGV[0] // 'genomes';
-my $removeRun = $ARGV[1] // 1;
+my $type = 'genomes';
+my $removeRun = 1;
 
 #program locations
 my $blastDirectory = '/usr/bin/';
 my $mummerDirectory = '/usr/bin/';
 my $muscleExecutable = '/usr/bin/muscle';
 
- GetOptions ('blastDirectory:s' => \$blastDirectory,
-             'mummerDirectory:s' => \$mummerDirectory,
-             'muscleExecutable:s' => \$muscleExecutable);
+ GetOptions ('blastDirectory=s' => \$blastDirectory,
+             'mummerDirectory=s' => \$mummerDirectory,
+             'muscleExecutable=s' => \$muscleExecutable,
+             'type=s' => \$type,
+             'removeRun=i' => \$removeRun
+             );
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
@@ -68,7 +71,8 @@ my %plasmidsConfig=(
     nameOrId=>'name',
 	overwrite=>1,
     storeAlleles=>1,
-    allelesToKeep=>2
+    allelesToKeep=>2,
+    blastWordSize=>11
 );
 
 my %queryConfig=(
