@@ -510,6 +510,7 @@ sub _processBlastXML {
 
 	}#while result
 	$self->_printResults($blastFile, \@finalResults);
+	$self->_printConversionInformation();
 	$self->logger->info("Total results: $totalResults");
 }
 
