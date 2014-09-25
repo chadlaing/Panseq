@@ -541,7 +541,7 @@ sub _printResults{
 		};	
 
 		#for pan_genome and core_snps
-		my $headerLine = "\tLocusID\tLocusName\tGenome\tAllele\tStart Bp\tEnd Bp\tContig";
+		my $headerLine = "LocusID\tLocusName\tGenome\tAllele\tStart Bp\tEnd Bp\tContig";
 		$panGenomeFH->print($headerLine);
 		$coreSnpsFH->print($headerLine);
 	}
