@@ -390,6 +390,10 @@ sub _setDefaults{
 	unless(defined $self->blastWordSize){
 		$self->blastWordSize(20);
 	}
+
+	unless(defined $self->novelRegionFinderMode){
+		$self->novelRegionFinderMode('no_duplicates');
+	}
 }
 
 

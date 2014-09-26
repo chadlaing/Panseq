@@ -342,6 +342,7 @@ sub _processBlastXML {
 	my $blastFile = shift;
 	my $counter=shift;
 
+	my $blastFileName = $counter . '_' . $blastFile;
 	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
@@ -504,12 +505,12 @@ sub _processBlastXML {
 		push @finalResults, \%result;
 
 		if(scalar(@finalResults) == $self->settings->maxNumberResultsInMemory){
-			$self->_printResults($blastFile,\@finalResults);
+			$self->_printResults($blastFileName,\@finalResults);
 			@finalResults=();
 		}
 
 	}#while result
-	$self->_printResults($blastFile, \@finalResults);
+	$self->_printResults($blastFileName, \@finalResults);
 	$self->_printConversionInformation();
 	$self->logger->info("Total results: $totalResults");
 }

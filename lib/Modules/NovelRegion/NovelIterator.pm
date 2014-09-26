@@ -230,7 +230,10 @@ sub run{
 	if($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
 			my $finalCoordsFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . '_vs_refDir');
-			$finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, ($iterativeResultFile . '_vs_refDir_novelRegions'));
+			my $refNovelFile = $iterativeResultFile . '_vs_refDir_novelRegions';
+			$finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, $refNovelFile);
+			unlink $finalCoordsFile;
+			unlink $iterativeResultFile;
 		}
 		else{
 			$finalFile = $iterativeResultFile;

@@ -211,19 +211,21 @@ sub _launchPanseq{
 		);
 
 		#this includes the combined reference of the last run
-		#->_lastNovelRegionsFile does not include the combined reference
 		$iterativeNovelRegions = $novelIterator->run();
 	}
 
 	$self->logger->info("Panseq mode set as " . $self->settings->runMode);
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
+		$self->logger->fatal("iterativeNovelRegions: $iterativeNovelRegions");
 		$self->_performPanGenomeAnalyses($files,$iterativeNovelRegions);
 		#with File::Copy
 		move($iterativeNovelRegions,$self->settings->baseDirectory . 'panGenome.fasta');
-	}else{
+	}
+	else{
 		#with File::Copy
-		move($novelIterator->_lastNovelRegionsFile, $self->settings->baseDirectory . 'novelRegions.fasta');
+		$self->logger->info("Printing final novel regions");	
+		move($iterativeNovelRegions, $self->settings->baseDirectory . 'novelRegions.fasta') or $self->logger->logdie("$!");
 	}
 }
 
@@ -288,7 +290,8 @@ sub _cleanUp{
 			($file =~ m/_withRefDirectory_temp/) ||
 			($file =~ m/lastNovelRegionsFile/) ||
 			($file =~ m/uniqueNovelRegions/) ||
-			($file =~ m/\.temp/)
+			($file =~ m/\.temp/) ||
+			($file =~ m/_NR$/)
 		){
 			unlink $file;
 		}
@@ -359,7 +362,7 @@ sub _performPanGenomeAnalyses{
 				. ' -max_target_seqs 100000';
 			$self->logger->info("Running blast with the following: $blastLine");
 			system($blastLine);
-			#unlink $splitFile;
+			unlink $splitFile;
 		$forker->finish;
 	}
 	$forker->wait_all_children();
