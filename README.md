@@ -80,7 +80,7 @@ Below is an example configuration file for panseq.pl:
 	baseDirectory	/home/phac/panseq/output/panseq2test/
 	numberOfCores	22
 	mummerDirectory	/home/phac/MUMmer3.23/
-	blastDirectory	/home/phac/ncbi-blast-2.2.25+/bin/
+	blastDirectory	/home/phac/ncbi-blast-2.2.29+/bin/
 	minimumNovelRegionSize	500
 	novelRegionFinderMode	no_duplicates
 	muscleExecutable	/usr/bin/muscle3.8.31_i86linux64
@@ -136,7 +136,7 @@ Advanced Options
 
 * 'frameshift' defaults to 0, and includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
 
-* 'overwrite' defaults to 0, and determined whether or not the specified baseDirectory will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
+* 'overwrite' defaults to 0, and determines whether or not the specified baseDirectory will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
 
 * 'maxNumberResultsInMemory' sets the number of pan-genome results to process before emptying the memory buffers and printing to file. The default is 500. Set this number higher if you want to limit the number of I/O operations. If you run into memory issues, lower this number.
 
