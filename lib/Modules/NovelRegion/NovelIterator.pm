@@ -101,9 +101,6 @@ sub _initialize{
 			$self->logger->logconfess("$key is not a valid parameter in Modules::NovelRegion::NovelRegionFinder");
 		}
 	}
-
-	#add the filenames for the hard-coded "last files" as the information cannot escape a fork
-	$self->_lastNovelRegionsFile($self->settings->baseDirectory . 'lastNovelRegionsFile.fasta');
 }
 
 =head2 logger
@@ -149,19 +146,6 @@ sub referenceFile{
 	my $self=shift;
 	$self->{'_referenceFile'}=shift // return $self->{'_referenceFile'};
 }
-
-=head2 _lastNovelRegionsFile
-
-Each iteration, the novel regions are output to this file.
-The pangenome is built up by the iterative addition of the novelRegionsFile.
-
-=cut
-
-sub _lastNovelRegionsFile{
-	my $self=shift;
-	$self->{'_lastNovelRegions'}=shift // return $self->{'_lastNovelRegions'};
-}
-
 
 sub _retriever{
 	my $self = shift;
@@ -222,7 +206,7 @@ sub run{
 	my $numberOfRemainingFiles = scalar(@{$allFastaFiles});
 	my $filesPerComparison=2;
 
-	my $iterativeResultFile;
+	
 	while(scalar(@{$allFastaFiles}) > 1){
 		$self->logger->info("Remaining files: " . scalar(@{$allFastaFiles}));
 
@@ -233,12 +217,9 @@ sub run{
 
 		$self->logger->debug("end of while:\n" . "@{$allFastaFiles}");
 	}
-	continue{
-		if(scalar(@{$allFastaFiles})==1){
-			$iterativeResultFile = $allFastaFiles->[0];
-		}
-	}	
-
+	
+	my $iterativeResultFile = $allFastaFiles->[0];
+	
 	#double check
 	unless(scalar(@{$allFastaFiles})==1){
 		$self->logger->fatal("Failed to generate a single pan-genome file. Found " . scalar(@{$allFastaFiles}) . " files");
@@ -249,13 +230,17 @@ sub run{
 	if($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
 			my $finalCoordsFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . '_vs_refDir');
-			my $finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, ($iterativeResultFile . '_vs_refDir_novelRegions'));
+			$finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, ($iterativeResultFile . '_vs_refDir_novelRegions'));
+		}
+		else{
+			$finalFile = $iterativeResultFile;
 		}
 	}
 	else{
 		$self->logger->fatal("Deprecated novelRegionFinderMode: " . $self->novelRegionFinderMode . "\nno_duplicates is the default, and only current option.");
 		exit(1);
 	}
+	$self->logger->fatal("Returning $finalFile");
 	return $finalFile;
 }
 
@@ -331,26 +316,11 @@ sub _processRemainingFilesWithNucmer{
 
 		$forker->start and next;								
 			my $coordsFile = $self->_processNucmerQueue($queryFile,$referenceFile, $newFileName);
-
-			my $namesFile;
-			if($self->settings->novelRegionFinderMode eq 'unique'){
-				
-				my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();			
-				$namesFile = $combiner->combineFilesIntoSingleFile(
-					[$queryFile,$referenceFile],
-					$self->settings->baseDirectory . 'uniqueNovelRegions.fasta'
-				);					
-			}
-			else{
-				$namesFile = $queryFile;
-			}
-
-			my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $namesFile, ($newFileName . '_NR'));	
+			my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $queryFile, ($newFileName . '_NR'));	
 			
 			#special case for mode unique
 			$self->logger->debug("combinedFile inputs:\nnrf: $novelRegionsFile\nrf : $referenceFile\nnfn: $newFileName");
-			my $combinedFile = $self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);	
-			$self->logger->info("Combined file: $combinedFile");			
+			$self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);			
 
 			#remove temp files
 			unlink $coordsFile;
@@ -394,17 +364,9 @@ sub _combineNovelRegionsAndReferenceFile{
 	my $referenceFile = shift;
 	my $outputFile = shift;
 
-	my $refFileToAdd;
-	if($self->settings->novelRegionFinderMode eq 'unique'){
-		$refFileToAdd = $self->_setRefFileToIgnore($referenceFile);
-	}
-	else{
-		$refFileToAdd = $referenceFile;
-	}
-
 	my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
 	$combiner->combineFilesIntoSingleFile(
-		[$novelRegionsFile, $refFileToAdd],
+		[$novelRegionsFile, $referenceFile],
 		$outputFile
 	);
 	return $outputFile;
