@@ -114,7 +114,7 @@ Advanced Options
 
 * 'minimumNovelRegionSize' sets the size in bp of the smallest region that will be kept by the Novel Region Finder; all regions found below this value will not be kept.
 
-* 'novelRegionFinderMode'  sets the type of novel region analysis that will be performed. ‘no_duplicates’ finds the novel regions among one or more query strains with respect to the reference strains selected. ‘unique’ finds sequence regions that are unique to each sequence among all of the strains selected; only strains in the 'queryDirectory' will be considered for analysis. 
+* 'novelRegionFinderMode'  sets the type of novel region analysis that will be performed. ‘no_duplicates’ finds the novel regions among one or more query strains with respect to the reference strains selected. This is currently the only option.
 
 * 'muscleExecutable' specifies the full path to the muscle executable file.
 
