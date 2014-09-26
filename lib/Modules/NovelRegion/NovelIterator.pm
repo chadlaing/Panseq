@@ -245,38 +245,15 @@ sub run{
 		exit(1);
 	}
 
-	my $finalFile = $iterativeResultFile;
-	#need to run against the referenceDirectory files if they exist
-	if($self->settings->novelRegionFinderMode eq 'unique'){
-		$self->logger->info("Gathering unique novel regions.");
-
-		my $finalReferenceFile;
-		if(defined $self->referenceFile && -s $self->referenceFile > 0){		
-			$self->logger->info("Comparing novel regions against reference file");
-			
-			my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
-			$finalReferenceFile= $combiner->combineFilesIntoSingleFile(
-				[$self->_lastNovelRegionsFile, $self->referenceFile],
-				$self->settings->baseDirectory . 'finalReferenceFile_unique.fasta'
-			);
-		}
-		else{
-			$self->logger->info("Using _lastNovelRegionsFile, as there is no reference file specified");
-			$finalReferenceFile = $self->_lastNovelRegionsFile();
-		}	
-
-		my $coordsFile = $self->_processNucmerQueue($self->_lastNovelRegionsFile,$finalReferenceFile, $self->settings->baseDirectory . 'unique_regions');
-		my $novelRegionsFile = $self->_printNovelRegionsFromQueue($coordsFile, $self->_lastNovelRegionsFile, ($iterativeResultFile . '_novelRegions'));
-		$self->logger->info("Novel regions file $novelRegionsFile has size " . -s $novelRegionsFile);
-		$finalFile = $novelRegionsFile;	
-	}
-	elsif($self->settings->novelRegionFinderMode eq 'no_duplicates'){
+	my $finalFile;	
+	if($self->settings->novelRegionFinderMode eq 'no_duplicates'){
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
-			$finalFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . 'vs_refDir');
+			my $finalCoordsFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . '_vs_refDir');
+			my $finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, ($iterativeResultFile . '_vs_refDir_novelRegions'));
 		}
 	}
 	else{
-		$self->logger->fatal("Unknown novelRegionFinderMode: " . $self->novelRegionFinderMode);
+		$self->logger->fatal("Deprecated novelRegionFinderMode: " . $self->novelRegionFinderMode . "\nno_duplicates is the default, and only current option.");
 		exit(1);
 	}
 	return $finalFile;
@@ -379,10 +356,6 @@ sub _processRemainingFilesWithNucmer{
 			unlink $coordsFile;
 			unlink $newFileName . '_filtered.delta';
 			unlink $newFileName . '_query_dbtemp.index';				
-
-			#keep the last novelRegionsFile under new name
-			#with File::Copy
-			move($novelRegionsFile,$self->_lastNovelRegionsFile) or die "$!";
 			unlink $queryFile;
 			unlink $referenceFile;					
 		$forker->finish;		
