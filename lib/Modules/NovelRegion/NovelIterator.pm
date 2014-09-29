@@ -243,7 +243,7 @@ sub run{
 		$self->logger->fatal("Deprecated novelRegionFinderMode: " . $self->novelRegionFinderMode . "\nno_duplicates is the default, and only current option.");
 		exit(1);
 	}
-	$self->logger->fatal("Returning $finalFile");
+	$self->logger->debug("Returning $finalFile");
 	return $finalFile;
 }
 
