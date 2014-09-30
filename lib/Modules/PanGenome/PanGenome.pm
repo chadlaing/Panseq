@@ -53,6 +53,7 @@ use Modules::Alignment::SNPFinder;
 use Modules::Alignment::BlastResults;
 use Modules::Setup::CombineFilesIntoSingleFile;
 use Data::Dumper;
+use File::Basename;
 
 #object creation
 sub new {
@@ -256,25 +257,24 @@ sub run{
 	#combine separate genome snp/binary phylip strings
 	for my $i(1 .. scalar(@{$self->settings->orderedGenomeNames})){
 		
-		my $snpString = 'snp.phylip_' . $i . '_';
+		my $snpString = 'snp_phylip_' . $i;
 		$self->_combineFilesOfType(
 			$snpString,
-			$self->settings->baseDirectory . $snpString,
+			$self->settings->baseDirectory . $i . '_combined_snp_phylip',
 			0 #do not discard first line
 		);
 
-		my $binaryString = 'binary.phylip_' . $i . '_';
+		my $binaryString =  'binary_phylip_' . $i;
 		$self->_combineFilesOfType(
 			$binaryString,
-			$self->settings->baseDirectory . $binaryString,
+			$self->settings->baseDirectory . $i . '_combined_binary_phylip',
 			0 # do not discard first line
 		);
 	}
 
-
 	#generate final phylip files
-	$self->_combinePhylipFiles('snp.phylip');
-	$self->_combinePhylipFiles('binary.phylip');
+	$self->_combinePhylipFiles('combined_snp_phylip');
+	$self->_combinePhylipFiles('combined_binary_phylip');
 
 	#add entries for query segments that have no Blast hits
 	if($self->settings->addMissingQuery){
@@ -342,7 +342,7 @@ sub _processBlastXML {
 	my $blastFile = shift;
 	my $counter=shift;
 
-	my $blastFileName = $counter . '_' . $blastFile;
+	my $blastFileName = $counter;
 	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
@@ -521,16 +521,14 @@ sub _printResults{
 	my $blastFile = shift;
 	my $finalResults = shift;
 
-	$blastFile =~ s/\W//g;
-
-	my $binaryFileName = $self->settings->baseDirectory . 'binary_table.txt' . $blastFile;
+	my $binaryFileName = $self->settings->baseDirectory . $blastFile . '_binary_table';
 	my $binaryTableFH = IO::File->new('>>' . $binaryFileName) or die "$!";
-	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp_table.txt' . $blastFile) or die "$!";
-	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . 'pan_genome.txt' . $blastFile) or die "$!";
-	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . 'core_snps.txt' . $blastFile) or die "$!";
-	my $accessoryFH = IO::File->new('>>' . $self->settings->baseDirectory . 'accessoryGenomeFragments.fasta' . $blastFile) or die "$!";
-	my $coreFH = IO::File->new('>>' . $self->settings->baseDirectory . 'coreGenomeFragments.fasta' . $blastFile) or die "$!";
-	my $allelesFH = IO::File->new('>>' . $self->settings->baseDirectory . 'locus_alleles.fasta' . $blastFile) or die "$!";	
+	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!";
+	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!";
+	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_core_snps') or die "$!";
+	my $accessoryFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_accessoryGenomeFragments') or die "$!";
+	my $coreFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_coreGenomeFragments') or die "$!";
+	my $allelesFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_locus_alleles') or die "$!";	
 
 	my @fileHandles = ($binaryTableFH, $snpTableFH, $panGenomeFH, $coreSnpsFH, $accessoryFH, $coreFH, $allelesFH);
 
@@ -602,7 +600,7 @@ sub _printResults{
 
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
 
-				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'binary.phylip' . '_' . $genomeCounter . '_' . $blastFile ) or die "$!";
+				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter) or die "$!";
 				$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
 				$binaryPhylipFH->close();	
 
@@ -718,9 +716,11 @@ sub _printSnpData{
 		$params{snpTableFH}->print($snpString);
 	}
 
+	#these keys do not need to be sorted, as they print to the file given by the genome number
+	#it doesn't matter what order they are printed in
 	foreach my $genome(keys %snpString){
 		#phylip file print
-		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . 'snp.phylip' . '_' . $genome . '_' . $params{blastFile} ) or die "$!";
+		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $params{blastFile} . '_snp_phylip_' . $genome) or die "$!";
 		$snpPhylipFH->print($snpString{$genome});
 		$snpPhylipFH->close();
 	}
@@ -734,8 +734,11 @@ sub _combineFilesOfType{
 
 	my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
 	my $fileNames = $namer->getFileNamesFromDirectory($self->settings->baseDirectory);
-	my @matchedFiles = sort grep(/\Q$fileNamePart\E/, @{$fileNames});
-	$self->logger->debug("Matched files: @matchedFiles");
+	my @matchedFiles = map {$_->[0]}
+					   sort {$a->[1] <=> $b->[1]}
+					   map {[$_, $self->_getFileNameNumber($_)]}
+					   	   grep(/\Q$fileNamePart\E/, @{$fileNames});
+	$self->logger->debug("combineFilesOfType Matched files: @matchedFiles");
 
 	my $combiner = Modules::Setup::CombineFilesIntoSingleFile->new();
 	$combiner->combineFilesIntoSingleFile(
@@ -751,15 +754,50 @@ sub _combineFilesOfType{
 	}
 }
 
+
+sub _getFileNameNumber{
+	my $self = shift;
+	my $fileNameWithDir = shift;
+
+	#with File::Basename
+	my $fileName = fileparse($fileNameWithDir);
+
+	if($fileName =~ m/^(\d+)_/){
+		return $1;
+	}
+	else{
+		$self->logger->fatal("Could not find filename number in file $fileName");
+		exit(1);
+	}
+}
+
 sub _combinePhylipFiles{
 	my $self = shift;
 	my $type = shift;
 
 	my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
 	my $fileNames = $namer->getFileNamesFromDirectory($self->settings->baseDirectory);
-	my @matchedFiles = sort grep(/\Q$type\E/, @{$fileNames});
+	my @matchedFiles = my @matchedFiles = map {$_->[0]}
+					   sort {$a->[1] <=> $b->[1]}
+					   map {[$_, $self->_getFileNameNumber($_)]}
+					   	  grep(/\Q$type\E/, @{$fileNames});
 
-	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $type) or die "$!";
+	$self->logger->debug("matchedFiles: @matchedFiles");
+
+	my $fileName;
+	if($type eq 'combined_binary_phylip'){
+		$fileName = 'binary.phylip';
+	}
+	elsif($type eq 'combined_snp_phylip'){
+		$fileName = 'snp.phylip';
+	}
+	else{
+		$self->logger->fatal("Unknown phylip file type");
+		exit(1);
+	}
+
+
+	my $outFH = IO::File->new('>' . $self->settings->baseDirectory . $fileName) or die "$!";
 
 	my $counter = 1;
 	foreach my $phylipFile(@matchedFiles){
