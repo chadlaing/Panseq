@@ -257,14 +257,14 @@ sub run{
 	#combine separate genome snp/binary phylip strings
 	for my $i(1 .. scalar(@{$self->settings->orderedGenomeNames})){
 		
-		my $snpString = 'snp_phylip_' . $i;
+		my $snpString = 'snp_phylip_' . $i . '_';
 		$self->_combineFilesOfType(
 			$snpString,
 			$self->settings->baseDirectory . $i . '_combined_snp_phylip',
 			0 #do not discard first line
 		);
 
-		my $binaryString =  'binary_phylip_' . $i;
+		my $binaryString =  'binary_phylip_' . $i . '_';
 		$self->_combineFilesOfType(
 			$binaryString,
 			$self->settings->baseDirectory . $i . '_combined_binary_phylip',
@@ -600,7 +600,7 @@ sub _printResults{
 
 				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
 
-				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter) or die "$!";
+				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_') or die "$!";
 				$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
 				$binaryPhylipFH->close();	
 
@@ -720,7 +720,7 @@ sub _printSnpData{
 	#it doesn't matter what order they are printed in
 	foreach my $genome(keys %snpString){
 		#phylip file print
-		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $params{blastFile} . '_snp_phylip_' . $genome) or die "$!";
+		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $params{blastFile} . '_snp_phylip_' . $genome . '_') or die "$!";
 		$snpPhylipFH->print($snpString{$genome});
 		$snpPhylipFH->close();
 	}
@@ -777,7 +777,7 @@ sub _combinePhylipFiles{
 
 	my $namer = Modules::Setup::CombineFilesIntoSingleFile->new();
 	my $fileNames = $namer->getFileNamesFromDirectory($self->settings->baseDirectory);
-	my @matchedFiles = my @matchedFiles = map {$_->[0]}
+	my @matchedFiles = map {$_->[0]}
 					   sort {$a->[1] <=> $b->[1]}
 					   map {[$_, $self->_getFileNameNumber($_)]}
 					   	  grep(/\Q$type\E/, @{$fileNames});
