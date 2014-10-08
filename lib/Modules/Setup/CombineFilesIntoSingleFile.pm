@@ -90,8 +90,12 @@ sub combineFilesIntoSingleFile{
             $cinFH->getline();
         }
 
+        if($firstFile > 1){
+            $coutFH->print("\n");
+        }
+
         while(my $cline = $cinFH->getline){
-            $coutFH->print("$cline");
+            $coutFH->print($cline);
         }
         $cinFH->close();
         $firstFile++;

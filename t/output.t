@@ -62,7 +62,6 @@ my %plasmidsConfig=(
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>500,
-	novelRegionFinderMode=>"no_duplicates",
 	muscleExecutable=>$muscleExecutable,
 	fragmentationSize=>'500',
 	percentIdentityCutoff=>'90',

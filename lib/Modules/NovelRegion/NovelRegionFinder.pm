@@ -298,13 +298,14 @@ sub printNovelRegions{
 			my $end =$2;
 			my $length=$end-$start+1;
 			
-			#$self->logger->info("Length: $length cutoff: " . $self->minimumNovelRegionSize);
-
+			$self->logger->debug("Length: $length cutoff: " . $self->settings->minimumNovelRegionSize);
 			next unless $length >= $self->settings->minimumNovelRegionSize;	
 
 			#uses Roles::GetNewIdStartEnd to implement _getNewIdStartEnd
 			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
-		
+			my $relLength = ($relEnd - $relStart +1);
+
+			$self->logger->debug("original: start:$start, end:$end, length: $length\nnew    : start:$relStart, end:$relEnd, length:$relLength" );
 			$outFH->print('>' . $relId . '_(' . $relStart . '..' . $relEnd . ')'. "\n" . $retriever->extractRegion($id,$start,$end) . "\n");	
 		}# end while
 	}# end foreach
