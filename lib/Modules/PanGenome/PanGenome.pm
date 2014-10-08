@@ -240,17 +240,20 @@ sub run{
 
 	$self->_combineFilesOfType(
 		'coreGenomeFragments',
-		$self->settings->baseDirectory . 'coreGenomeFragments.fasta'
+		$self->settings->baseDirectory . 'coreGenomeFragments.fasta',
+		0 #do not discard first line
 	);
 
 	$self->_combineFilesOfType(
 		'accessoryGenomeFragments',
-		$self->settings->baseDirectory . 'accessoryGenomeFragments.fasta'
+		$self->settings->baseDirectory . 'accessoryGenomeFragments.fasta',
+		0 #do not discard first line
 	);
 
 	$self->_combineFilesOfType(
 		'locus_alleles',
-		$self->settings->baseDirectory . 'locus_alleles.fasta'
+		$self->settings->baseDirectory . 'locus_alleles.fasta',
+		0 #do not discard first line
 	);
 
 
