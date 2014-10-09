@@ -1,3 +1,5 @@
+![Master branch build status](https://travis-ci.org/chadlaing/Panseq.svg?branch=master "Master Build Status")
+
 ## OVERVIEW
 
 Panseq determines the core and accessory regions among a collection of genomic sequences based on user-defined parameters. It readily extracts regions unique to a genome or group of genomes, identifies SNPs within shared core genomic regions, constructs files for use in phylogeny programs based on both the presence/absence of accessory regions and SNPs within core regions.
