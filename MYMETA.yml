@@ -1,0 +1,85 @@
+---
+abstract: 'Panseq: pan-genomic sequence analysis'
+author:
+  - 'Chad Laing <chadlaing@gmail.com>'
+build_requires: {}
+dynamic_config: 0
+generated_by: 'Module::Build version 0.421, CPAN::Meta::Converter version 2.142690'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: '1.4'
+name: Panseq
+provides:
+  Interface::Scripts::Dispatch:
+    file: lib/Interface/Scripts/Dispatch.pm
+  Interface::Scripts::Panseq:
+    file: lib/Interface/Scripts/Panseq.pm
+  Interface::Scripts::Panseq_Super:
+    file: lib/Interface/Scripts/Panseq_Super.pm
+  Interface::Scripts::SendMailWrapper:
+    file: lib/Interface/Scripts/SendMailWrapper.pm
+  Interface::Scripts::ServerSettings:
+    file: lib/Interface/Scripts/ServerSettings.pm
+  Modules::Alignment::BlastResults:
+    file: lib/Modules/Alignment/BlastResults.pm
+  Modules::Alignment::MakeBlastDB:
+    file: lib/Modules/Alignment/MakeBlastDB.pm
+  Modules::Alignment::NucmerRun:
+    file: lib/Modules/Alignment/NucmerRun.pm
+  Modules::Alignment::SNPFinder:
+    file: lib/Modules/Alignment/SNPFinder.pm
+  Modules::Fasta::FastaFileSplitter:
+    file: lib/Modules/Fasta/FastaFileSplitter.pm
+  Modules::Fasta::MultiFastaSequenceName:
+    file: lib/Modules/Fasta/MultiFastaSequenceName.pm
+  Modules::Fasta::SegmentMaker:
+    file: lib/Modules/Fasta/SegmentMaker.pm
+  Modules::Fasta::SequenceName:
+    file: lib/Modules/Fasta/SequenceName.pm
+  Modules::Fasta::SequenceRetriever:
+    file: lib/Modules/Fasta/SequenceRetriever.pm
+  Modules::LociSelector::LociSelector:
+    file: lib/Modules/LociSelector/LociSelector.pm
+  Modules::NovelRegion::NovelIterator:
+    file: lib/Modules/NovelRegion/NovelIterator.pm
+  Modules::NovelRegion::NovelRegionFinder:
+    file: lib/Modules/NovelRegion/NovelRegionFinder.pm
+  Modules::PanGenome::PanGenome:
+    file: lib/Modules/PanGenome/PanGenome.pm
+  Modules::Setup::CombineFilesIntoSingleFile:
+    file: lib/Modules/Setup/CombineFilesIntoSingleFile.pm
+  Modules::Setup::Panseq:
+    file: lib/Modules/Setup/Panseq.pm
+  Modules::Setup::PanseqFiles:
+    file: lib/Modules/Setup/PanseqFiles.pm
+  Modules::Setup::Settings:
+    file: lib/Modules/Setup/Settings.pm
+  Modules::Stats::FET:
+    file: lib/Modules/Stats/FET.pm
+  Roles::FlexiblePrinter:
+    file: lib/Roles/FlexiblePrinter.pm
+  Roles::GetNewIdStartEnd:
+    file: lib/Roles/GetNewIdStartEnd.pm
+requires:
+  Archive::Zip: '0'
+  Bio::DB::Fasta: '0'
+  Bio::Seq: '0'
+  Bio::SeqIO: '0'
+  Carp: '0'
+  Digest::MD5: '0'
+  File::Basename: '0'
+  File::Copy: '0'
+  File::Temp: '0'
+  FindBin: '0'
+  Getopt::Long: '0'
+  IO::File: '0'
+  Log::Log4perl: '0'
+  Parallel::ForkManager: '0'
+  Role::Tiny: '0'
+  Test::Pretty: '0'
+  Tie::Log4perl: '0'
+  perl: v5.10.0
+resources:
+  license: http://dev.perl.org/licenses/
+version: '4'
