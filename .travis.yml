@@ -5,8 +5,11 @@ perl:
 before_install:
   - sudo apt-get update
   - sudo apt-get install muscle
-  - sudo apt-get install ncbi-blast+
   - sudo apt-get install mummer
+  - sudo apt-get install alien
+  - wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.2.29+-1.x86_64.rpm -O /tmp/blast.rpm
+  - sudo alien -i /tmp/blast.rpm
+
 
 install:
   - cpanm --verbose --installdeps --notest .
