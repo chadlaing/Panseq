@@ -8,4 +8,4 @@ perl:
   - "5.10"
 
 install:
-    ./Build installdeps
+    perl Build.PL && ./Build installdeps
