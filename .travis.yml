@@ -13,4 +13,4 @@ before_install:
 install:
   - cpanm --verbose --installdeps --notest .
 
-script: travis_wait "perl Build.PL && ./Build && ./Build test"
+script: "perl Build.PL && ./Build && travis_wait ./Build test"
