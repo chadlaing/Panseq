@@ -275,7 +275,7 @@ sub _getSettingsFromConfigurationFile {
 	}
 	else {
 		$self->logger->fatal("No configuration file specified");
-		exit(1);
+		#exit(1);
 	}
 }
 

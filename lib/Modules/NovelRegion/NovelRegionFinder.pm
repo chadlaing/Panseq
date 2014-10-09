@@ -354,10 +354,10 @@ sub _updateComparisonHash {
 	#start,end,key,value
 	$self->_addToComparisonHash($la[2],$la[3],$la[10],$la[9]);
 
-	if($self->settings->novelRegionFinderMode eq 'unique'){
-		$self->logger->debug("Adding REF:SEQ for unique");
-		$self->_addToComparisonHash($la[0],$la[1],$la[9],$la[10]);
-	}
+	# if($self->settings->novelRegionFinderMode eq 'unique'){
+	# 	$self->logger->debug("Adding REF:SEQ for unique");
+	# 	$self->_addToComparisonHash($la[0],$la[1],$la[9],$la[10]);
+	# }
 }
 
 
@@ -493,7 +493,7 @@ sub _getNoDuplicates {
 	#...
 	
 	foreach my $query ( sort keys %{$self->_queryFastaHeadersHash}) {
-		$self->logger->debug("query: $query");
+		$self->logger->info("query: $query");
 		my $qName = $self->settings->getGenomeNameFromContig($query);
 		
 		if($qName eq '_ignore'){

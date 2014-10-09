@@ -8,6 +8,10 @@ use Test::More tests=>7;
 use Test::Pretty;
 use Log::Log4perl qw/:easy/;
 use Modules::NovelRegion::NovelRegionFinder;
+use Modules::Setup::Settings;
+
+my $settings = Modules::Setup::Settings->new();
+
 
 Log::Log4perl->easy_init($DEBUG);
 my $logger =  Log::Log4perl->get_logger();
@@ -17,6 +21,14 @@ $logger->info("Testing");
 
 #test the NovelRegionFinder.pm module
 my $nrf = Modules::NovelRegion::NovelRegionFinder->new();
+#add the required setting elements, as we are not actually loading a file
+$nrf->settings($settings);
+$nrf->settings->_genomeNameFromContig({
+    query=>'query',
+    query2=>'query2'
+    });
+
+
 
 ok(defined $nrf, 'Object exists');
 ok($nrf->isa('Modules::NovelRegion::NovelRegionFinder'), 'and it is the proper Modules::NovelRegion::NovelRegionFinder class');
@@ -41,7 +53,13 @@ is($novelRegions->{'query2'},',1..4500','Query2 with no hit, correctly identifie
 
 
 #test for query vs multiple ref name hits
+#ditto the settings setup
 my $nrf2 = Modules::NovelRegion::NovelRegionFinder->new();
+$nrf2->settings($settings);
+$nrf2->settings->_genomeNameFromContig({
+    query=>'query',
+    query2=>'query2'
+    });
 #query:     1.............................................................................7000
 #ref1:      1..........1000
 #ref2:              500................2001
