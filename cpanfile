@@ -1,18 +1,16 @@
-on configure =>sub{
-    requires 'Parallel::ForkManager' > 0;
-    requires 'Log::Log4perl' > 0;
-    requires 'FindBin' > 0;
-    requires 'IO::File' > 0;
-    requires 'File::Copy' > 0;
-    requires 'Role::Tiny' > 0;
-    requires 'Bio::SeqIO' > 0;
-    requires 'Bio::DB::Fasta' > 0;
-    requires 'File::Temp' > 0;
-    requires 'Bio::Seq' > 0;
-    requires 'File::Basename' > 0;
-    requires 'Tie::Log4perl' > 0;
-    requires 'Archive::Zip' > 0;
-    requires 'Test::Pretty' > 0;
-    requires 'Getopt::Long' > 0;
-    requires 'Digest::MD5' > 0;
-}
+requires 'Parallel::ForkManager';
+requires 'Log::Log4perl';
+requires 'FindBin';
+requires 'IO::File';
+requires 'File::Copy';
+requires 'Role::Tiny';
+requires 'Bio::SeqIO';
+requires 'Bio::DB::Fasta';
+requires 'File::Temp';
+requires 'Bio::Seq';
+requires 'File::Basename';
+requires 'Tie::Log4perl';
+requires 'Archive::Zip';
+requires 'Test::Pretty';
+requires 'Getopt::Long';
+requires 'Digest::MD5'
