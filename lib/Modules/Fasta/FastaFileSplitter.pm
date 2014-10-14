@@ -43,11 +43,8 @@ use FindBin;
 use lib "$FindBin::Bin/../../";
 use Carp;
 use IO::File;
-use Modules::Fasta::SequenceRetriever;
 use Log::Log4perl;
-use Role::Tiny::With;
 
-with 'Roles::FlexiblePrinter';
 
 #object creation
 sub new {
@@ -59,16 +56,6 @@ sub new {
 }
 
 #class variables
-sub _numberOfTempFiles {
-	my $self = shift;
-	$self->{'_FastaFileSplitter_numberOfTempFiles'} = shift // return $self->{'_FastaFileSplitter_numberOfTempFiles'};
-}
-
-sub arrayOfSplitFiles {
-	my $self = shift;
-	$self->{'_FastaFileSplitter_arrayOfSplitFiles'} = shift // return $self->{'_FastaFileSplitter_arrayOfSplitFiles'};
-}
-
 sub logger{
 	my $self=shift;
 	$self->{'_FastaFileSplitter_logger'} = shift // return $self->{'_FastaFileSplitter_logger'};
@@ -84,9 +71,9 @@ sub numberOfSplits{
 	$self->{'_numberOfSplits'}=shift // return $self->{'_numberOfSplits'};
 }
 
-sub databaseFile{
-	my $self=shift;
-	$self->{'_databaseFile'}=shift // return $self->{'_databaseFile'};
+sub baseDirectory{
+    my $self = shift;
+    $self->{'_baseDirectory'} = shift // return $self->{'_baseDirectory'};   
 }
 
 
@@ -123,82 +110,71 @@ sub _initialize {
 		$self->numberOfSplits(1);
 	}
 
-	unless(defined $self->databaseFile){
-		$self->logger->info("Database file not specified, will not split input file");
-		$self->numberOfSplits(1);
-		$self->databaseFile('not_specified');
-	}
-
-	#defaults
-	$self->arrayOfSplitFiles([]);    #init as an anonymous array
-
-	if($self->numberOfSplits == 1){
-		$self->arrayOfSplitFiles([$self->inputFile]);
+	unless(defined $self->baseDirectory){
+		$self->logger->logconfess("baseDirectory is not specified");
 	}
 }
 
 sub splitFastaFile {
 	my $self = shift;
 	
-	if($self->numberOfSplits == 1){
-		$self->logger->info("Number of splits is 1, returning inputFile as only entry in arrayOfSplitFiles");
-		$self->arrayOfSplitFiles([$self->inputFile]);
-		return 1;
-	}
-
+	my @splitFiles;
 	$self->logger->info("Splitting " . $self->inputFile . " into " . $self->numberOfSplits . " files");
 
-	my $fileHandle = IO::File->new( '<' . $self->inputFile ) or die "cannot open " . $self->inputFile . "$!";
-	my %fastaSizes;
-	my $currentHeader;
-	my $currentSize;
+	my $numSeqs = $self->_getNumberOfSequences;
 
-	while ( my $line = $fileHandle->getline ) {
-		next if $line eq '';
+	if($self->numberOfSplits == 1){
+		$splitFiles[0] = $self->inputFile;
+	}
+	else{
+		my $seqsPerFile = (int($numSeqs / $self->numberOfSplits) + 1);		
 
-		if ( $line =~ /^>(.+)/ ) {
-			$fastaSizes{$currentHeader} = $currentSize if defined $currentHeader;
-			$currentHeader              = $1;
-			$currentSize                = 0;
+		my $inFH = IO::File->new('<' . $self->inputFile) or die "$!";
+		my $counter = 0;
+		my $outputPrefix = 0;
+		my $outFileName;
+		my $outFH;
+
+		while(my $line = $inFH->getline()){
+			if($line =~ m/^>/){
+				$counter++;
+			}
+
+			if($counter == $seqsPerFile || !defined $outFileName){
+				$counter=0;
+				$outputPrefix++;
+				
+				unless(!defined $outFileName){
+					$outFH->close();
+				}
+
+				$outFileName = $self->baseDirectory . $outputPrefix . '_split.fasta';
+				$outFH = IO::File->new('>' . $self->baseDirectory . $outputPrefix . '_split.fasta') or die "$!";
+				push @splitFiles, $outFileName;
+			}
+			$outFH->print($line);
 		}
-		elsif ( $line =~ /^([\w\-])/ ) {
-			my $seqString = $1;
-			$currentSize .= length($seqString);
+
+		$outFH->close();
+		$inFH->close();
+	}	
+	return \@splitFiles;
+}
+
+
+sub _getNumberOfSequences{
+	my $self = shift;
+
+	my $inFH = IO::File->new('<' . $self->inputFile) or die "$!";
+	my $counter=0;
+	while(my $line = $inFH->getline()){
+		if($line =~ m/^>/){
+			$counter++;
 		}
 	}
-	$fastaSizes{$currentHeader} = $currentSize;
+	$inFH->close();
 
-	#avoid creating blank temp files
-	my $numberOfSeqs = scalar keys %fastaSizes;
-	if ( $numberOfSeqs >= $self->numberOfSplits ) {
-		$self->_numberOfTempFiles($self->numberOfSplits);
-	}
-	else {
-		$self->_numberOfTempFiles($numberOfSeqs);
-	}
-
-	$self->logger->info( "Number of temp query files to create: " . $self->_numberOfTempFiles );
-
-	#package into approximately equal temp files
-	#use the Bio::DB in SequenceRetriever
-	my $queryDB = Modules::Fasta::SequenceRetriever->new(	
-		'inputFile'=>$self->inputFile,
-		'databaseFile'=>$self->databaseFile
-	);
-
-	my $tempNum    = 0;
-	my $count      = 0;
-	my @sortedKeys = sort { $fastaSizes{$a} <=> $fastaSizes{$b} } keys %fastaSizes;
-	for ( my $start = 0 ; $start < $self->_numberOfTempFiles ; $start++ ) {
-		my $tempFileName = $self->databaseFile . $start . '.FastaTemp';
-		push @{ $self->arrayOfSplitFiles }, $tempFileName;
-		$self->outputFH(IO::File->new('>' . $tempFileName or die "Cannot open $tempFileName"));
-		
-		for(my $seqNum=$start;$seqNum < scalar(@sortedKeys); $seqNum+=$self->_numberOfTempFiles){
-			my $seq = $sortedKeys[$seqNum];
-			$self->printOut( '>' . $seq . "\n" . $queryDB->extractRegion($seq) . "\n" );
-		}
-	}
+	return $counter;
 }
 
 1;
