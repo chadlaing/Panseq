@@ -118,7 +118,7 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	$self->_cleanUp();
+	#$self->_cleanUp();
 	$self->_createZipFile();
 }
 
@@ -342,8 +342,8 @@ sub _performPanGenomeAnalyses{
 	
 	my $splitter= Modules::Fasta::FastaFileSplitter->new(
 		inputFile=>$panGenomeFile,
-		databaseFile=>$self->settings->baseDirectory . 'fasta_splitter.temp',
-		numberOfSplits=>$self->settings->numberOfCores
+		numberOfSplits=>$self->settings->numberOfCores,
+		baseDirectory=>$self->settings->baseDirectory
 	);
 	$splitter->splitFastaFile();
 
@@ -361,7 +361,7 @@ sub _performPanGenomeAnalyses{
 				. ' -max_target_seqs 100000';
 			$self->logger->info("Running blast with the following: $blastLine");
 			system($blastLine);
-			unlink $splitFile;
+			#unlink $splitFile;
 		$forker->finish;
 	}
 	$forker->wait_all_children();
@@ -376,7 +376,7 @@ sub _performPanGenomeAnalyses{
 	$panAnalyzer->run();
 	
 	if(defined $segmenter && -e $segmenter->outputFile){
-		unlink $segmenter->outputFile;
+		#unlink $segmenter->outputFile;
 	}
 	
 	#add the functional assignment of pan-genome loci based of blastx of the genbank NR database
