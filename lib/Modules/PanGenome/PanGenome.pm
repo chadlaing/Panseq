@@ -807,7 +807,8 @@ sub _combinePhylipFiles{
 		my $inFH = IO::File->new('<' . $phylipFile) or die "$!";
 		
 		#only a single string per file, therefore all the data is in the first line
-		my $fileContent = $inFH->getline();
+		my @fileContents = $inFH->getlines();
+		my $fileContent = join('', @fileContents);
 
 		unless(defined $fileContent){
 			if($type eq 'binary'){

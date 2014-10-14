@@ -59,6 +59,7 @@ use File::Copy;
 use Carp;
 use Modules::Alignment::NucmerRun;
 use Modules::NovelRegion::NovelRegionFinder;
+use Modules::Fasta::SequenceRetriever;
 use Parallel::ForkManager;
 use Log::Log4perl;
 use Digest::MD5;

@@ -88,14 +88,11 @@ sub combineFilesIntoSingleFile{
 
         if($firstLineAdjust && ($firstFile > 1)){
             $cinFH->getline();
-        }
-
-        if($firstFile > 1){
-            $coutFH->print("\n");
-        }
+        }    
 
         while(my $cline = $cinFH->getline){
-            $coutFH->print($cline);
+            $cline =~ s/\R//g;
+            $coutFH->print($cline . "\n");
         }
         $cinFH->close();
         $firstFile++;

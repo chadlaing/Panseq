@@ -345,12 +345,12 @@ sub _performPanGenomeAnalyses{
 		numberOfSplits=>$self->settings->numberOfCores,
 		baseDirectory=>$self->settings->baseDirectory
 	);
-	$splitter->splitFastaFile();
+	my $splitFiles = $splitter->splitFastaFile();
 
 	my @blastFiles;
 	my $forker = Parallel::ForkManager->new($self->settings->numberOfCores);
 
-	foreach my $splitFile(@{$splitter->arrayOfSplitFiles}){
+	foreach my $splitFile(@{$splitFiles}){
 		my $blastOutFile = $splitFile . '_blast.out';
 		push @blastFiles, $blastOutFile;
 		$forker->start and next;
