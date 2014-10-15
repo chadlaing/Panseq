@@ -69,6 +69,10 @@ If your system setup is different, pass the optional argument for each external 
 
 	perl t/output.t --blastDirectory '/home/user/local_blast/' --mummerDirectory '/home/user/local_mummer/'  --muscleExecutable '/home/dir/muscle_executable'
 
+If you have more than one core available on your machine, you can pass the number of cores to use for the test as follows:
+
+	perl t/output.t --numberOfCores 4 --blastDirectory '/home/user/local_blast/' --mummerDirectory '/home/user/local_mummer/'  --muscleExecutable '/home/dir/muscle_executable'
+
 ## Running Panseq
 
 All the adjustments to Panseq are made by modifying a tab-delimited configuration file, which is specified as the only argument to the script.

@@ -90,7 +90,7 @@ sub combineFilesIntoSingleFile{
             $cinFH->getline();
         }    
 
-        while(my $cline = $cinFH->getline){
+        while(my $cline = <$cinFH>){
             $cline =~ s/\R//g;
             $coutFH->print($cline . "\n");
         }

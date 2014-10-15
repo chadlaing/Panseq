@@ -36,19 +36,21 @@ use File::Copy;
 use File::Basename;
 use Getopt::Long;
 
-my $type = 'genomes';
-my $removeRun = 1;
-
-#program locations
+#test options
 my $blastDirectory = '/usr/bin/';
 my $mummerDirectory = '/usr/bin/';
 my $muscleExecutable = '/usr/bin/muscle';
+my $numberOfCores = 1;
+my $type = 'genomes';
+my $removeRun = 1;
+
 
  GetOptions ('blastDirectory=s' => \$blastDirectory,
              'mummerDirectory=s' => \$mummerDirectory,
              'muscleExecutable=s' => \$muscleExecutable,
              'type=s' => \$type,
-             'removeRun=i' => \$removeRun
+             'removeRun=i' => \$removeRun,
+             'numberOfCores=i' => \$numberOfCores
              );
 
 #get script location via File::Basename
@@ -58,7 +60,7 @@ print "SCRIPT_LOCATION: $SCRIPT_LOCATION\n";
 my %plasmidsConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/plasmids/",
 	baseDirectory=>"$SCRIPT_LOCATION/plasmids/",
-	numberOfCores=>3,
+	numberOfCores=>$numberOfCores,
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>500,
@@ -77,7 +79,7 @@ my %queryConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/genomes/",
 	queryFile=>"$SCRIPT_LOCATION/data/testfragments.fasta",
 	baseDirectory=>"$SCRIPT_LOCATION/query/",
-	numberOfCores=>1,
+	numberOfCores=>$numberOfCores,
 	nameOrId=>'name',
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
@@ -95,7 +97,7 @@ my %queryConfig=(
 my %genomesConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/genomes/",
 	baseDirectory=>"$SCRIPT_LOCATION/genomes/",
-	numberOfCores=>3,
+	numberOfCores=>$numberOfCores,
     nameOrId=>'name',
 	mummerDirectory=>$mummerDirectory,
 	blastDirectory=>$blastDirectory,
