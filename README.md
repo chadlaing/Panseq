@@ -1,4 +1,4 @@
-![Master branch build status](https://travis-ci.org/chadlaing/Panseq.svg?branch=master "Master Build Status")
+[![Master branch build status](https://travis-ci.org/chadlaing/Panseq.svg?branch=master "Master Build Status")](https://travis-ci.org/chadlaing/Panseq)
 
 ## OVERVIEW
 
