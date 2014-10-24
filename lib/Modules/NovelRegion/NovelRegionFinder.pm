@@ -493,7 +493,7 @@ sub _getNoDuplicates {
 	#...
 	
 	foreach my $query ( sort keys %{$self->_queryFastaHeadersHash}) {
-		$self->logger->info("query: $query");
+		$self->logger->debug("query: $query");
 		my $qName = $self->settings->getGenomeNameFromContig($query);
 		
 		if($qName eq '_ignore'){
