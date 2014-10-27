@@ -276,12 +276,6 @@ sub run{
 	#generate final phylip files
 	$self->_combinePhylipFiles('combined_snp_phylip');
 	$self->_combinePhylipFiles('combined_binary_phylip');
-
-	#add entries for query segments that have no Blast hits
-	if($self->settings->addMissingQuery){
-		$self->logger->debug("queryFile specified as " . $self->settings->queryFile);
-		$self->_addQueryWithNoBlastHits();
-	}
 	
 	$self->logger->info("Processing blast output files complete");
 	$self->logger->info("Pan-genome generation complete");
