@@ -208,11 +208,9 @@ sub run{
 	$self->logger->info("Processing Blast output files");
 	foreach my $xml(sort @{$self->xmlFiles}){
 		$counter++;
-		$forker->start and next;
-			
+		$forker->start and next;			
 			$self->_processBlastXML($xml,$counter);
-			unlink $xml;
-			
+			unlink $xml;			
 		$forker->finish;
 	}
 	$forker->wait_all_children;
@@ -363,7 +361,7 @@ sub _processBlastXML {
 		my $numberOfResults = scalar @resultKeys;
 		$self->logger->debug("NOR: $numberOfResults");
 		unless($numberOfResults > 0){
-			$self->logger->warn("No results for query sequence $totalResults, skipping");
+			$self->logger->warn("No results for query sequence $totalResults, skipping" . Dumper($result));
 			next;
 		}		
 		$self->logger->debug("There are $numberOfResults results");

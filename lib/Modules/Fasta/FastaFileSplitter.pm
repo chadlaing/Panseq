@@ -121,13 +121,13 @@ sub splitFastaFile {
 	my @splitFiles;
 	$self->logger->info("Splitting " . $self->inputFile . " into " . $self->numberOfSplits . " files");
 
-	my $numSeqs = $self->_getNumberOfSequences;
+	my $numBytes = -s $self->inputFile;
 
 	if($self->numberOfSplits == 1){
 		$splitFiles[0] = $self->inputFile;
 	}
 	else{
-		my $seqsPerFile = (int($numSeqs / $self->numberOfSplits) + 1);		
+		my $bytesPerFile = (int($numBytes / $self->numberOfSplits) + 1);		
 
 		my $inFH = IO::File->new('<' . $self->inputFile) or die "$!";
 		my $counter = 0;
@@ -136,11 +136,9 @@ sub splitFastaFile {
 		my $outFH;
 
 		while(my $line = $inFH->getline()){
-			if($line =~ m/^>/){
-				$counter++;
-			}
+			$counter += length($line);
 
-			if($counter == $seqsPerFile || !defined $outFileName){
+			if($line =~ m/^>/ && ($counter >= $bytesPerFile || !defined $outFileName)){
 				$counter=0;
 				$outputPrefix++;
 				
@@ -159,22 +157,6 @@ sub splitFastaFile {
 		$inFH->close();
 	}	
 	return \@splitFiles;
-}
-
-
-sub _getNumberOfSequences{
-	my $self = shift;
-
-	my $inFH = IO::File->new('<' . $self->inputFile) or die "$!";
-	my $counter=0;
-	while(my $line = $inFH->getline()){
-		if($line =~ m/^>/){
-			$counter++;
-		}
-	}
-	$inFH->close();
-
-	return $counter;
 }
 
 1;
