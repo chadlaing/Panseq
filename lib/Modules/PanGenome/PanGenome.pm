@@ -506,7 +506,11 @@ sub _processBlastXML {
 
 	}#while result
 	$self->_printResults($blastFileName, \@finalResults);
-	$self->_printConversionInformation();
+
+	my $conversionFile = $self->settings->baseDirectory . 'phylip_name_conversion.txt';
+	unless(-s $conversionFile > 0){
+		$self->_printConversionInformation();
+	}
 	$self->logger->info("Total results: $totalResults");
 }
 
@@ -852,8 +856,9 @@ This creates a tab-delimited table that lists the conversion information.
 
 sub _printConversionInformation{
 	my $self=shift;	
+	my $conversionFile = shift;
 
-	my $conversionFH = IO::File->new('>' . $self->settings->baseDirectory . 'phylip_name_conversion.txt') or die "$!";
+	my $conversionFH = IO::File->new('>' . $conversionFile) or die "$!";
 	$conversionFH->print(
 		'Number' . "\t" . 'Name' . "\n"
 	);
