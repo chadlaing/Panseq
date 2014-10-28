@@ -206,11 +206,20 @@ sub run{
 	my $counter=0;
 	#process all XML files
 	$self->logger->info("Processing Blast output files");
-	my @sortedFiles = map {$_->[0]}
+
+	#if there is only one file, there will not be a number associated
+	#with it. Also we don't need to sort it.
+	my @sortedFiles;
+	if(scalar(@{$self->xmlFiles}) == 1){
+		push @sortedFiles, @{$self->xmlFiles};
+	}
+	else{
+		@sortedFiles = map {$_->[0]}
 					   sort {$a->[1] <=> $b->[1]}
 					   map {[$_, $self->_getFileNameNumber($_)]}
 					   	   @{$self->xmlFiles};
-
+	}
+		
 	foreach my $xml(@sortedFiles){
 		$counter++;
 		$forker->start and next;			
