@@ -1,33 +1,9 @@
 #!/usr/bin/env perl
 
 
-# Command being timed: "Panseq/t/output.t"
-# User time (seconds): 612.94
-# System time (seconds): 28.34
-# Percent of CPU this job got: 98%
-# Elapsed (wall clock) time (h:mm:ss or m:ss): 10:49.48
-# Average shared text size (kbytes): 0
-# Average unshared data size (kbytes): 0
-# Average stack size (kbytes): 0
-# Average total size (kbytes): 0
-# Maximum resident set size (kbytes): 236760
-# Average resident set size (kbytes): 0
-# Major (requiring I/O) page faults: 0
-# Minor (reclaiming a frame) page faults: 13048945
-# Voluntary context switches: 8018
-# Involuntary context switches: 7143
-# Swaps: 0
-# File system inputs: 0
-# File system outputs: 738744
-# Socket messages sent: 0
-# Socket messages received: 0
-# Signals delivered: 0
-# Page size (bytes): 4096
-# Exit status: 0
-
 use strict;
 use warnings;
-use Test::More tests=>23;
+use Test::More tests=>26;
 use Test::Pretty;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
@@ -120,6 +96,7 @@ my %md5Sum=(
 	plasmidsSnpPhylip=>'847014dfd971fef5abb384dc876eca73',
     plasmidsCoreFragments=>'2fa21523c2c0e9abde0836f2a754640e',
     plasmidsAccessoryFragments=>'f17e29fd8ca3dbaac3033ce188018465',
+    plasmidsNameConversion=>'da9678fa95a0def763ad014ec7153779',
 	genomesCoreSnps=>'590ead136269c9f29ce126a67a14d2aa',
 	genomesPanGenome=>'3e00bb9e7d7fa9b02b34052fd005fa00',
 	genomesBinaryTable=>'1f1aaef9c674a5e847cae718964b0385',
@@ -128,13 +105,15 @@ my %md5Sum=(
 	genomesSnpPhylip=>'83b52d545f6da09b26f97bd28f8109e9',
     genomesCoreFragments=>'117d52a380e05eddd33a31d07a4f7829',
     genomesAccessoryFragments=>'6dca4cb62aabfbca4d54279d959fc451',
+    genomesNameConversion=>'e90cc17adc92f2d63106d58dff86860a',
 	queryCoreSnps=>'1682548300dc82584e01415d38d82af4',
 	queryPanGenome=>'a603a5526709da34bc854363045c94bf',
 	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
 	querySnpTable=>'27dc08b4023a052cc8680af0ad7ddf5d',
 	queryBinaryPhylip=>'183fea98a21e4f9eae54e486f1f08821',
 	querySnpPhylip=>'94f340c6f989514c06758472f708c5f2',
-	queryAlleles=>'7aec36d7ee53447e0dd5e82be3d2f9bc'
+	queryAlleles=>'7aec36d7ee53447e0dd5e82be3d2f9bc',
+    queryNameConversion=>'e90cc17adc92f2d63106d58dff86860a'
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
@@ -176,6 +155,7 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	is($md5->{'snpTable'},$md5Sum{"${test}SnpTable"},"${test}SnpTable generated correctly");
 	is($md5->{'snpPhylip'},$md5Sum{"${test}SnpPhylip"},"${test}SnpPhylip generated correctly");
 	is($md5->{'binaryPhylip'},$md5Sum{"${test}BinaryPhylip"},"${test}BinaryPhylip generated correctly");
+    is($md5->{'nameConversion'},$md5Sum{"${test}NameConversion"},"${test}NameConversion generated correctly");
 	
 	if($test eq 'query'){
 		is($md5->{'locusAlleles'},$md5Sum{"${test}Alleles"},"${test}Alleles generated correctly");
@@ -297,6 +277,9 @@ sub _getMD5{
         }
         elsif($fileName eq 'coreGenomeFragments.fasta'){
             $md5Hash{'coreFragments'}=$md5sum;
+        }
+        elsif($fileName eq 'phylip_name_conversion.txt'){
+            $md5Hash{'nameConversion'}=$md5sum;
         }
         $inFH->close();
     }
