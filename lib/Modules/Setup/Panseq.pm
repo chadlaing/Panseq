@@ -83,7 +83,7 @@ sub _initialize{
 
 	#logging
     $self->logger(Log::Log4perl->get_logger()); 
-	$self->logger->info("Logger initialized in Modules::Setup::Panseq");  
+	$self->logger->debug("Logger initialized in Modules::Setup::Panseq");  
 }
 
 =head3 logger
@@ -118,7 +118,10 @@ sub run{
 	else{
 		$self->_launchPanseq();
 	}
-	$self->_cleanUp();
+
+	unless($self->logger->is_debug()){
+		$self->_cleanUp();
+	}
 	$self->_createZipFile();
 }
 
@@ -359,12 +362,17 @@ sub _performPanGenomeAnalyses{
 				. ' -outfmt "6 sseqid qseqid sstart send qstart qend slen qlen pident length sseq qseq"' 
 				. ' -evalue 0.001 -word_size ' . $self->settings->blastWordSize . ' -num_threads 1'
 				. ' -max_target_seqs 100000';
-			$self->logger->info("Running blast with the following: $blastLine");
+			$self->logger->debug("Running blast with the following: $blastLine");
 			system($blastLine);
-			unlink $splitFile;
+
+			unless($self->logger->is_debug()){
+				unlink $splitFile;
+			}
 		$forker->finish;
 	}
 	$forker->wait_all_children();
+	
+	$self->logger->debug("All blast files: @blastFiles");
 	
 	#do the pan-genome analysis	
 	my $panAnalyzer = Modules::PanGenome::PanGenome->new(
@@ -375,9 +383,11 @@ sub _performPanGenomeAnalyses{
 	);
 	$panAnalyzer->run();
 	
-	if(defined $segmenter && -e $segmenter->outputFile){
-		unlink $segmenter->outputFile;
-	}
+	unless($self->logger->is_debug()){
+		if(defined $segmenter && -e $segmenter->outputFile){
+			unlink $segmenter->outputFile;
+		}
+	}	
 	
 	#add the functional assignment of pan-genome loci based of blastx of the genbank NR database
 	#only if nrDatabase is defined

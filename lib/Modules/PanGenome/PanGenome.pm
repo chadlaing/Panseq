@@ -206,11 +206,18 @@ sub run{
 	my $counter=0;
 	#process all XML files
 	$self->logger->info("Processing Blast output files");
-	foreach my $xml(sort @{$self->xmlFiles}){
+	my @sortedFiles = map {$_->[0]}
+					   sort {$a->[1] <=> $b->[1]}
+					   map {[$_, $self->_getFileNameNumber($_)]}
+					   	   @{$self->xmlFiles};
+
+	foreach my $xml(@sortedFiles){
 		$counter++;
 		$forker->start and next;			
 			$self->_processBlastXML($xml,$counter);
-			unlink $xml;			
+			unless($self->logger->is_debug()){
+				unlink $xml;
+			}						
 		$forker->finish;
 	}
 	$forker->wait_all_children;
@@ -338,7 +345,7 @@ sub _processBlastXML {
 	my $counter=shift;
 
 	my $blastFileName = $counter;
-	$self->logger->info("Processing Blast output file $blastFile, counter: $counter");
+	$self->logger->debug("Processing Blast output file $blastFile, counter: $counter");
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
 	$counter = $self->_getUniqueResultId($counter);
@@ -508,8 +515,8 @@ sub _processBlastXML {
 	$self->_printResults($blastFileName, \@finalResults);
 
 	my $conversionFile = $self->settings->baseDirectory . 'phylip_name_conversion.txt';
-	unless(-s $conversionFile > 0){
-		$self->_printConversionInformation();
+	unless(-e $conversionFile){
+		$self->_printConversionInformation($conversionFile);
 	}
 	$self->logger->info("Total results: $totalResults");
 }
@@ -748,8 +755,10 @@ sub _combineFilesOfType{
 	); 
 
 	#delete original files
-	foreach my $file(@matchedFiles){
-		unlink $file;
+	unless($self->logger->is_debug()){
+		foreach my $file(@matchedFiles){
+			unlink $file;
+		}
 	}
 }
 
@@ -824,7 +833,10 @@ sub _combinePhylipFiles{
 		$outFH->print($counter, $self->_numberOfSpacesToAdd($counter), ' ', $fileContent, "\n");
 		$counter++;
 		$inFH->close();
-		unlink $phylipFile;
+
+		unless($self->logger->is_debug()){
+			unlink $phylipFile;
+		}		
 	}
 	$outFH->close();
 }
@@ -858,7 +870,7 @@ sub _printConversionInformation{
 	my $self=shift;	
 	my $conversionFile = shift;
 
-	my $conversionFH = IO::File->new('>' . $conversionFile) or die "$!";
+	my $conversionFH = IO::File->new('>' . $conversionFile) or die "Could not open $conversionFile$!";
 	$conversionFH->print(
 		'Number' . "\t" . 'Name' . "\n"
 	);
@@ -915,8 +927,10 @@ sub _getMsa{
 	$tempOutFH->close();
 
 	# #delete temp files
-	unlink $tempInFile;
-	unlink $tempOutFile;
+	unless($self->logger->is_debug()){
+		unlink $tempInFile;
+		unlink $tempOutFile;
+	}
 	return \@alignedFastaSeqs;
 }
 

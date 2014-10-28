@@ -209,7 +209,7 @@ sub run{
 
 	
 	while(scalar(@{$allFastaFiles}) > 1){
-		$self->logger->info("Remaining files: " . scalar(@{$allFastaFiles}));
+		$self->logger->debug("Remaining files: " . scalar(@{$allFastaFiles}));
 
 		$allFastaFiles = $self->_processRemainingFilesWithNucmer(
 			$allFastaFiles,
@@ -233,8 +233,11 @@ sub run{
 			my $finalCoordsFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . '_vs_refDir');
 			my $refNovelFile = $iterativeResultFile . '_vs_refDir_novelRegions';
 			$finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, $refNovelFile);
-			unlink $finalCoordsFile;
-			unlink $iterativeResultFile;
+			
+			unless($self->logger->is_debug()){
+				unlink $finalCoordsFile;
+				unlink $iterativeResultFile;
+			}
 		}
 		else{
 			$finalFile = $iterativeResultFile;
@@ -327,11 +330,14 @@ sub _processRemainingFilesWithNucmer{
 			$self->_combineNovelRegionsAndReferenceFile($novelRegionsFile,$referenceFile,$newFileName);			
 
 			#remove temp files
-			unlink $coordsFile;
-			unlink $newFileName . '_filtered.delta';
-			unlink $newFileName . '_query_dbtemp.index';				
-			unlink $queryFile;
-			unlink $referenceFile;					
+			unless($self->logger->is_debug()){
+				unlink $coordsFile;
+				unlink $newFileName . '_filtered.delta';
+				unlink $newFileName . '_query_dbtemp.index';				
+				unlink $queryFile;
+				unlink $referenceFile;
+				unlink $novelRegionsFile;
+			}	
 		$forker->finish;		
 	}
 	continue{
@@ -424,7 +430,7 @@ sub _printNovelRegionsFromQueue{
 	);
 	$nrf->findNovelRegions();
 
-	$self->logger->info("File for db construction: $queryFile");
+	$self->logger->debug("File for db construction: $queryFile");
 	my $databaseFile = $queryFile . '_dbtemp';
 
 	#need to include reference file if $self->type eq 'unique'
@@ -438,7 +444,9 @@ sub _printNovelRegionsFromQueue{
 	);
 	$nrf->printNovelRegions($retriever, $outputFile);
 
-	unlink $databaseFile;
+	unless($self->logger->is_debug()){
+		unlink $databaseFile;
+	}
 	return $outputFile;
 }
 
@@ -470,11 +478,14 @@ sub _processNucmerQueue{
 		'percentIdentityCutoff'=>$self->settings->percentIdentityCutoff,
 		'logFile'=> $outputFile . 'mummerlog.txt'
 	);	
-	$self->logger->info("Nucmer query file: $queryFile");
+	$self->logger->debug("Nucmer query file: $queryFile");
 	$self->logger->debug("Nucmer ref file: $referenceFile");
 	$nucmer->run();	
-	unlink $outputFile . '.delta';
-	unlink $outputFile . '.index';
+
+	unless($self->logger->is_debug()){
+		unlink $outputFile . '.delta';
+		unlink $outputFile . '.index';
+	}
 	return $nucmer->coordsFile;	
 }
 
@@ -578,7 +589,7 @@ sub _getBestSeed{
 		last;
 	}
 	
-	$self->logger->info("Best seed: $smallestGenome");
+	$self->logger->debug("Best seed: $smallestGenome");
 	return $smallestGenome;
 }
 
@@ -628,7 +639,7 @@ sub _createFileFromGenomeName{
 	}
 	$outFH->close();
 
-	$self->logger->info("Creating " . $params{'outputFile'} . " from " . $ params{'genome'});
+	$self->logger->debug("Creating " . $params{'outputFile'} . " from " . $ params{'genome'});
 }
 
 

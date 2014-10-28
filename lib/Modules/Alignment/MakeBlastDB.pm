@@ -111,7 +111,7 @@ sub run{
 		. ' -in ' . $self->in
 		. ' -logfile ' . $self->logfile;
 	
-	$self->logger->info("Running makeblastdb with the following: $systemLine");
+	$self->logger->debug("Running makeblastdb with the following: $systemLine");
 	system($systemLine); 
 }
 

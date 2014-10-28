@@ -243,7 +243,7 @@ sub findNovelRegions {
 sub _processQueryFiles{
 	my $self=shift;
 
-	$self->logger->info("Gathering fasta sequence information from:" . $self->queryFile);
+	$self->logger->debug("Gathering fasta sequence information from:" . $self->queryFile);
 
 	my $inFH = Bio::SeqIO->new(-file=>'<'.$self->queryFile, -format=>'fasta') or $self->logger->logdie("Cannot open " . $self->queryFile . "$!");
 
@@ -257,7 +257,7 @@ sub _processQueryFiles{
 sub _buildHashOfAllComparisons {
 	my ($self) = shift;
 
-	$self->logger->info("Building hash of all comparisons");
+	$self->logger->debug("Building hash of all comparisons");
 
 	my $inputFH = IO::File->new( '<' . $self->coordsFile) or $self->logger->logdie("Cannot open " .$self->coordsFile . " $!");
 
@@ -521,10 +521,10 @@ sub _getNoDuplicates {
 			$self->logger->debug("query: $query ref: $ref non_dup_coords: $nonDuplicatedCoords{$query}");
 		}
 	}
-	$self->logger->info("Sorting and compiling novel regions");
+	$self->logger->debug("Sorting and compiling novel regions");
 	my $sortedHashRef = $self->_sortAndCompileCoordsHash( \%nonDuplicatedCoords );
 
-	$self->logger->info("Getting negative image of coords");
+	$self->logger->debug("Getting negative image of coords");
 	return $self->_getNegativeImageCoords($sortedHashRef);
 }
 
@@ -657,7 +657,7 @@ sub _dispatcher {
 
 		my $novelCoordsHashRef;
 		if ( $self->settings->novelRegionFinderMode eq 'no_duplicates' ) {
-			$self->logger->info("Getting non-redundant query regions");
+			$self->logger->debug("Getting non-redundant query regions");
 			$novelCoordsHashRef = $self->_getNoDuplicates();
 		}
 		#elsif ( $self->novelRegionFinderMode eq 'common_to_all' ) {

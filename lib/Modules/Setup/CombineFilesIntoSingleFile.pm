@@ -79,11 +79,11 @@ sub combineFilesIntoSingleFile{
     my $firstFile = 1;
 	foreach my $file(@{$filesToCombine}){
         unless(-e $file && -s $file > 0){
-            $self->logger->info("Skipping $file as it has size of 0");
+            $self->logger->warn("Skipping $file as it has size of 0");
             next;
         }
 
-        $self->logger->info("Adding $file to $outputFile");
+        $self->logger->debug("Adding $file to $outputFile");
         my $cinFH = IO::File->new('<' . $file) or $self->logger->logdie("Cannot open $file $!");
 
         if($firstLineAdjust && ($firstFile > 1)){
@@ -109,9 +109,9 @@ sub combineAndSanitizeFastaFiles{
 
     my $outFH = IO::File->new('>'. $outputFile) or $self->logger->logdie("Could not open $outputFile\n $!");
 
-    $self->logger->info("Combining files:");
+    $self->logger->debug("Combining files:");
     foreach my $file(@{$filesToCombine}){
-        $self->logger->info("$file");
+        $self->logger->debug("$file");
         my $inFH = IO::File->new('<' . $file) or die "Cannot open $file\n $!";
         
         while(my $line = $inFH->getline){
