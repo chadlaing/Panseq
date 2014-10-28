@@ -155,7 +155,7 @@ sub run{
 	#run mummer
 	my $deltaFile = $self->p . '.delta';
 	my $mummerLine = $self->_createMummerLine();
-	$self->logger->info("Running nucmer comparison with the command: $mummerLine");
+	$self->logger->debug("Running nucmer comparison with the command: $mummerLine");
 	system($mummerLine);	
 
 	#add a delta-filter to limit the nucmer matches to the percentIdentity cutoff
@@ -183,7 +183,7 @@ sub _deltaFilter{
 	my $filterLine = $self->mummerDirectory . 'delta-filter -i ' . $self->percentIdentityCutoff
 		. ' ' . $deltaFile . ' > ' . $filteredDeltaFile;
 
-	$self->logger->info("Filtering delta-file for minimum percent identity of " . $self->percentIdentityCutoff
+	$self->logger->debug("Filtering delta-file for minimum percent identity of " . $self->percentIdentityCutoff
 	 . " with command:\n $filterLine");
 
 	system($filterLine);
@@ -220,7 +220,7 @@ sub _showCoords{
 
 	my $coordsLine = $self->mummerDirectory . 'show-coords -l -q -T ' . $deltaFile . ' > ' . $self->coordsFile;
 	
-	$self->logger->info("Launching show-coords with $coordsLine");
+	$self->logger->debug("Launching show-coords with $coordsLine");
 
 	system($coordsLine);
 }
