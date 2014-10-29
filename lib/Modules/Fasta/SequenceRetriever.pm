@@ -179,10 +179,10 @@ sub _createDatabase{
 	
 	if(defined $self->_databaseName){
 		#database already created, no need to duplicte
-		$self->logger->info("Database already created" );
+		$self->logger->debug("Database already created" );
 	}
 	else{
-		$self->logger->info("Creating database");
+		$self->logger->debug("Creating database");
 		
 		my $originalFH = Bio::SeqIO->new(-file=>'<'.$self->inputFile, -format=>'fasta') or die "$!";
 		my $dbFileName = $self->databaseFile;

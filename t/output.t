@@ -19,7 +19,6 @@ my $numberOfCores = 1;
 my $type = 'genomes';
 my $removeRun = 1;
 
-
  GetOptions ('blastDirectory=s' => \$blastDirectory,
              'mummerDirectory=s' => \$mummerDirectory,
              'muscleExecutable=s' => \$muscleExecutable,

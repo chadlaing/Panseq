@@ -111,6 +111,9 @@ sub settings{
 sub run{
 	my $self=shift;
 
+	#test that the external programs are correctly installed
+	$self->_externalProgramTest();
+
 	#if mode is set to loci, launch loci_finder, rather than Panseq
 	if($self->settings->runMode eq 'loci'){
 		$self->_launchLociFinder();
@@ -124,6 +127,36 @@ sub run{
 	}
 	$self->_createZipFile();
 }
+
+
+sub _externalProgramTest{
+	my $self = shift;
+
+	unless(-e $self->settings->blastDirectory . 'blastn'){
+		$self->logger->fatal($self->_missingExternalMessage($self->settings->blastDirectory,'blastDirectory'));
+		exit(1);
+	}
+
+	unless(-e $self->settings->mummerDirectory . 'nucmer'){
+		$self->logger->fatal($self->_missingExternalMessage($self->settings->mummerDirectory,'mummerDirectory'));
+		exit(1);
+	}
+
+	unless(-e $self->settings->muscleExecutable){
+		$self->logger->fatal($self->_missingExternalMessage($self->settings->muscleExecutable,'muscleExecutable'));
+		exit(1);
+	}
+
+}
+
+sub _missingExternalMessage{
+	my $self = shift;
+	my $file = shift;
+	my $setting = shift;
+
+	return("The setting $setting is set as $file, which does not contain the appropriate executable. Please update the $setting setting in your Panseq configuration file.\n");
+}
+
 
 =head2 _launchLociFinder
 
