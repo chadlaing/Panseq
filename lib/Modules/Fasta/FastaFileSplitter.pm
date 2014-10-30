@@ -6,11 +6,16 @@ package Modules::Fasta::FastaFileSplitter;
 
 =head1 NAME
 
-FileInteraction::Fasta::FastaFileSplitter - Splits a single fasta file into a given number of ~equal sized output fasta files.
+Modules::Fasta::FastaFileSplitter - Splits a single fasta file into a given number of ~equal sized output fasta files.
 
 =head1 SYNOPSIS
 
-
+Given a number of files to create, we iterate through the master file, adding one fasta sequence to each of
+the output files in turn. The output is accumulated in an array, and then printed to the files at the end.
+We add sequences in this iterative fashion to help in the downstream BLAST step, where "core" regions tend to
+cluster, making some output files significantly larger than others. This leads to most cores sitting idle while 
+a few work to finish processing the largest blast output. By adding sequence iteratively to the output files, the BLAST
+output should be relatively homogeneous.
 
 =head1 DESCRIPTION
 
@@ -121,41 +126,41 @@ sub splitFastaFile {
 	my @splitFiles;
 	$self->logger->info("Splitting " . $self->inputFile . " into " . $self->numberOfSplits . " files");
 
-	my $numBytes = -s $self->inputFile;
+	my @splitArray;
 
 	if($self->numberOfSplits == 1){
 		$splitFiles[0] = $self->inputFile;
 	}
 	else{
-		my $bytesPerFile = (int($numBytes / $self->numberOfSplits) + 1);		
-
+		
 		my $inFH = IO::File->new('<' . $self->inputFile) or die "$!";
-		my $counter = 0;
 		my $outputPrefix = 0;
-		my $outFileName;
-		my $outFH;
 
 		while(my $line = $inFH->getline()){
-			$counter += length($line);
-
-			if($line =~ m/^>/ && ($counter >= $bytesPerFile || !defined $outFileName)){
-				$counter=0;
+			
+			if($line =~ m/^>/){
 				$outputPrefix++;
-				
-				unless(!defined $outFileName){
-					$outFH->close();
-				}
-
-				$outFileName = $self->baseDirectory . $outputPrefix . '_split.fasta';
-				$outFH = IO::File->new('>' . $self->baseDirectory . $outputPrefix . '_split.fasta') or die "$!";
-				push @splitFiles, $outFileName;
+				if($outputPrefix > $self->numberOfSplits){
+					$outputPrefix=1;
+				}					
 			}
-			$outFH->print($line);
-		}
-
-		$outFH->close();
+			if(defined $splitArray[$outputPrefix]){
+				$splitArray[$outputPrefix] .= $line;
+			}
+			else{
+				$splitArray[$outputPrefix] = $line;
+			}
+		}		
 		$inFH->close();
-	}	
+		#print out the array values to the separate files
+		for my $i(1..$self->numberOfSplits){
+			my $outFileName = $self->baseDirectory . $i . '_split.fasta';
+			my $outFH = IO::File->new('>' . $outFileName) or die "$!";
+			$outFH->print($splitArray[$i]);
+			push @splitFiles, $outFileName;
+			$outFH->close();
+		}
+	}		
 	return \@splitFiles;
 }
 
