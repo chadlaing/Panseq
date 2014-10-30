@@ -24,7 +24,11 @@ my $removeRun = 1;
              'muscleExecutable=s' => \$muscleExecutable,
              'type=s' => \$type,
              'removeRun=i' => \$removeRun,
-             'numberOfCores=i' => \$numberOfCores
+             #Because of the change in splitting the fasta file, the number of cores
+             #affects the order of fasta sequences, which is guaranteed to be the same for each run
+             #using the same number of cores, but not the same among different core numbers
+             #therefore, for consistent testing, a single core is used
+             #'numberOfCores=i' => \$numberOfCores
              );
 
 #get script location via File::Basename
@@ -86,31 +90,31 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'56ef054ecc9b51cb11c5f1945fe9db72',
-	plasmidsPanGenome=>'47c3011f3bafad9d0b851992f94ccbb1',
-	plasmidsBinaryTable=>'fbfffe4e58a1dfc1cd04cb29b5146c0d',
-	plasmidsSnpTable=>'b36ddaf8ca3d1fca2fff44192cc7091f',
-	plasmidsBinaryPhylip=>'db5e15a38d9b7b7be53811df302d7558',
-	plasmidsSnpPhylip=>'847014dfd971fef5abb384dc876eca73',
-    plasmidsCoreFragments=>'2fa21523c2c0e9abde0836f2a754640e',
-    plasmidsAccessoryFragments=>'f17e29fd8ca3dbaac3033ce188018465',
+	plasmidsCoreSnps=>'43faa7b837c477332685c5a2339455fd',
+	plasmidsPanGenome=>'5f124671f4db916d90fe73ff6fbb5df2',
+	plasmidsBinaryTable=>'985b590c8b5819b05380e737414ad06b',
+	plasmidsSnpTable=>'1353a9ed8b378bfe19afe2a07a80e2fd',
+	plasmidsBinaryPhylip=>'ae6115a52d97df7b45c7e053a2b2425f',
+	plasmidsSnpPhylip=>'0d910820c5effcaf4848c31b3fe581a4',
+    plasmidsCoreFragments=>'041a079b56ada12c1c631898f34f028a',
+    plasmidsAccessoryFragments=>'024dbb11dab8a3b4bdfa70ed2bab7e04',
     plasmidsNameConversion=>'da9678fa95a0def763ad014ec7153779',
-	genomesCoreSnps=>'590ead136269c9f29ce126a67a14d2aa',
-	genomesPanGenome=>'3e00bb9e7d7fa9b02b34052fd005fa00',
-	genomesBinaryTable=>'1f1aaef9c674a5e847cae718964b0385',
-	genomesSnpTable=>'4c5289bccfe1923512be89fbc0ca466c',
-	genomesBinaryPhylip=>'4b341c515a3aa54377b7a7f8a9e71d17',
-	genomesSnpPhylip=>'83b52d545f6da09b26f97bd28f8109e9',
-    genomesCoreFragments=>'117d52a380e05eddd33a31d07a4f7829',
-    genomesAccessoryFragments=>'6dca4cb62aabfbca4d54279d959fc451',
+	genomesCoreSnps=>'039565e0abde3196527dd4fa3adf53f1',
+	genomesPanGenome=>'de6b8b4f33d6cb5cd59da7bae5c5ec81',
+	genomesBinaryTable=>'538fa9bee4f6491fe0f2903f2dc03b1a',
+	genomesSnpTable=>'8508237bed38b8b1bae0caf279fa2098',
+	genomesBinaryPhylip=>'1e1ad05595be6596ab3834e19ae26e9b',
+	genomesSnpPhylip=>'2d9c91b1ec8c3a91ef96546ec61d1087',
+    genomesCoreFragments=>'e0e0e31385d044a3087e386f0ed85dc9',
+    genomesAccessoryFragments=>'e3093b5dd56958b983944fc1937d072a',
     genomesNameConversion=>'e90cc17adc92f2d63106d58dff86860a',
-	queryCoreSnps=>'1682548300dc82584e01415d38d82af4',
-	queryPanGenome=>'a603a5526709da34bc854363045c94bf',
-	queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
-	querySnpTable=>'27dc08b4023a052cc8680af0ad7ddf5d',
-	queryBinaryPhylip=>'183fea98a21e4f9eae54e486f1f08821',
-	querySnpPhylip=>'94f340c6f989514c06758472f708c5f2',
-	queryAlleles=>'7aec36d7ee53447e0dd5e82be3d2f9bc',
+	queryCoreSnps=>'9f0120dfb92355c74f17fe0d60caf63f',
+	queryPanGenome=>'4cd6b8fc1693e75dbf18b7ce3603d42f',
+	queryBinaryTable=>'2aed04ef015d99b4729e809c42bc8aea',
+	querySnpTable=>'91fc6f2f38eaaf9be5cdc1476c12e6d5',
+	queryBinaryPhylip=>'7e7b4c4a04dd89ce36d0e8dac4d6e0dc',
+	querySnpPhylip=>'d2132a7b5f4952db583ffdc07f579d24',
+	queryAlleles=>'66a7c01a75682328e7f85c39668b233d',
     queryNameConversion=>'e90cc17adc92f2d63106d58dff86860a'
 );
 
