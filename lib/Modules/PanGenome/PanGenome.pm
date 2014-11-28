@@ -98,14 +98,20 @@ sub _initialize{
 	unless(defined $self->panGenomeOutputFile){
 		$self->panGenomeOutputFile($self->settings->baseDirectory . 'pan_genome.txt');
 	}
-
 	$self->_currentResult(0);
+	$self->_createPrintFileHandles();
 }
 
 
 sub panGenome{
 	my $self=shift;
 	$self->{'_panGenome'} = shift // return $self->{'_panGenome'};	
+}
+
+
+sub _printFH{
+    my $self = shift;
+    $self->{'__printFH'} = shift // return $self->{'__printFH'};   
 }
 
 
@@ -531,49 +537,66 @@ sub _processBlastXML {
 }
 
 
+sub _getNameOrId{
+	my $self=shift;
+	my $finalResult = shift;
+
+	$self->logger->debug("foreach finalresult: " . Dumper($locusInformation));
+	if($self->settings->nameOrId eq 'name'){
+		$self->logger->debug("printing: li->name " . Dumper($locusInformation->{name}));
+		return("\n" . $finalResult->{locusInformation}->{name});
+	}
+	else{
+		return("\n" . $finalResult->{locusInformation}->{id});
+	}
+}
+
+
+sub _printPanGenomeFastaFiles{
+	my $self = shift;
+	my $finalResult = shift;
+
+	#fragment files
+	if($finalResult->{locusInformation}->{pan} eq 'core'){
+		$self->_printFH->{coreFH}->print('>lcl|' . $finalResult->{locusInformation}->{id} . '|' . $finalResult->{locusInformation}->{name} . "\n" . $finalResult->{locusInformation}->{sequence} . "\n");
+	}
+	elsif($finalResult->{locusInformation}->{pan} eq 'accessory'){
+		$self->_printFH->{accessoryFH}->print('>lcl|', $locusInformation->{id}, '|', $locusInformation->{name}, "\n", $locusInformation->{sequence}, "\n");
+	}
+	else{
+		$self->logger->fatal("Unknown pan-genome fragment type!");
+		exit(1);
+	}
+}
+
+
+sub _printAlleleData{
+	my $self = shift;
+	my $finalResult = shift;
+
+	#alleles file if required
+	if($self->settings->storeAlleles){
+		$allelesFH->print("\n", 'Locus ', $locusInformation->{name}, "\n");
+	}
+
+	if($self->storeAlleles){
+					$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{alleles}->[$i], "\n");
+	}
+}
+
+
 sub _printResults{
 	my $self = shift;
 	my $blastFile = shift;
 	my $finalResults = shift;
-
-	
-
-	if(-s $binaryFileName < 1){
-		$self->_printTableHeaders();
-	}
 	
 	foreach my $finalResult(@{$finalResults}){
-		my $locusInformation = $finalResult->{locusInformation};
-		my $genomeResults = $finalResult->{genomeResults};
+		my $locusNameOrId = $self->_getNameOrId($finalresult);
+		
+		$self->_printPanGenomeFastaFiles($finalresult);
 
 
-		#print binaryTable
-		$self->_printBinaryTableData($binaryTableFH)
-		$self->logger->debug("foreach finalresult: " . Dumper($locusInformation));
-		if($self->settings->nameOrId eq 'name'){
-			$self->logger->debug("printing: li->name " . Dumper($locusInformation->{name}));
-			$binaryTableFH->print("\n", $locusInformation->{name});
-		}
-		else{
-			$binaryTableFH->print("\n", $locusInformation->{id});
-		}
-
-		#fragment files
-		if($locusInformation->{pan} eq 'core'){
-			$coreFH->print('>lcl|', $locusInformation->{id}, '|', $locusInformation->{name}, "\n", $locusInformation->{sequence}, "\n");
-		}
-		elsif($locusInformation->{pan} eq 'accessory'){
-			$accessoryFH->print('>lcl|', $locusInformation->{id}, '|', $locusInformation->{name}, "\n", $locusInformation->{sequence}, "\n");
-		}
-		else{
-			$self->logger->fatal("Unknown pan-genome fragment type!");
-			exit(1);
-		}
-
-		#alleles file if required
-		if($self->settings->storeAlleles){
-			$allelesFH->print("\n", 'Locus ', $locusInformation->{name}, "\n");
-		}
+		
 				
 		my $genomeCounter=1;
 		my $snpArray=[];
@@ -581,7 +604,11 @@ sub _printResults{
 		my $numberOfSnps;
 
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){			
-			#Table files
+			
+
+			if($self->settings->storeAlleles){
+				$self->_printAlleleData();
+			}
 			my $contigId; 
 			$self->logger->debug("genomes in final result" . @{$self->settings->orderedGenomeNames});
 			if(defined $genomeResults->{$genome}->{binary}){
@@ -596,9 +623,7 @@ sub _printResults{
 						}					
 					}					
 									
-					if($self->storeAlleles){
-						$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{alleles}->[$i], "\n");
-					}
+					
 
 					#pan-genome output			
 					$panGenomeFH->print(
@@ -671,16 +696,26 @@ sub _printResults{
 sub _createPrintFileHandles{
 	my $self = shift;
 
-	my $binaryFileName = $self->settings->baseDirectory . $blastFile . '_binary_table';
-	my $fhHash=(
-		my $binaryTableFH = IO::File->new('>>' . $binaryFileName) or die "$!";
-		my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!";
-		my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!";
-		my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_core_snps') or die "$!";
-		my $accessoryFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_accessoryGenomeFragments') or die "$!";
-		my $coreFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_coreGenomeFragments') or die "$!";
-		my $allelesFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_locus_alleles') or die "$!";	
-	);
+	my $self->_printFH({
+		binaryTableFH => IO::File->new('>' . $binaryFileName) or die "$!",
+		snpTableFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!",
+		panGenomeFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!",
+		coreSnpsFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_core_snps') or die "$!",
+		accessoryFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_accessoryGenomeFragments') or die "$!",
+		coreFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_coreGenomeFragments') or die "$!",
+		allelesFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_locus_alleles') or die "$!"
+	});
+
+	#Initialize the table files with headers			
+	foreach my $genome(@{$self->settings->orderedGenomeNames}){
+		$self->_printFH->{binaryTableFH}->print("\t", $genome);
+		$self->_printFH->{snpTableFH}->print("\t", $genome);
+	};	
+
+	#for pan_genome and core_snps
+	my $headerLine = "LocusID\tLocusName\tGenome\tAllele\tStart Bp\tEnd Bp\tContig";
+	$self->_printFH->{panGenomeFH}->print($headerLine);
+	$self->_printFH->{coreSnpsFH}->print($headerLine);
 }
 
 
