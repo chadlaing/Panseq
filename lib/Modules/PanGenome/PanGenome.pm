@@ -536,34 +536,19 @@ sub _printResults{
 	my $blastFile = shift;
 	my $finalResults = shift;
 
-	my $binaryFileName = $self->settings->baseDirectory . $blastFile . '_binary_table';
-	my $binaryTableFH = IO::File->new('>>' . $binaryFileName) or die "$!";
-	my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!";
-	my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!";
-	my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_core_snps') or die "$!";
-	my $accessoryFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_accessoryGenomeFragments') or die "$!";
-	my $coreFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_coreGenomeFragments') or die "$!";
-	my $allelesFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_locus_alleles') or die "$!";	
-
-	my @fileHandles = ($binaryTableFH, $snpTableFH, $panGenomeFH, $coreSnpsFH, $accessoryFH, $coreFH, $allelesFH);
+	
 
 	if(-s $binaryFileName < 1){
-		#for table files			
-		foreach my $genome(@{$self->settings->orderedGenomeNames}){
-			$binaryTableFH->print("\t", $genome);
-			$snpTableFH->print("\t", $genome);
-		};	
-
-		#for pan_genome and core_snps
-		my $headerLine = "LocusID\tLocusName\tGenome\tAllele\tStart Bp\tEnd Bp\tContig";
-		$panGenomeFH->print($headerLine);
-		$coreSnpsFH->print($headerLine);
+		$self->_printTableHeaders();
 	}
 	
 	foreach my $finalResult(@{$finalResults}){
 		my $locusInformation = $finalResult->{locusInformation};
 		my $genomeResults = $finalResult->{genomeResults};
 
+
+		#print binaryTable
+		$self->_printBinaryTableData($binaryTableFH)
 		$self->logger->debug("foreach finalresult: " . Dumper($locusInformation));
 		if($self->settings->nameOrId eq 'name'){
 			$self->logger->debug("printing: li->name " . Dumper($locusInformation->{name}));
@@ -597,85 +582,105 @@ sub _printResults{
 
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){			
 			#Table files
+			my $contigId; 
 			$self->logger->debug("genomes in final result" . @{$self->settings->orderedGenomeNames});
 			if(defined $genomeResults->{$genome}->{binary}){
+				
 				#alleles file, print out if multiple copies
-				if($self->settings->storeAlleles){
-					for my $i(0 .. scalar(@{$genomeResults->{$genome}->{binary}}) -1){
-						$self->logger->debug("Allele $i");
-						if(defined $genomeResults->{$genome}->{alleles}->[$i]){
-							my $contigId = $genomeResults->{$genome}->{binary}->[$i]->{contig_id};
-							if($i > 0){
-								$contigId .= '_a' . ($i +1);
-							}						
-							$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{alleles}->[$i], "\n");
+				for my $i(0 .. scalar(@{$genomeResults->{$genome}->{binary}}) -1){
+					$self->logger->debug("Allele $i");
+					if(defined $genomeResults->{$genome}->{alleles}->[$i]){
+						$contigId = $genomeResults->{$genome}->{binary}->[$i]->{contig_id};
+						if($i > 0){
+							$contigId .= '_a' . ($i +1);
 						}					
 					}					
-				}
+									
+					if($self->storeAlleles){
+						$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{alleles}->[$i], "\n");
+					}
 
-				$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
+					#pan-genome output			
+					$panGenomeFH->print(
+						"\n",
+						$locusInformation->{id},
+						"\t",
+						$locusInformation->{name},
+						"\t",
+						$genome,
+						"\t",
+						$genomeResults->{$genome}->{binary}->[$i]->{value},
+						"\t",
+						$genomeResults->{$genome}->{binary}->[$i]->{start_bp},
+						"\t",
+						$genomeResults->{$genome}->{binary}->[$i]->{end_bp},
+						"\t",
+						$genomeResults->{$genome}->{binary}->[$i]->{contig_id}
+					);		
 
-				my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_') or die "$!";
-				$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
-				$binaryPhylipFH->close();	
-
-				#pan-genome output			
-				$panGenomeFH->print(
-					"\n",
-					$locusInformation->{id},
-					"\t",
-					$locusInformation->{name},
-					"\t",
-					$genome,
-					"\t",
-					$genomeResults->{$genome}->{binary}->[0]->{value},
-					"\t",
-					$genomeResults->{$genome}->{binary}->[0]->{start_bp},
-					"\t",
-					$genomeResults->{$genome}->{binary}->[0]->{end_bp},
-					"\t",
-					$genomeResults->{$genome}->{binary}->[0]->{contig_id}
-				);
-			}
-			else{
-				$self->logger->fatal("No binary result for $genome");
-				exit(1);
-			}		
-			
-			if($locusInformation->{pan} eq 'core'){
-			
-				if(defined $genomeResults->{$genome}->{snp}){
-					my $snpLocusCounter=0;
+					#we only want allele data for the pan_genome.txt file and the core_snps.txt file
+					#and the alleles file. Not for the phylip or the table files
+					if($i > 0){
+						next;
+					}
+						
+					$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
+					my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_') or die "$!";
+					$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
+					$binaryPhylipFH->close();	
+				
+					if($locusInformation->{pan} eq 'core'){
 					
-					foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
-						if(!defined $snpArray->[$snpLocusCounter]->[0]){
-							$snpArray->[$snpLocusCounter]->[0] = $snpId;
-						}
-						elsif($snpArray->[$snpLocusCounter]->[0] ne $snpId){
-							$self->logger->fatal("SNP IDs do not match!");
-							exit(1);
-						}				
-						$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};							
-						$snpLocusCounter++;
-					}						
-				} #defined SNP for genome
-			} #end if core
-			$genomeCounter++;	
-		}#end genome
-		#print the SNPs
-		$self->_printSnpData(
-			snpArray => $snpArray,
-			name => $locusInformation->{name},
-			genomeResults => $genomeResults,
-			snpTableFH => $snpTableFH,
-			coreSnpsFH => $coreSnpsFH,
-			blastFile => $blastFile
-		);
-	}
+						if(defined $genomeResults->{$genome}->{snp}){
+							my $snpLocusCounter=0;
+							
+							foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
+								if(!defined $snpArray->[$snpLocusCounter]->[$i]){
+									$snpArray->[$snpLocusCounter]->[$i] = $snpId;
+								}
+								elsif($snpArray->[$snpLocusCounter]->[$i] ne $snpId){
+									$self->logger->fatal("SNP IDs do not match!");
+									exit(1);
+								}				
+								$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};							
+								$snpLocusCounter++;
+							}						
+						} #defined SNP for genome
+					} #end if core
+					$genomeCounter++;	
+
+				} #end allele	
+			}#end genome
+			#print the SNPs
+			$self->_printSnpData(
+				snpArray => $snpArray,
+				name => $locusInformation->{name},
+				genomeResults => $genomeResults,
+				snpTableFH => $snpTableFH,
+				coreSnpsFH => $coreSnpsFH,
+				blastFile => $blastFile
+			);
 
 	foreach my $fh(@fileHandles){
 		$fh->close();
 	}	
+}
+
+
+
+sub _createPrintFileHandles{
+	my $self = shift;
+
+	my $binaryFileName = $self->settings->baseDirectory . $blastFile . '_binary_table';
+	my $fhHash=(
+		my $binaryTableFH = IO::File->new('>>' . $binaryFileName) or die "$!";
+		my $snpTableFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!";
+		my $panGenomeFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!";
+		my $coreSnpsFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_core_snps') or die "$!";
+		my $accessoryFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_accessoryGenomeFragments') or die "$!";
+		my $coreFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_coreGenomeFragments') or die "$!";
+		my $allelesFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_locus_alleles') or die "$!";	
+	);
 }
 
 
