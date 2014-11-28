@@ -573,15 +573,96 @@ sub _printPanGenomeFastaFiles{
 sub _printAlleleData{
 	my $self = shift;
 	my $finalResult = shift;
+	my $alleleData = shift;
+	my $firstFlag =shift;
+	my $contigId = shift;
 
 	#alleles file if required
-	if($self->settings->storeAlleles){
-		$allelesFH->print("\n", 'Locus ', $locusInformation->{name}, "\n");
-	}
+	if($firstFlag){
+		$self->_printFH->{allelesFH}->print("\n" . 'Locus ' . $finalResult->{locusInformation}->{name} . "\n");
+	}	
+	
+	$self->_printFH->{allelesFH}->print('>' . $contigId . "\n" .  $alleleData . "\n");
+	return 0;
+}
 
-	if($self->storeAlleles){
-					$allelesFH->print('>', $contigId, "\n", $genomeResults->{$genome}->{alleles}->[$i], "\n");
-	}
+
+sub _printBinaryTableData{
+	my $self = shift;
+	my $data = shift;
+	$self->_printFH->{binaryTableFH}->print("\t" . $data);
+}
+
+
+sub _printBinaryPhylipData{
+	my $self = shift;
+	my $fileName = shift;
+	my $data = shift;
+
+	my $binaryPhylipFH = IO::File->new('>>' . $fileName) or die "$!";
+	$binaryPhylipFH->print($data);
+	$binaryPhylipFH->close();	
+}
+
+
+sub _addToSnpArray{
+	my $self = shift;
+	my $snpArray = shift;
+	my $singleGenome = shift;
+	my $genomeCounter = shift;
+
+	if(defined $singleGenome->{snp}){
+		my $snpLocusCounter=0;
+		
+		foreach my $snpId(sort keys %{$singleGenome->{snp}}){
+			if(!defined $snpArray->[$snpLocusCounter]->[0]){
+				$snpArray->[$snpLocusCounter]->[0] = $snpId;
+			}
+			elsif($snpArray->[$snpLocusCounter]->[0] ne $snpId){
+				$self->logger->fatal("SNP IDs do not match!");
+				exit(1);
+			}				
+			$snpArray->[$snpLocusCounter]->[$genomeCounter]=$singleGenome->{snp}->{$snpId}->{value};							
+			$snpLocusCounter++;
+		}						
+	} #defined SNP for genome
+	return $snpArray;
+}
+
+
+sub _getContigId{
+	my $self = shift;
+	my $contigId = shift;
+	my $i = shift;
+	
+	if($i > 0){
+		$contigId .= '_a' . ($i +1);
+	}					
+	return $contigId;									
+}
+
+sub _printPanGenomeData{
+	my $self=shift;
+	my $locusInformation = shift;
+	my $singleGenome = shift;
+	my $genome = shift;
+		
+	$self->_printFH->{panGenomeFH}->print(
+		"\n" .
+		$locusInformation->{id} .
+		"\t" .
+		$locusInformation->{name} .
+		"\t" .
+		$genome .
+		"\t" .
+		$singleGenome->{value} .
+		"\t" .
+		$singleGenome->{start_bp} .
+		"\t" .
+		$singleGenome->{end_bp} .
+		"\t" .
+		$singleGenome->{contig_id}
+	);		
 }
 
 
@@ -593,102 +674,50 @@ sub _printResults{
 	foreach my $finalResult(@{$finalResults}){
 		my $locusNameOrId = $self->_getNameOrId($finalresult);
 		
-		$self->_printPanGenomeFastaFiles($finalresult);
-
-
-		
+		$self->_printPanGenomeFastaFiles($finalresult);		
 				
-		my $genomeCounter=1;
 		my $snpArray=[];
 		my @genomesMissingSnps;
 		my $numberOfSnps;
+		my $genomeCounter = 1;
+		my $firstFlag = 1;
+		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
+			#do all of the single allele printing first
+			$self->_printBinaryTableData($genomeResults->{$genome}->{binary}->[0]->{value});
+			$self->_printBinaryPhylipData($self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_' 
+										 ,$genomeResults->{$genome}->{binary}->[0]->{value});
 
-		foreach my $genome(@{$self->settings->orderedGenomeNames}){			
-			
+			if($locusInformation->{pan} eq 'core'){
+				$snpArray = $self->_addToSnpArray($snpArray, $finalResult->{genomeResults}->{$genome}, $genomeCounter);	
+			} #end if core
 
-			if($self->settings->storeAlleles){
-				$self->_printAlleleData();
-			}
-			my $contigId; 
-			$self->logger->debug("genomes in final result" . @{$self->settings->orderedGenomeNames});
+			#now we are concerned about the multiple alleles
+			#print with them in mind
 			if(defined $genomeResults->{$genome}->{binary}){
-				
-				#alleles file, print out if multiple copies
 				for my $i(0 .. scalar(@{$genomeResults->{$genome}->{binary}}) -1){
-					$self->logger->debug("Allele $i");
-					if(defined $genomeResults->{$genome}->{alleles}->[$i]){
-						$contigId = $genomeResults->{$genome}->{binary}->[$i]->{contig_id};
-						if($i > 0){
-							$contigId .= '_a' . ($i +1);
-						}					
-					}					
-									
-					
+					my $contigId = $self->_getContigId($genomeResults->{$genome}->{binary}->[$i]->{contig_id}, $i);
+					$self->logger->debug("Contig id: $contigId");
 
-					#pan-genome output			
-					$panGenomeFH->print(
-						"\n",
-						$locusInformation->{id},
-						"\t",
-						$locusInformation->{name},
-						"\t",
-						$genome,
-						"\t",
-						$genomeResults->{$genome}->{binary}->[$i]->{value},
-						"\t",
-						$genomeResults->{$genome}->{binary}->[$i]->{start_bp},
-						"\t",
-						$genomeResults->{$genome}->{binary}->[$i]->{end_bp},
-						"\t",
-						$genomeResults->{$genome}->{binary}->[$i]->{contig_id}
-					);		
-
-					#we only want allele data for the pan_genome.txt file and the core_snps.txt file
-					#and the alleles file. Not for the phylip or the table files
-					if($i > 0){
-						next;
-					}
-						
-					$binaryTableFH->print("\t", $genomeResults->{$genome}->{binary}->[0]->{value});
-					my $binaryPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_') or die "$!";
-					$binaryPhylipFH->print($genomeResults->{$genome}->{binary}->[0]->{value});
-					$binaryPhylipFH->close();	
+					if($self->settings->storeAlleles){
+						$firstFlag = $self->_printAlleleData($finalResult, $genomeResults->{$genome}->{alleles}->[$i], $firstFlag, $contigId);
+					}			
 				
-					if($locusInformation->{pan} eq 'core'){
+					$self->_printPanGenomeData($finalResult->{locusInformation}, $finalResult->{genomeResults}->{$genome}->{binary}->[$i],$genome);
 					
-						if(defined $genomeResults->{$genome}->{snp}){
-							my $snpLocusCounter=0;
-							
-							foreach my $snpId(sort keys %{$genomeResults->{$genome}->{snp}}){
-								if(!defined $snpArray->[$snpLocusCounter]->[$i]){
-									$snpArray->[$snpLocusCounter]->[$i] = $snpId;
-								}
-								elsif($snpArray->[$snpLocusCounter]->[$i] ne $snpId){
-									$self->logger->fatal("SNP IDs do not match!");
-									exit(1);
-								}				
-								$snpArray->[$snpLocusCounter]->[$genomeCounter]=$genomeResults->{$genome}->{snp}->{$snpId}->{value};							
-								$snpLocusCounter++;
-							}						
-						} #defined SNP for genome
-					} #end if core
-					$genomeCounter++;	
 
 				} #end allele	
-			}#end genome
-			#print the SNPs
-			$self->_printSnpData(
-				snpArray => $snpArray,
-				name => $locusInformation->{name},
-				genomeResults => $genomeResults,
-				snpTableFH => $snpTableFH,
-				coreSnpsFH => $coreSnpsFH,
-				blastFile => $blastFile
-			);
-
-	foreach my $fh(@fileHandles){
-		$fh->close();
-	}	
+			}#end genomeResult
+		} #end genome
+		#print the SNPs
+		$self->_printSnpData(
+			snpArray => $snpArray,
+			name => $locusInformation->{name},
+			genomeResults => $genomeResults,
+			snpTableFH => $snpTableFH,
+			coreSnpsFH => $coreSnpsFH,
+			blastFile => $blastFile
+		);
+	}#end finalResults		
 }
 
 
