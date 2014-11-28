@@ -99,7 +99,6 @@ sub _initialize{
 		$self->panGenomeOutputFile($self->settings->baseDirectory . 'pan_genome.txt');
 	}
 	$self->_currentResult(0);
-	$self->_createPrintFileHandles();
 }
 
 
@@ -357,6 +356,8 @@ sub _getUniqueResultId{
 sub _processBlastXML {
 	my $self = shift;
 	my $blastFile = shift;
+
+	$self->_createPrintFileHandles($blastFile);
 	my $counter=shift;
 
 	my $blastFileName = $counter;
@@ -673,12 +674,9 @@ sub _printResults{
 	
 	foreach my $finalResult(@{$finalResults}){
 		my $locusNameOrId = $self->_getNameOrId($finalresult);
-		
 		$self->_printPanGenomeFastaFiles($finalresult);		
 				
 		my $snpArray=[];
-		my @genomesMissingSnps;
-		my $numberOfSnps;
 		my $genomeCounter = 1;
 		my $firstFlag = 1;
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
@@ -703,18 +701,14 @@ sub _printResults{
 					}			
 				
 					$self->_printPanGenomeData($finalResult->{locusInformation}, $finalResult->{genomeResults}->{$genome}->{binary}->[$i],$genome);
-					
-
 				} #end allele	
 			}#end genomeResult
 		} #end genome
 		#print the SNPs
 		$self->_printSnpData(
 			snpArray => $snpArray,
-			name => $locusInformation->{name},
-			genomeResults => $genomeResults,
-			snpTableFH => $snpTableFH,
-			coreSnpsFH => $coreSnpsFH,
+			name => $finalResult->{locusInformation}->{name},
+			genomeResults => $finalResult->{genomeResults},
 			blastFile => $blastFile
 		);
 	}#end finalResults		
@@ -724,8 +718,9 @@ sub _printResults{
 
 sub _createPrintFileHandles{
 	my $self = shift;
+	my $blastFile = shift;
 
-	my $self->_printFH({
+	$self->_printFH({
 		binaryTableFH => IO::File->new('>' . $binaryFileName) or die "$!",
 		snpTableFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!",
 		panGenomeFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!",
@@ -755,22 +750,22 @@ sub _printSnpData{
 	my $snpArray = $params{snpArray};
 
 	my %snpString;
-	foreach my $snp(0..scalar(@{$snpArray})-1){	
-		my $snpId = $snpArray->[$snp]->[0];	
+	for my $i(0..scalar(@{$snpArray})-1){	
+		my $snpId = $snpArray->[$i]->[0];	
 		my $snpString = "\n" . $snpId;
 
-		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
-			my $snpChar = $snpArray->[$snp]->[$genome] // '-';				
+		for my $j(1..scalar(@{$self->settings->orderedGenomeNames})){
+			my $snpChar = $snpArray->[$i]->[$j] // '-';				
 			$snpString .= "\t" . $snpChar;
 
-			if(defined $snpString{$genome}){
-				$snpString{$genome} .= $snpChar;
+			if(defined $snpString{$j}){
+				$snpString{$j} .= $snpChar;
 			}
 			else{
-				$snpString{$genome} = $snpChar;
+				$snpString{$j} = $snpChar;
 			}
 
-			my $genome = $self->settings->orderedGenomeNames->[$genome -1];
+			my $genome = $self->settings->orderedGenomeNames->[$j -1];
 			my $startBp;
 			if(defined $params{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}){
 				$startBp = $params{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp};
@@ -781,23 +776,23 @@ sub _printSnpData{
 			#per SNP printing
 			
 			$params{coreSnpsFH}->print(
-				"\n", 
-				$snpId,
-				"\t",
-				$params{name},
-				"\t",
-				$genome,
-				"\t",
-				$snpChar,
-				"\t",
-				$startBp,
-				"\t",
-				$startBp,
-				"\t",
+				"\n" . 
+				$snpId .
+				"\t" .
+				$params{name} .
+				"\t" .
+				$genome .
+				"\t" .
+				$snpChar .
+				"\t" .
+				$startBp .
+				"\t" .
+				$startBp .
+				"\t" .
 				$params{genomeResults}->{$genome}->{binary}->[0]->{contig_id}						
 			);
 		} #foreach
-		$params{snpTableFH}->print($snpString);
+		$self->_printFH->{snpTableFH}->print($snpString);
 	}
 
 	#these keys do not need to be sorted, as they print to the file given by the genome number
@@ -809,6 +804,7 @@ sub _printSnpData{
 		$snpPhylipFH->close();
 	}
 }
+
 
 sub _combineFilesOfType{
 	my $self = shift;
