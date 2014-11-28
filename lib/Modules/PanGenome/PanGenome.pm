@@ -535,34 +535,47 @@ sub _processBlastXML {
 		$self->_printConversionInformation($conversionFile);
 	}
 	$self->logger->info("Total results: $totalResults");
+	$self->_closePrintFileHandles();
 }
 
 
 sub _getNameOrId{
 	my $self=shift;
-	my $finalResult = shift;
+	my $locusInformation = shift;
 
 	$self->logger->debug("foreach finalresult: " . Dumper($locusInformation));
 	if($self->settings->nameOrId eq 'name'){
 		$self->logger->debug("printing: li->name " . Dumper($locusInformation->{name}));
-		return("\n" . $finalResult->{locusInformation}->{name});
+		return("\n" . $locusInformation->{name});
 	}
 	else{
-		return("\n" . $finalResult->{locusInformation}->{id});
+		return("\n" . $locusInformation->{id});
 	}
 }
 
 
 sub _printPanGenomeFastaFiles{
 	my $self = shift;
-	my $finalResult = shift;
+	my $locusInformation = shift;
 
 	#fragment files
-	if($finalResult->{locusInformation}->{pan} eq 'core'){
-		$self->_printFH->{coreFH}->print('>lcl|' . $finalResult->{locusInformation}->{id} . '|' . $finalResult->{locusInformation}->{name} . "\n" . $finalResult->{locusInformation}->{sequence} . "\n");
+	if($locusInformation->{pan} eq 'core'){
+		$self->_printFH->{coreFH}->print('>lcl|' 
+						 .$locusInformation->{id} 
+						 . '|' 
+						 . $locusInformation->{name} 
+						 . "\n" 
+						 . $locusInformation->{sequence} 
+						 . "\n");
 	}
-	elsif($finalResult->{locusInformation}->{pan} eq 'accessory'){
-		$self->_printFH->{accessoryFH}->print('>lcl|', $locusInformation->{id}, '|', $locusInformation->{name}, "\n", $locusInformation->{sequence}, "\n");
+	elsif($locusInformation->{pan} eq 'accessory'){
+		$self->_printFH->{accessoryFH}->print('>lcl|'
+											 . $locusInformation->{id} 
+											 . '|'
+											 . $locusInformation->{name} 
+											 . "\n" 
+											 . $locusInformation->{sequence}
+											 . "\n");
 	}
 	else{
 		$self->logger->fatal("Unknown pan-genome fragment type!");
@@ -590,6 +603,7 @@ sub _printAlleleData{
 
 sub _printBinaryTableData{
 	my $self = shift;
+	my $nameOrId = shift;
 	my $data = shift;
 	$self->_printFH->{binaryTableFH}->print("\t" . $data);
 }
@@ -673,34 +687,41 @@ sub _printResults{
 	my $finalResults = shift;
 	
 	foreach my $finalResult(@{$finalResults}){
-		my $locusNameOrId = $self->_getNameOrId($finalresult);
-		$self->_printPanGenomeFastaFiles($finalresult);		
+		$self->_printPanGenomeFastaFiles($finalResult);		
 				
 		my $snpArray=[];
 		my $genomeCounter = 1;
 		my $firstFlag = 1;
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
 			#do all of the single allele printing first
-			$self->_printBinaryTableData($genomeResults->{$genome}->{binary}->[0]->{value});
-			$self->_printBinaryPhylipData($self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_' 
-										 ,$genomeResults->{$genome}->{binary}->[0]->{value});
+			$self->_printBinaryTableData($self->_getNameOrId($finalResult->{locusInformation})										
+										,$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{value});
 
-			if($locusInformation->{pan} eq 'core'){
-				$snpArray = $self->_addToSnpArray($snpArray, $finalResult->{genomeResults}->{$genome}, $genomeCounter);	
-			} #end if core
+			$self->_printBinaryPhylipData($self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_' 
+										 ,$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{value});
+
+			if($finalResult->{locusInformation}->{pan} eq 'core'){
+				$snpArray = $self->_addToSnpArray($snpArray
+												 ,$finalResult->{genomeResults}->{$genome}
+												 ,$genomeCounter);	
+			}
 
 			#now we are concerned about the multiple alleles
 			#print with them in mind
-			if(defined $genomeResults->{$genome}->{binary}){
-				for my $i(0 .. scalar(@{$genomeResults->{$genome}->{binary}}) -1){
-					my $contigId = $self->_getContigId($genomeResults->{$genome}->{binary}->[$i]->{contig_id}, $i);
-					$self->logger->debug("Contig id: $contigId");
+			if(defined $finalResult->{genomeResults}->{$genome}->{binary}){
+				for my $i(0 .. scalar(@{$finalResult->{genomeResults}->{$genome}->{binary}}) -1){
+					my $contigId = $self->_getContigId($finalResult->{genomeResults}->{$genome}->{binary}->[$i]->{contig_id}, $i);
 
 					if($self->settings->storeAlleles){
-						$firstFlag = $self->_printAlleleData($finalResult, $genomeResults->{$genome}->{alleles}->[$i], $firstFlag, $contigId);
+						$firstFlag = $self->_printAlleleData($finalResult
+															,$genomeResults->{$genome}->{alleles}->[$i]
+															,$firstFlag
+															,$contigId);
 					}			
 				
-					$self->_printPanGenomeData($finalResult->{locusInformation}, $finalResult->{genomeResults}->{$genome}->{binary}->[$i],$genome);
+					$self->_printPanGenomeData($finalResult->{locusInformation}
+											  ,$finalResult->{genomeResults}->{$genome}->{binary}->[$i]
+											  ,$genome);
 				} #end allele	
 			}#end genomeResult
 		} #end genome
@@ -715,13 +736,12 @@ sub _printResults{
 }
 
 
-
 sub _createPrintFileHandles{
 	my $self = shift;
 	my $blastFile = shift;
 
 	$self->_printFH({
-		binaryTableFH => IO::File->new('>' . $binaryFileName) or die "$!",
+		binaryTableFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_binary_table') or die "$!",
 		snpTableFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_snp_table') or die "$!",
 		panGenomeFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_pan_genome') or die "$!",
 		coreSnpsFH => IO::File->new('>' . $self->settings->baseDirectory . $blastFile . '_core_snps') or die "$!",
@@ -740,6 +760,16 @@ sub _createPrintFileHandles{
 	my $headerLine = "LocusID\tLocusName\tGenome\tAllele\tStart Bp\tEnd Bp\tContig";
 	$self->_printFH->{panGenomeFH}->print($headerLine);
 	$self->_printFH->{coreSnpsFH}->print($headerLine);
+}
+
+
+
+sub _closePrintFileHandles{
+	my $self = shift;
+
+	foreach my $fh(keys %{$self->_printFH}){
+		$self->_printFH->{$fh}->close();
+	}
 }
 
 
