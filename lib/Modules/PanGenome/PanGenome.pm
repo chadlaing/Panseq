@@ -691,7 +691,7 @@ sub _printResults{
 	foreach my $finalResult(@{$finalResults}){
 		$self->_printPanGenomeFastaFiles($finalResult->{locusInformation});		
 				
-		#my $snpArray=[];
+		my $snpArray=[];
 		my $genomeCounter = 1;
 		my $firstFlag = 1;
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
@@ -702,11 +702,11 @@ sub _printResults{
 			$self->_printBinaryPhylipData($self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_' 
 										 ,$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{value});
 
-			# if($finalResult->{locusInformation}->{pan} eq 'core'){
-			# 	$snpArray = $self->_addToSnpArray($snpArray
-			# 									 ,$finalResult->{genomeResults}->{$genome}
-			# 									 ,$genomeCounter);	
-			# }
+			if($finalResult->{locusInformation}->{pan} eq 'core'){
+				$snpArray = $self->_addToSnpArray($snpArray
+												 ,$finalResult->{genomeResults}->{$genome}
+												 ,$genomeCounter);	
+			}
 
 			#now we are concerned about the multiple alleles
 			#print with them in mind
@@ -731,7 +731,7 @@ sub _printResults{
 		} #end genome
 		#print the SNPs
 		$self->_printSnpData(
-			#snpArray => $snpArray,
+			snpArray => $snpArray,
 			name => $finalResult->{locusInformation}->{name},
 			genomeResults => $finalResult->{genomeResults},
 			blastFile => $blastFile
