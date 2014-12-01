@@ -731,10 +731,8 @@ sub _printResults{
 		} #end genome
 		#print the SNPs
 		$self->_printSnpData(
-			snpArray => $snpArray,
-			name => $finalResult->{locusInformation}->{name},
-			genomeResults => $finalResult->{genomeResults},
-			blastFile => $blastFile
+			$snpArray,
+			$blastFile
 		);
 	}#end finalResults		
 }
@@ -779,17 +777,34 @@ sub _closePrintFileHandles{
 }
 
 
+sub _printCoreSnpData{
+	my $self = shift;
+
+	# $self->_printFH->{coreSnpsFH}->print(
+	# 	"\n" . 
+	# 	$snpId .
+	# 	"\t" .
+	# 	$params{name} .
+	# 	"\t" .
+	# 	$genome .
+	# 	"\t" .
+	# 	$snpChar .
+	# 	"\t" .
+	# 	$startBp .
+	# 	"\t" .
+	# 	$startBp .
+	# 	"\t" .
+	# 	$params{genomeResults}->{$genome}->{binary}->[0]->{contig_id}						
+	# );
+}
+
 sub _printSnpData{
 	my $self = shift;
-	my %params = @_;
-	
-	my $snpArray = $params{snpArray};
-
-	$self->logger->debug("Printing snp data:");
-	$self->logger->debug(Dumper(%params));
+	my $snpArray = shift;
+	my $blastFile = shift;
 
 	my %snpString;
-	for my $i(0..scalar(@{$snpArray})-1){	
+	for my $i(0..scalar(@{$snpArray})-1){
 		my $snpId = $snpArray->[$i]->[0];	
 		my $snpString = "\n" . $snpId;
 
@@ -804,30 +819,7 @@ sub _printSnpData{
 				$snpString{$j} = $snpChar;
 			}
 
-			my $genome = $self->settings->orderedGenomeNames->[$j -1];
-			
-			my $startBp = 0;
-			if(defined $params{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}){
-				$startBp = $params{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp};
-			}
-			#per SNP printing
-			
-			$self->_printFH->{coreSnpsFH}->print(
-				"\n" . 
-				$snpId .
-				"\t" .
-				$params{name} .
-				"\t" .
-				$genome .
-				"\t" .
-				$snpChar .
-				"\t" .
-				$startBp .
-				"\t" .
-				$startBp .
-				"\t" .
-				$params{genomeResults}->{$genome}->{binary}->[0]->{contig_id}						
-			);
+			my $genome = $self->settings->orderedGenomeNames->[$j -1];			
 		} #foreach
 		$self->_printFH->{snpTableFH}->print($snpString);
 	}
@@ -836,7 +828,7 @@ sub _printSnpData{
 	#it doesn't matter what order they are printed in
 	foreach my $genome(keys %snpString){
 		#phylip file print
-		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $params{blastFile} . '_snp_phylip_' . $genome . '_') or die "$!";
+		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_phylip_' . $genome . '_') or die "$!";
 		$snpPhylipFH->print($snpString{$genome});
 		$snpPhylipFH->close();
 	}
