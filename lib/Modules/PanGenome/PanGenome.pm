@@ -362,9 +362,7 @@ sub _processBlastXML {
 
 	$self->logger->debug("Processing xml $blastFileName");
 	$self->_printFH($self->_createPrintFileHandles($blastFileName));
-	$self->_printFH->{binaryTableFH}->print("TESY\n\test\tststsatsadtast\nsdtsadtsadt");	
 	
-	$self->logger->debug("Processing Blast output file $blastFile, counter: $counter");
 	#this should guarantee a unique number for each result of every Panseq run on the same machine
 	#allows up to 1000 SNPs per result
 	$counter = $self->_getUniqueResultId($counter);
@@ -606,7 +604,12 @@ sub _printAlleleData{
 sub _printBinaryTableData{
 	my $self = shift;
 	my $nameOrId = shift;
+	my $genomeCounter = shift;
 	my $data = shift;
+
+	if($genomeCounter == 1){
+		$self->_printFH->{binaryTableFH}->print("$nameOrId");
+	}
 	$self->_printFH->{binaryTableFH}->print("\t" . $data);
 }
 
@@ -696,7 +699,8 @@ sub _printResults{
 		my $firstFlag = 1;
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
 			#do all of the single allele printing first
-			$self->_printBinaryTableData($self->_getNameOrId($finalResult->{locusInformation})										
+			$self->_printBinaryTableData($self->_getNameOrId($finalResult->{locusInformation})
+										,$genomeCounter										
 										,$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{value});
 
 			$self->_printBinaryPhylipData($self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_' 
@@ -727,6 +731,10 @@ sub _printResults{
 											  ,$genome);
 				} #end allele	
 			}#end genomeResult
+			else{
+				$self->logger->fatal("No binary data for genome $genome");
+				exit(1);
+			}
 			$genomeCounter++;
 		} #end genome
 		#print the SNPs
