@@ -50,7 +50,7 @@ my %plasmidsConfig=(
     nameOrId=>'name',
 	overwrite=>1,
     storeAlleles=>1,
-    allelesToKeep=>1
+    allelesToKeep=>2
 );
 
 my %queryConfig=(
@@ -90,8 +90,8 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'56ef054ecc9b51cb11c5f1945fe9db72',
-    plasmidsPanGenome=>'47c3011f3bafad9d0b851992f94ccbb1',
+	plasmidsCoreSnps=>'e636225a81338be54b6af6cb3f60f569',
+    plasmidsPanGenome=>'168d75b59dbe825cd91222906a4f5645',
     plasmidsBinaryTable=>'fbfffe4e58a1dfc1cd04cb29b5146c0d',
     plasmidsSnpTable=>'b36ddaf8ca3d1fca2fff44192cc7091f',
     plasmidsBinaryPhylip=>'db5e15a38d9b7b7be53811df302d7558',
@@ -99,7 +99,7 @@ my %md5Sum=(
     plasmidsCoreFragments=>'2fa21523c2c0e9abde0836f2a754640e',
     plasmidsAccessoryFragments=>'f17e29fd8ca3dbaac3033ce188018465',
     plasmidsNameConversion=>'da9678fa95a0def763ad014ec7153779',
-	genomesCoreSnps=>'590ead136269c9f29ce126a67a14d2aa',
+	genomesCoreSnps=>'2ba0cca84d133cb2d69d2c8fa1a624b6',
     genomesPanGenome=>'3e00bb9e7d7fa9b02b34052fd005fa00',
     genomesBinaryTable=>'1f1aaef9c674a5e847cae718964b0385',
     genomesSnpTable=>'4c5289bccfe1923512be89fbc0ca466c',
@@ -108,7 +108,7 @@ my %md5Sum=(
     genomesCoreFragments=>'117d52a380e05eddd33a31d07a4f7829',
     genomesAccessoryFragments=>'6dca4cb62aabfbca4d54279d959fc451',
     genomesNameConversion=>'e90cc17adc92f2d63106d58dff86860a',
-	queryCoreSnps=>'1682548300dc82584e01415d38d82af4',
+	queryCoreSnps=>'177b285cdd00cd567ea3aef87f2dfb3b',
     queryPanGenome=>'a603a5526709da34bc854363045c94bf',
     queryBinaryTable=>'1727cd2ef07eb6082793717521d7146f',
     querySnpTable=>'27dc08b4023a052cc8680af0ad7ddf5d',
