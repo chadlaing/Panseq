@@ -666,6 +666,7 @@ sub _printPanGenomeData{
 	my $locusInformation = shift;
 	my $singleGenome = shift;
 	my $genome = shift;
+	my $contigId = shift;
 		
 	$self->_printFH->{panGenomeFH}->print(
 		"\n" .
@@ -681,7 +682,7 @@ sub _printPanGenomeData{
 		"\t" .
 		$singleGenome->{end_bp} .
 		"\t" .
-		$singleGenome->{contig_id}
+		$contigId
 	);		
 }
 
@@ -728,7 +729,8 @@ sub _printResults{
 				
 					$self->_printPanGenomeData($finalResult->{locusInformation}
 											  ,$finalResult->{genomeResults}->{$genome}->{binary}->[$i]
-											  ,$genome);
+											  ,$genome
+											  ,$contigId);
 				} #end allele	
 			}#end genomeResult
 			else{

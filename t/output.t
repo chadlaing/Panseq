@@ -50,7 +50,7 @@ my %plasmidsConfig=(
     nameOrId=>'name',
 	overwrite=>1,
     storeAlleles=>1,
-    allelesToKeep=>2
+    allelesToKeep=>1
 );
 
 my %queryConfig=(
