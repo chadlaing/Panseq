@@ -707,10 +707,24 @@ sub _printResults{
 			$self->_printBinaryPhylipData($self->settings->baseDirectory . $blastFile . '_binary_phylip_' . $genomeCounter . '_' 
 										 ,$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{value});
 
+			
+
 			if($finalResult->{locusInformation}->{pan} eq 'core'){
 				$snpArray = $self->_addToSnpArray($snpArray
 												 ,$finalResult->{genomeResults}->{$genome}
-												 ,$genomeCounter);	
+												 ,$genomeCounter);
+
+
+				foreach my $snpId(keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
+					$self->_printCoreSnpData(
+						snpId=>$snpId
+					   ,locusName=>$finalResult->{locusInformation}->{name}
+					   ,genome=>$genome 
+					   ,snpChar=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value}
+					   ,startBp=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}
+					   ,contigId=>$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{contig_id}
+					);
+				}
 			}
 
 			#now we are concerned about the multiple alleles
@@ -789,23 +803,24 @@ sub _closePrintFileHandles{
 
 sub _printCoreSnpData{
 	my $self = shift;
+	my %params = @_;
 
-	# $self->_printFH->{coreSnpsFH}->print(
-	# 	"\n" . 
-	# 	$snpId .
-	# 	"\t" .
-	# 	$params{name} .
-	# 	"\t" .
-	# 	$genome .
-	# 	"\t" .
-	# 	$snpChar .
-	# 	"\t" .
-	# 	$startBp .
-	# 	"\t" .
-	# 	$startBp .
-	# 	"\t" .
-	# 	$params{genomeResults}->{$genome}->{binary}->[0]->{contig_id}						
-	# );
+	$self->_printFH->{coreSnpsFH}->print(
+		"\n" . 
+		$params{snpId} .
+		"\t" .
+		$params{locusName} .
+		"\t" .
+		$params{genome} .
+		"\t" .
+		$params{snpChar} .
+		"\t" .
+		$params{startBp} .
+		"\t" .
+		$params{startBp} .
+		"\t" .
+		$params{contigId}						
+	);
 }
 
 sub _printSnpData{
