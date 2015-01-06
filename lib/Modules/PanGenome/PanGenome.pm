@@ -1122,7 +1122,7 @@ sub _getCoreResult {
 	# [11]qseq
 	my %startBpHash;
 	foreach my $resKey(keys %{$result}){
-		$startBpHash{$result->{$resKey}->[0]->[0]}=$result->{$resKey}->[0]->[4];
+		$startBpHash{$result->{$resKey}->[0]->[0]}=$result->{$resKey}->[0]->[2];
 	}
 	
 	#add SNP information to the return
