@@ -664,10 +664,12 @@ sub _getSnpsIdsFromResult{
 
 	foreach my $genome(keys %{$finalResult->{genomeResults}}){
 		if(defined $finalResult->{genomeResults}->{$genome}->{snp}){
-			my @keys = keys %{$finalResult->{genomeResults}->{$genome}->{snp}};
-			return \@keys;
+			my @idkeys = keys %{$finalResult->{genomeResults}->{$genome}->{snp}};
+			$self->logger->debug("snpId keys: @idkeys");
+			return \@idkeys;
 		}
 	}
+	return undef;
 }
 
 
@@ -728,11 +730,12 @@ sub _printResults{
 				#if there are SNPs in a region, add dashes to the snp string
 				#for all genomes that have no sequence information for the region
 				if(defined $snpIdsForResult){
-					unless(defined $snpStringHash{$snpIdsForResult->[0]}->{genome}){
+					my $firstId = $snpIdsForResult->[0];
+					unless(defined $snpStringHash{$firstId}->{genome}){
 						$self->logger->debug("Adding - to $genome");
 						foreach my $snpId(@{$snpIdsForResult}){
 							$self->logger->debug("snpID: $snpId");
-							$snpStringHash{$snpId}->{$genomeCounter} = '-';
+							#$snpStringHash{$snpId}->{$genomeCounter} = '-';
 						}
 					}			
 				}
@@ -765,15 +768,14 @@ sub _printResults{
 			$genomeCounter++;
 		} #end genome
 		#print the SNPs
-		$self->_printSnpPhylip(
-			\%snpStringHash,
-			$blastFile
-		);
+		# $self->_printSnpPhylip(
+		# 	\%snpStringHash,
+		# 	$blastFile
+		# );
 
-		$self->_printSnpTable(
-			\%snpStringHash
-
-		);
+		# $self->_printSnpTable(
+		# 	\%snpStringHash
+		# );
 	}#end finalResults		
 }
 
