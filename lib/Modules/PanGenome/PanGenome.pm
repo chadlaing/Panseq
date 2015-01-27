@@ -659,6 +659,18 @@ sub _printPanGenomeData{
 }
 
 
+sub _getSnpsPerResult{
+	my $self = shift;
+	my $finalResult = shift;
+
+	foreach my $genome(keys %{$finalResult->{genomeResults}}){
+		if(defined $finalResult->{genomeResults}->{$genome}->{snp}){
+			return scalar(keys %{$finalResult->{genomeResults}->{$genome}->{snp}});
+		}
+	}
+}
+
+
 sub _printResults{
 	my $self = shift;
 	my $blastFile = shift;
@@ -674,6 +686,14 @@ sub _printResults{
 
 		my $genomeCounter = 1;
 		my $firstFlag = 1;
+
+		#we need to add '-' to genomes that are completely lacking a region
+		#the snpsPerResult counter records the number to add
+		my $snpsPerResult=0;
+		if($finalResult->{locusInformation}->{pan} eq 'core'){
+			$snpsPerResult = $self->_getSnpsPerResult($finalResult);
+		}
+		
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
 			#do all of the single allele printing first
 			$self->_printBinaryTableData($self->_getNameOrId($finalResult->{locusInformation})
@@ -684,11 +704,11 @@ sub _printResults{
 										 ,$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{value});
 
 			
-
+		
 			if($finalResult->{locusInformation}->{pan} eq 'core'){
 				$self->logger->debug("Final result locusInformation is core");
-				
-				foreach my $snpId(keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
+
+				foreach my $snpId(sort keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
 					#add the char to the snp string for the correct genomes
 					if(defined $snpStringHash{$genomeCounter}){
 						$snpStringHash{$genomeCounter} .= $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
@@ -706,6 +726,16 @@ sub _printResults{
 					   ,contigId=>$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{contig_id}
 					);
 				}
+			}
+			#if there are SNPs in a region, add dashes to the snp string
+			#for all genomes that have no sequence information for the region
+			if($snpsPerResult != 0){
+				my $currentGenomeSnps = keys %{$finalResult->{genomeResults}->{$genome}->{snp}};
+				$self->logger->debug("Adding dashes: snpsPerResult: $snpsPerResult");
+				unless($currentGenomeSnps > 0){
+					$self->logger->debug("Adding - to $genome");
+					$snpStringHash{$genomeCounter} .= '-' x $snpsPerResult;
+				}			
 			}
 
 			#now we are concerned about the multiple alleles
