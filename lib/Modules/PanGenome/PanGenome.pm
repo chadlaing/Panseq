@@ -502,17 +502,15 @@ sub _processBlastXML {
 	
 			#if it is a core result, send to SNP finding
 			my $coreResults = $self->_getCoreResult($result,$msaHash,$counter);	
-
+			$self->logger->debug("CORE_RESULTS: " . Dumper($coreResults));
 			foreach my $cResult(@{$coreResults}){
 				#$self->logger->warn("cResult contig: " . $cResult->{contig});
 				my $sName = $self->settings->getGenomeNameFromContig($cResult->{contig}) // $self->logger->logdie("Could not find genome for " . $cResult->{contig});
 				#my $sName = $cResult->{contig};
-				$genomeResults{$sName}->{snp}=
-					{
-						$cResult->{locusId}=>{
-							start_bp=>$cResult->{startBp},
-							value=>$cResult->{value}
-						}
+				$genomeResults{$sName}->{snp}->{$cResult->{locusId}}=
+					{						
+						start_bp=>$cResult->{startBp},
+						value=>$cResult->{value}						
 					};
 			} #foreach cResult
 		}#if core
@@ -624,32 +622,6 @@ sub _printBinaryPhylipData{
 	$binaryPhylipFH->close();	
 }
 
-
-sub _addToSnpArray{
-	my $self = shift;
-	my $snpArray = shift;
-	my $singleGenome = shift;
-	my $genomeCounter = shift;
-
-	if(defined $singleGenome->{snp}){
-		my $snpLocusCounter=0;
-		
-		foreach my $snpId(sort keys %{$singleGenome->{snp}}){
-			if(!defined $snpArray->[$snpLocusCounter]->[0]){
-				$snpArray->[$snpLocusCounter]->[0] = $snpId;
-			}
-			elsif($snpArray->[$snpLocusCounter]->[0] ne $snpId){
-				$self->logger->fatal("SNP IDs do not match!");
-				exit(1);
-			}				
-			$snpArray->[$snpLocusCounter]->[$genomeCounter]=$singleGenome->{snp}->{$snpId}->{value};							
-			$snpLocusCounter++;
-		}						
-	}
-	return $snpArray;
-}
-
-
 sub _getContigId{
 	my $self = shift;
 	my $contigId = shift;
@@ -694,8 +666,12 @@ sub _printResults{
 	
 	foreach my $finalResult(@{$finalResults}){
 		$self->_printPanGenomeFastaFiles($finalResult->{locusInformation});		
-				
-		my $snpArray=[];
+		
+		#we want to store the SNPs in a concatenated string for each genomes
+		#this hash gets updated every iteration, adding the char to the end of
+		#the string for each genome	
+		my %snpStringHash;
+
 		my $genomeCounter = 1;
 		my $firstFlag = 1;
 		foreach my $genome(@{$self->settings->orderedGenomeNames}){	
@@ -710,12 +686,17 @@ sub _printResults{
 			
 
 			if($finalResult->{locusInformation}->{pan} eq 'core'){
-				$snpArray = $self->_addToSnpArray($snpArray
-												 ,$finalResult->{genomeResults}->{$genome}
-												 ,$genomeCounter);
-
-
+				$self->logger->debug("Final result locusInformation is core");
+				
 				foreach my $snpId(keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
+					#add the char to the snp string for the correct genomes
+					if(defined $snpStringHash{$genomeCounter}){
+						$snpStringHash{$genomeCounter} .= $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
+					}
+					else{
+						$snpStringHash{$genomeCounter} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
+					}	
+
 					$self->_printCoreSnpData(
 						snpId=>$snpId
 					   ,locusName=>$finalResult->{locusInformation}->{name}
@@ -755,7 +736,7 @@ sub _printResults{
 		} #end genome
 		#print the SNPs
 		$self->_printSnpData(
-			$snpArray,
+			\%snpStringHash,
 			$blastFile
 		);
 	}#end finalResults		
@@ -825,36 +806,16 @@ sub _printCoreSnpData{
 
 sub _printSnpData{
 	my $self = shift;
-	my $snpArray = shift;
-	my $blastFile = shift;
-
-	my %snpString;
-	for my $i(0..scalar(@{$snpArray})-1){
-		my $snpId = $snpArray->[$i]->[0];	
-		my $snpString = "\n" . $snpId;
-
-		for my $j(1..scalar(@{$self->settings->orderedGenomeNames})){
-			my $snpChar = $snpArray->[$i]->[$j] // '-';				
-			$snpString .= "\t" . $snpChar;
-
-			if(defined $snpString{$j}){
-				$snpString{$j} .= $snpChar;
-			}
-			else{
-				$snpString{$j} = $snpChar;
-			}
-
-			my $genome = $self->settings->orderedGenomeNames->[$j -1];			
-		} #foreach
-		$self->_printFH->{snpTableFH}->print($snpString);
-	}
+	my $snpStringHash = shift;
+	my $blastFile = shift;	
 
 	#these keys do not need to be sorted, as they print to the file given by the genome number
 	#it doesn't matter what order they are printed in
-	foreach my $genome(keys %snpString){
+	foreach my $genome(keys %{$snpStringHash}){
 		#phylip file print
+		$self->logger->debug("genome for filename: $genome");
 		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_phylip_' . $genome . '_') or die "$!";
-		$snpPhylipFH->print($snpString{$genome});
+		$snpPhylipFH->print($snpStringHash->{$genome});
 		$snpPhylipFH->close();
 	}
 }
