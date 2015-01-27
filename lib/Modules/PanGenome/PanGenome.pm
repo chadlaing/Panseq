@@ -708,13 +708,14 @@ sub _printResults{
 			if($finalResult->{locusInformation}->{pan} eq 'core'){
 				$self->logger->debug("Final result locusInformation is core");
 
-				foreach my $snpId(sort keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
+				my $snpId;
+				foreach $snpId(sort keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
 					#add the char to the snp string for the correct genomes
-					if(defined $snpStringHash{$genomeCounter}){
-						$snpStringHash{$genomeCounter} .= $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
+					if(defined $snpStringHash{$snpId}->{$genomeCounter}){
+						$snpStringHash{$snpId}->{$genomeCounter} .= $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
 					}
 					else{
-						$snpStringHash{$genomeCounter} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
+						$snpStringHash{$snpId}->{$genomeCounter} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
 					}	
 
 					$self->_printCoreSnpData(
@@ -726,18 +727,19 @@ sub _printResults{
 					   ,contigId=>$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{contig_id}
 					);
 				}
-			}
-			#if there are SNPs in a region, add dashes to the snp string
-			#for all genomes that have no sequence information for the region
-			if($snpsPerResult != 0){
-				my $currentGenomeSnps = keys %{$finalResult->{genomeResults}->{$genome}->{snp}};
-				$self->logger->debug("Adding dashes: snpsPerResult: $snpsPerResult");
-				unless($currentGenomeSnps > 0){
-					$self->logger->debug("Adding - to $genome");
-					$snpStringHash{$genomeCounter} .= '-' x $snpsPerResult;
-				}			
-			}
 
+				#if there are SNPs in a region, add dashes to the snp string
+				#for all genomes that have no sequence information for the region
+				if($snpsPerResult != 0){
+					my $currentGenomeSnps = keys %{$finalResult->{genomeResults}->{$genome}->{snp}};
+					$self->logger->debug("Adding dashes: snpsPerResult: $snpsPerResult");
+					unless($currentGenomeSnps > 0){
+						$self->logger->debug("Adding - to $genome");
+						$snpStringHash{$snpId}->{$genomeCounter} .= '-' x $snpsPerResult;
+					}			
+				}
+			}
+			
 			#now we are concerned about the multiple alleles
 			#print with them in mind
 			if(defined $finalResult->{genomeResults}->{$genome}->{binary}){
@@ -765,12 +767,30 @@ sub _printResults{
 			$genomeCounter++;
 		} #end genome
 		#print the SNPs
-		$self->_printSnpData(
+		$self->_printSnpPhylip(
 			\%snpStringHash,
 			$blastFile
 		);
+
+		$self->_printSnpTable(
+			\%snpStringHash,
+			$snpsPerResult,
+
+		);
 	}#end finalResults		
 }
+
+
+sub _printSnpTable{
+	my $self=shift;
+	my $snpStringHash = shift;
+	my $snpsPerResult = shift;
+	my $snpId = shift;
+
+	#we need to grab the last $snpPerResult from the hash and print to the
+	#table under the current snpID
+}
+
 
 
 sub _createPrintFileHandles{
@@ -834,18 +854,27 @@ sub _printCoreSnpData{
 	);
 }
 
-sub _printSnpData{
+sub _printSnpPhylip{
 	my $self = shift;
 	my $snpStringHash = shift;
 	my $blastFile = shift;	
 
-	#these keys do not need to be sorted, as they print to the file given by the genome number
-	#it doesn't matter what order they are printed in
-	foreach my $genome(keys %{$snpStringHash}){
-		#phylip file print
-		$self->logger->debug("genome for filename: $genome");
+	my %printHash;
+	foreach my $id(sort keys %{$snpStringHash}){
+		foreach my $genome(sort keys %{$snpStringHash->{$id}}){
+			if(defined $printHash{$genome}){
+				$printHash{$genome} .= $snpStringHash->{$id}->{$genome};
+			}
+			else{
+				$printHash{$genome} = $snpStringHash->{$id}->{$genome};
+			}
+		}		
+	}
+
+	#phylip file print
+	foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
 		my $snpPhylipFH = IO::File->new('>>' . $self->settings->baseDirectory . $blastFile . '_snp_phylip_' . $genome . '_') or die "$!";
-		$snpPhylipFH->print($snpStringHash->{$genome});
+		$snpPhylipFH->print($printHash{$genome});
 		$snpPhylipFH->close();
 	}
 }
