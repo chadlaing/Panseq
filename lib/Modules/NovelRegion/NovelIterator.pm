@@ -157,7 +157,6 @@ sub _retriever{
 =head2 run
 
 Launches the iterative novel region search.
-For the pan-genome generation see _processRemainingThreeFiles description.
 
 When running under 'unique' mode, both query and reference genomes as used for finding novel regions.
 That way when running A vs. B, we end up with A(B) and B(A) from the single comparison. We also add
@@ -228,8 +227,11 @@ sub run{
 	}
 
 	my $finalFile;	
+	$self->logger->debug("NRFM: " . $self->settings->novelRegionFinderMode);
 	if($self->settings->novelRegionFinderMode eq 'no_duplicates'){
+		$self->logger->debug("reference file: " . $self->referenceFile);
 		if((defined $self->referenceFile) && (-s $self->referenceFile > 0)){
+			$self->logger->debug("Pre-reference file nucmer");
 			my $finalCoordsFile = $self->_processNucmerQueue($iterativeResultFile,$self->referenceFile,$iterativeResultFile . '_vs_refDir');
 			my $refNovelFile = $iterativeResultFile . '_vs_refDir_novelRegions';
 			$finalFile = $self->_printNovelRegionsFromQueue($finalCoordsFile, $iterativeResultFile, $refNovelFile);
