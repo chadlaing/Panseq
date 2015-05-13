@@ -379,7 +379,7 @@ sub _processBlastXML {
 		my $numberOfResults = scalar @resultKeys;
 		$self->logger->debug("NOR: $numberOfResults");
 		unless($numberOfResults > 0){
-			$self->logger->warn("No results for query sequence $totalResults, skipping" . Dumper($result));
+			$self->logger->debug("No results for query sequence $totalResults, skipping" . Dumper($result));
 			next;
 		}		
 		$self->logger->debug("There are $numberOfResults results");
@@ -967,7 +967,7 @@ sub _combinePhylipFiles{
 				$self->logger->logconfess("Binary file is empty. Fatal error");
 			}
 			else{
-				$self->logger->warn("SNP file empty");
+				$self->logger->debug("SNP file empty");
 				next;
 			}
 		}
