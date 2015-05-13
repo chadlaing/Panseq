@@ -165,6 +165,21 @@ The unique identifier could be the strain name or anything else of your choosing
 
 Common database file formats are supported by default, such as ref|, gb|, emb|, dbj|, and gi| and do not need to be modified as described above. For legacy purposes, the name=|unique_identifier| is supported in addition to lcl|unique_identifier|. Please note that spaces are not permitted in the unique identifier. Only letters (A-Z, a-z), digits (0-9) and the underscore "_" are valid characters. 
 
+##Description of output files
+- `accessoryGenomeFragments.fasta`: based on the run settings, all pan-genome fragments that are considered "accessory".
+- `binary.phylip`: the presence / absence of the pan-genome among all genomes in the `queryDirectory` in phylip format.
+- `binary_table.txt`: the presence / absence of the pan-genome among all genomes in the `queryDirectory` in tab-delimited table format.
+- `core_snps.txt`: based on the run settings, a tab-delimited, detailed results file of all SNPs found. Includes genome name, contig name, nucleotide variant, and base-pair position.
+- `coreGenomeFragments.fasta`: based on the run settings, all pan-genome fragments that are considered "core".
+- `Master.log`: the log detailing program execution.
+- `pan_genome.txt`: based on the run settings, a tab-delimited, detailed results file of all pan-genome regions. Includes genome name, contig name, presence / absence, and base-pair position for the pan-genome regions.
+- `panGenome.fasta`: the non-fragmented pan-genome for the genomes in `queryDirectory`.
+- `panGenomeFragments.fasta`: the fragmented pan-genome based on the `fragmentationSize` parameter.
+- 'phylip_name_conversion.txt': the genomes in the phylip file are labeled as sequential numbers. This file maps the numbers back to the original names given in the input fasta files. Can be used by the `lib/treeNumberToName.pl` script to automatically convert a newick file labeled with numbers to the appropriate genome names.
+- `snp.phylip`: a concatenated alignment of all SNPs found in the "core" genome regions for all genomes in the `queryDirectory`l
+- `snp_table.txt`: the nucleotide values for all SNPs found in the "core" genome regions in tab-delimited table format.
+
+
 ##Detailed explanation of Panseq
 
 ###Novel Region Finder
