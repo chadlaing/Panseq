@@ -41,7 +41,7 @@ while(my $line = $infoFH->getline){
 
 	#substitute
 	if($treeAsLine =~ m/[\)\(,\s]\Q$number\E[\:\,)]/){
-		print STDERR "matched $number\n";
+		#print STDERR "matched $number\n";
 		$treeAsLine =~ s/([\)\(\,\s])\Q$number\E([\:\),])/$1$name$2/;
 	}
 	else{
