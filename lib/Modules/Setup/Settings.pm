@@ -391,8 +391,28 @@ sub _setDefaults{
 		$self->blastWordSize(20);
 	}
 
-	unless(defined $self->novelRegionFinderMode){
-		$self->novelRegionFinderMode('no_duplicates');
+	unless(defined $self->novelRegionFinderMode) {
+			$self->novelRegionFinderMode('no_duplicates');
+	}
+
+	unless(defined $self->nucB){
+			$self->nucB(200);
+	}
+
+	unless(defined $self->nucC){
+			$self->nucC(65);
+	}
+
+	unless(defined $self->nucD){
+			$self->nucD(0.12);
+	}
+
+	unless(defined $self->nucG){
+			$self->nucG(90);
+	}
+
+	unless(defined $self->nucL){
+			$self->nucL(20);
 	}
 }
 
