@@ -467,11 +467,11 @@ sub _processNucmerQueue{
 
 	#run mummer
 	my $nucmer = Modules::Alignment::NucmerRun->new(
-		'b'=>200,
-		'c'=>65,
-		'd'=>0.12,
-		'g'=>90,
-		'l'=>20,
+		'b'=>$self->settings->nucB,
+		'c'=>$self->settings->nucC,
+		'd'=>$self->settings->nucD,
+		'g'=>$self->settings->nucG,
+		'l'=>$self->settings->nucL,
 		'coordsFile'=>$outputFile . '.coords',
 		'p'=>$outputFile,
 		'mummerDirectory'=>$self->settings->mummerDirectory,
