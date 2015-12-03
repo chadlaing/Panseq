@@ -1,3 +1,6 @@
+/t/query
+/t/plasmids
+/t/genomes
 /_build
 /.idea
 /MANIFEST.SKIP.bak
