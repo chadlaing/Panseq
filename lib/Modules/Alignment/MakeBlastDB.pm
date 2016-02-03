@@ -106,7 +106,7 @@ sub run{
 		. 'makeblastdb'
 		. ' -dbtype ' . $self->dbtype
 		. ' -out '. $self->out
-		. ' -max_file_sz 1000000000000' 
+		. ' -max_file_sz 2000000000'
 		. ' -title ' . $self->title
 		. ' -in ' . $self->in
 		. ' -logfile ' . $self->logfile;
