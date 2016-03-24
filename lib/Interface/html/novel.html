@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Panseq</title>
+    <link href="../css/panseq.css" rel="stylesheet">
+    <link href="../images/favicon.ico" rel="shortcut icon">
+</head>
+<body>
+<div id="panseqImage">
+    <p>Pan~genomic sequence analysis</p>
+</div>
+
+
+<div id="nav">
+    <ul>
+        <li><a href="home.html">Home</a></li>
+        <li><a href="novel.html">Novel Regions</a></li>
+        <li><a href="pan.html">Pan-genome</a></li>
+        <li><a href="loci.html">Loci</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+    </ul>
+</div>
+
+    <div class="mainBody">
+        <h1>Select Parameters</h1>
+        <p>
+            Minimum Novel Region size <input name="minimumNovelRegionSize" type="number" min="0" max="10000" step="50" value="500" size="1">
+        </p>
+
+        <p>
+            Nucmer Values:
+            b: <input name="nucB" type="number" min="0" max="10000" step="1" value="200">
+            c: <input name="nucC" type="number" min="0" max="1000" step="1" value="50">
+            d: <input name="nucD" type="number" min="0" max="1" step="0.01" value="0.12">
+            g: <input name="nucG" type="number" min="1" max="5000" step="1" value="100">
+            l: <input name="nucL" type="number" min="1" max="100" step="1" value="20">
+        </p>
+
+        <h1>Select Query Strains</h1>
+        <p>
+            Upload Query Strains:
+            <input type="file" name="queryFiles" multiple class="fileUpload">
+        </p>
+        <p>
+            <div class="selectBox">
+            <ul>
+                <li><input type="checkbox">Genomasdfasdfasdf asdf asdfasdfasdfasdfasdfasdf sdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfas</li>
+                <li><input type="checkbox">Genome 2</li>
+                <li><input type="checkbox">Genome 3</li>
+            </ul>
+            </div>
+        </p>
+
+        </ul>
+    </div>
+
+</body>
+
+<footer class="horWrapper">
+    &copy; 2016 Public Health Agency of Canada. All Rights Reserved.
+</footer>
+
+</html>
