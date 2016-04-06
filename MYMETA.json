@@ -4,7 +4,7 @@
       "Chad Laing <chadlaing@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Module::Build version 0.421",
+   "generated_by" : "Module::Build version 0.4214",
    "license" : [
       "perl_5"
    ],
@@ -120,5 +120,6 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "4"
+   "version" : "4",
+   "x_serialization_backend" : "JSON::PP version 2.27300"
 }

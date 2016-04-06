@@ -64,7 +64,10 @@ footer{
 
 input{
     width:5em;
+    color: #2b2b2b;
 }
+
+
 
 .mainBody{
     float:left;
@@ -140,6 +143,7 @@ input{
 
 .fileUpload{
     width: 15em;
+    color: #2b2b2b;
 }
 
 /*footer{*/

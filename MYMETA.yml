@@ -4,7 +4,7 @@ author:
   - 'Chad Laing <chadlaing@gmail.com>'
 build_requires: {}
 dynamic_config: 0
-generated_by: 'Module::Build version 0.421, CPAN::Meta::Converter version 2.142690'
+generated_by: 'Module::Build version 0.4214, CPAN::Meta::Converter version 2.150005'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -83,3 +83,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
 version: '4'
+x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

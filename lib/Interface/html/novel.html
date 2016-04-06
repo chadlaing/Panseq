@@ -14,7 +14,7 @@
 
 <div id="nav">
     <ul>
-        <li><a href="home.html">Home</a></li>
+        <li><a href="index.html">Home</a></li>
         <li><a href="novel.html">Novel Regions</a></li>
         <li><a href="pan.html">Pan-genome</a></li>
         <li><a href="loci.html">Loci</a></li>
@@ -23,7 +23,9 @@
 </div>
 
     <div class="mainBody">
-        <h1>Select Parameters</h1>
+        <form action="/process/processSubmit.pl" method="post" onsubmit="document.location.href='/page/index.html'">
+        <input type="hidden" name="redirect" value="/page/index.html"/>
+            <h1>Select Parameters</h1>
         <p>
             Minimum Novel Region size <input name="minimumNovelRegionSize" type="number" min="0" max="10000" step="50" value="500" size="1">
         </p>
@@ -52,7 +54,12 @@
             </div>
         </p>
 
+        <p>
+            <button type="submit">Click me</button>
+        </p>
+
         </ul>
+        </form>
     </div>
 
 </body>
