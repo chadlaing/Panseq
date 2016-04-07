@@ -2,6 +2,7 @@
 use strict;
 use warnings FATAL => 'all';
 use CGI;
+use Data::Dumper;
 
 my $cgi = CGI->new();
 my $pid = fork();
@@ -16,15 +17,24 @@ if($pid){
 }
 else{
     print STDERR "processing the submission\n";
-#    #launch the panseq program
-#    close STDERR;
-#    close STDOUT;
-#    my $q=$self->query();
-#
-#    #    	if($q->param('runMode') eq 'loci'){
-#    #    		$self->_launchLociSelector($q);
-#    #    	}
-#    #    	else{
-#    $self->_launchPanseq();
-#    #    	}
+
+    #we need to determine what run mode (pan, novel, loci)
+    my $runMode = $cgi->param('runMode');
+
+    if($runMode eq 'novel'){
+        print STDERR "Novel mode\n";
+        print STDERR Dumper($cgi);
+    }
+    elsif($runMode eq 'pan'){
+
+    }
+    elsif($runMode eq 'loci'){
+
+    }
+    else{
+        print STDERR "Panseq unknown runmode\n";
+        exit(1);
+    }
+
+
 }
