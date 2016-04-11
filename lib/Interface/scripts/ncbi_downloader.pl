@@ -17,7 +17,7 @@ my $directory = '/genomes/genbank/bacteria/';
 #eg. ftp://ftp.ncbi.nih.gov/genomes/genbank/bacteria/Escherichia_coli/all_assembly_versions/GCA_000005845.2_ASM584v2/GCA_000005845.2_ASM584v2_genomic.fna.gz
 
 #constructs the connection
-my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1) or die "Cannot connect to genbank: $@";
+my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1, Timeout => 1000) or die "Cannot connect to genbank: $@";
 #log in as anonymous, use email as password
 $ftp->login("anonymous",'chadlaing@inoutbox.com') or die "Cannot login ", $ftp->message;
 $ftp->cwd($directory) or die "Cannot change working directory ", $ftp->message;
