@@ -131,14 +131,16 @@ input{
     margin-left:0;
 }
 
+
 .selectBox ul{
-    padding-left:0;
-    margin-left:0;
-    text-align: left;
+    padding-left: 0;
+    margin-left: 0;
 }
 
-.selectBox ul li{
-
+.selectBox li{
+    text-align: left;
+    margin-left:0;
+    padding-left:0;
 }
 
 .fileUpload{
