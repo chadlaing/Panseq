@@ -65,9 +65,18 @@ foreach my $species(@speciesList){
         }
 
         my $localFile = $localNcbiDirectory . $genomeFile;
+        my $decompressedLocalFile;
+
+        if($localFile =~ m/(.+)\.gz/){
+            $decompressedLocalFile = $1;
+        }
+        else{
+            print STDERR "Could not find .gz file for $genome\n";
+            next;
+        }
 
         #check if the filename currently exists in the local directory
-        if(-e $localFile){
+        if(-e $decompressedLocalFile){
             print STDERR "Current genome $genomeFile exists, skipping\n";
         }
         else{
