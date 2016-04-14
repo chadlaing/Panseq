@@ -24,8 +24,9 @@ else{
     my $serverSettings = _loadServerSettings();
 
     if($runMode eq 'novel'){
-        print STDERR "Novel mode\n";
-        print STDERR Dumper($cgi);
+        foreach my $k(keys %{$cgi->{'param'}}){
+            print STDERR "$k\n";
+        }
 
 
         #for a novel run we need both query / reference directories
@@ -34,7 +35,6 @@ else{
         my $refDir = $newDir . 'reference/';
         my $resultsDir = $newDir . 'results/';
 
-        print STDERR "creating $newDir \n";
         _createDirectory($newDir);
         _createDirectory($queryDir);
         _createDirectory($refDir);
