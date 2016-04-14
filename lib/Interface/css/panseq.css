@@ -45,9 +45,17 @@ ul{
 }
 
 h1{
+    float:left;
     margin-top: 1em;
     margin-bottom:0;
+    width: 100%;
 }
+
+p{
+    float:left;
+    width: 100%;
+}
+
 
 h1 ~ p{
     font-size: 1.5em;
@@ -55,6 +63,7 @@ h1 ~ p{
     padding-top:0;
     margin-bottom:0;
 }
+
 
 footer{
     margin-top:2em;
@@ -135,17 +144,17 @@ input{
 .selectBox ul{
     padding-left: 0;
     margin-left: 0;
+    text-align: left;
 }
 
-.selectBox li{
-    text-align: left;
-    margin-left:0;
-    padding-left:0;
-}
 
 .fileUpload{
     width: 15em;
     color: #2b2b2b;
+}
+
+.mainBody h1{
+    margin-top: 1em;
 }
 
 /*footer{*/

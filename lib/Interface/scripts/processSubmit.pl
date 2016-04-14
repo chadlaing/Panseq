@@ -97,7 +97,7 @@ sub _downloadUserSelections{
     #sets up the parameters for ncbi ftp connection
     my $host = 'ftp.ncbi.nlm.nih.gov';
     #constructs the connection
-    my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1, Timeout => 1000) or die "Cannot connect to genbank: $@";
+    my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1) or die "Cannot connect to genbank: $@";
     #log in as anonymous, use email as password
     $ftp->login("anonymous",'chadlaing@inoutbox.com') or die "Cannot login ", $ftp->message;
 

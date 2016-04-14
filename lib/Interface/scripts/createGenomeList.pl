@@ -28,12 +28,18 @@ while(my $line = $genomeFH->getline()){
     $line =~ s/\R//g;
     my @la = split('\t', $line);
 
-    my $accessionNumber = $la[0];
-    my $asmName = $la[15];
     my $organismName = $la[7];
-    my $accessionAndAsm = $accessionNumber . '_' . $asmName;
+    my $strainName = $la[8];
 
-    $genomeHash{$accessionAndAsm}=$organismName;
+    my $ftpName;
+    if($la[19] =~ m/genomes\/all\/(.+)/){
+        $ftpName= $1;
+    }
+    else{
+        die "Could not get FTP location for $organismName\n";
+    }
+
+    $genomeHash{$ftpName}=$organismName . ', ' . $strainName;
 }
 
 open(my $tempFH, '<', $tempFile) or die "Could not open $tempFile $!\n";
