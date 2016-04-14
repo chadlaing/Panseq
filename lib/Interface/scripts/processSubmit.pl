@@ -4,6 +4,7 @@ use warnings FATAL => 'all';
 use CGI;
 use Data::Dumper;
 use File::Path qw/make_path/;
+use Net::FTP;
 
 my $cgi = CGI->new();
 my $pid = fork();
@@ -55,6 +56,7 @@ else{
         );
 
         _createBatchFile(\%runSettings);
+        _downloadUserSelections(\%runSettings);
 
     }
     elsif($runMode eq 'pan'){
@@ -67,6 +69,29 @@ else{
         print STDERR "Panseq unknown runmode\n";
         exit(1);
     }
+}
+
+sub _downloadUserSelections{
+    my $runSettings = shift;
+    my $selectionsHashRef = shift;
+
+    $selectionsHashRef = {
+        '/genomes/all/GCF_000010525.1_ASM1052v1/GCF_000010525.1_ASM1052v1_genomic.fna.gz' => 'Azorhizobium caulinodans ORS 571'
+    };
+
+
+    #sets up the parameters for ncbi ftp connection
+    my $host = 'ftp.ncbi.nlm.nih.gov';
+    #constructs the connection
+    my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1, Timeout => 1000) or die "Cannot connect to genbank: $@";
+    #log in as anonymous, use email as password
+    $ftp->login("anonymous",'chadlaing@inoutbox.com') or die "Cannot login ", $ftp->message;
+
+    $ftp->binary();
+    foreach my $k(sort keys %{$selectionsHashRef}){
+        $ftp->get($k, $runSettings->{'queryDirectory'}) or die "Cannot get $k", $ftp->message;
+    }
+    $ftp->ascii();
 }
 
 

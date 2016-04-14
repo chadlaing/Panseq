@@ -10,8 +10,7 @@ my $localNcbiDirectory = $ARGV[0] // die "local NCBI directory required";
 #sets up the parameters for ncbi ftp connection
 my $host = 'ftp.ncbi.nlm.nih.gov';
 
-#new FTP directory structure
-my $directory = '/genomes/genbank/bacteria/';
+
 
 #within this directory is organism_name/all_assembly_versions/name/name.fna.gz
 #eg. ftp://ftp.ncbi.nih.gov/genomes/genbank/bacteria/Escherichia_coli/all_assembly_versions/GCA_000005845.2_ASM584v2/GCA_000005845.2_ASM584v2_genomic.fna.gz
