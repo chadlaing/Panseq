@@ -5,8 +5,11 @@ use CGI;
 use Data::Dumper;
 use File::Path qw/make_path/;
 use Net::FTP;
+use Archive::Extract;
 
 my $cgi = CGI->new();
+my $NCBI_PREFIX = '/genomes/all/';
+
 my $pid = fork();
 if(!defined $pid){
     die "cannot fork process!\n $!";
@@ -18,6 +21,8 @@ if($pid){
 
 }
 else{
+
+
     print STDERR "processing the submission\n";
 
     #we need to determine what run mode (pan, novel, loci)
@@ -73,11 +78,20 @@ else{
 
 sub _downloadUserSelections{
     my $runSettings = shift;
-    my $selectionsHashRef = shift;
 
-    $selectionsHashRef = {
-        '/genomes/all/GCF_000010525.1_ASM1052v1/GCF_000010525.1_ASM1052v1_genomic.fna.gz' => 'Azorhizobium caulinodans ORS 571'
-    };
+    my @ncbiQueryGenomes;
+    my @ncbiReferenceGenomes;
+    foreach my $p(keys %{$cgi->{'param'}}){
+        if($p =~ m/^q_(.+)/){
+            push @ncbiQueryGenomes, $1;
+        }
+        elsif($p =~ m/^r_(.+)/){
+            push @ncbiReferenceGenomes, $1;
+        }
+        else {
+            print STDERR "$p no match\n";
+        }
+    }
 
 
     #sets up the parameters for ncbi ftp connection
@@ -87,11 +101,34 @@ sub _downloadUserSelections{
     #log in as anonymous, use email as password
     $ftp->login("anonymous",'chadlaing@inoutbox.com') or die "Cannot login ", $ftp->message;
 
+
     $ftp->binary();
-    foreach my $k(sort keys %{$selectionsHashRef}){
-        $ftp->get($k, $runSettings->{'queryDirectory'}) or die "Cannot get $k", $ftp->message;
+    my @allDownloadedFiles;
+    foreach my $q(@ncbiQueryGenomes){
+        my $ncbiFile = $NCBI_PREFIX . $q . '/' . $q . '_genomic.fna.gz';
+        my $localFile = $runSettings->{'queryDirectory'} . $q;
+
+        push @allDownloadedFiles, $localFile;
+        $ftp->get($ncbiFile, $localFile) or die "Cannot get $q", $ftp->message;
+    }
+
+    foreach my $r(@ncbiReferenceGenomes){
+        my $ncbiFile = $NCBI_PREFIX . $r . '/' . $r . '_genomic.fna.gz';
+        my $localFile = $runSettings->{'referenceDirectory'} . $r;
+
+        push @allDownloadedFiles, $localFile;
+        $ftp->get($ncbiFile, $localFile) or die ("Cannot get $r" . $ftp->message);
     }
     $ftp->ascii();
+
+
+    #extract them all
+    foreach my $f(@allDownloadedFiles){
+        my $extracter = Archive::Extract->new('archive'=>$f, type=>'gz');
+        $extracter->extract(to=>$f . '.fna') or die ("Could not extract $f\n" and next);
+        unlink $f;
+    }
+
 }
 
 
