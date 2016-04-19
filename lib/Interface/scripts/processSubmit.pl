@@ -52,16 +52,20 @@ else{
         #but it is too late for that change now
 
         my %runSettings = (
-          queryDirectory => $queryDir,
-          referenceDirectory => $refDir,
-          mummerDirectory => $serverSettings->{'mummerDirectory'},
-          numberOfCores => $serverSettings->{'numberOfCores'},
-          baseDirectory => $newDir,
-          resultsDirectory => $resultsDir
+            queryDirectory => $queryDir,
+            referenceDirectory => $refDir,
+            mummerDirectory => $serverSettings->{'mummerDirectory'},
+            blastDirectory => $serverSettings->{'blastDirectory'},
+            numberOfCores => $serverSettings->{'numberOfCores'},
+            baseDirectory => $resultsDir,
+            numberOfCores => $serverSettings->{'numberOfCores'},
+            muscleExecutable => $serverSettings->{'muscleExecutable'},
+            outputDirectory => $newDir
         );
 
-        _createBatchFile(\%runSettings);
+        my $batchFile = _createBatchFile(\%runSettings);
         _downloadUserSelections(\%runSettings);
+        _runPanseq($serverSettings, $batchFile);
 
     }
     elsif($runMode eq 'pan'){
@@ -75,6 +79,25 @@ else{
         exit(1);
     }
 }
+
+
+sub _runPanseq{
+    my $serverSettings = shift;
+    my $configFile = shift;
+    my $systemLine = 'perl ' . $serverSettings->{'panseqDirectory'} . 'panseq.pl ' . $configFile;
+    my $systemExit = system($systemLine);
+
+    if($systemExit == 0){
+        #panseq finished properly, send to results html
+
+    }
+    else{
+        #error in system call
+        #send to error html
+    }
+}
+
+
 
 sub _downloadUserSelections{
     my $runSettings = shift;
@@ -135,7 +158,7 @@ sub _downloadUserSelections{
 sub _createBatchFile{
     my $paramRef = shift;
 
-    my $batchFile = $paramRef->{'baseDirectory'} . 'panseq.batch';
+    my $batchFile = $paramRef->{'outputDirectory'} . 'panseq.batch';
     open(my $batchFH, '>', $batchFile) or die "Could not create $batchFile\n$!";
 
     foreach my $k(keys %{$paramRef}){
@@ -143,6 +166,7 @@ sub _createBatchFile{
     }
 
     $batchFH->close();
+    return $batchFile;
 }
 
 
