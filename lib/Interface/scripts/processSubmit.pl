@@ -60,7 +60,13 @@ else{
             baseDirectory => $resultsDir,
             numberOfCores => $serverSettings->{'numberOfCores'},
             muscleExecutable => $serverSettings->{'muscleExecutable'},
-            outputDirectory => $newDir
+            outputDirectory => $newDir,
+            runMode => 'novel',
+            nucB => $cgi->param('nucB'),
+            nucC => $cgi->param('nucC'),
+            nucD => $cgi->param('nucD'),
+            nucG => $cgi->param('nucG'),
+            nucL => $cgi->param('nucL')
         );
 
         my $batchFile = _createBatchFile(\%runSettings);
@@ -161,7 +167,7 @@ sub _createBatchFile{
     my $batchFile = $paramRef->{'outputDirectory'} . 'panseq.batch';
     open(my $batchFH, '>', $batchFile) or die "Could not create $batchFile\n$!";
 
-    foreach my $k(keys %{$paramRef}){
+    foreach my $k(sort keys %{$paramRef}){
         $batchFH->print($k . "\t" . $paramRef->{$k} . "\n");
     }
 
