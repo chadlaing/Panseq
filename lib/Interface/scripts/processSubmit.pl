@@ -18,7 +18,7 @@ if(!defined $pid){
 
 if($pid){
 
-    my $resultsUrl = "www.coolbeans.com";
+    my $resultsUrl = 'panseq/page/' . $serverSettings->{'newDir'};
 
 my $hereDoc = <<END_HTML;
 <!DOCTYPE html>
@@ -78,7 +78,7 @@ else{
 
 
         #for a novel run we need both query / reference directories
-       my $newDir = $serverSettings->{'newDir'};
+        my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
         my $queryDir = $newDir . 'query/';
         my $refDir = $newDir . 'reference/';
         my $resultsDir = $newDir . 'results/';
@@ -248,7 +248,7 @@ sub _loadServerSettings{
     }
 
     #create newDir for output
-    $settings{'newDir'} =  $settings{'outputDirectory'} . _createBaseDirectoryName();
+    $settings{'newDir'} =  _createBaseDirectoryName();
 
     return \%settings;
 }
