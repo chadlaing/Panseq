@@ -8,6 +8,7 @@ use Net::FTP;
 use Archive::Extract;
 
 my $cgi = CGI->new();
+my $serverSettings = _loadServerSettings();
 my $NCBI_PREFIX = '/genomes/all/';
 
 my $pid = fork();
@@ -16,18 +17,59 @@ if(!defined $pid){
 };
 
 if($pid){
-    #the redirect url goes here
-    print $cgi->redirect("/page/index.html");
 
+    my $resultsUrl = "www.coolbeans.com";
+
+my $hereDoc = <<END_HTML;
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Panseq</title>
+    <link href="../css/panseq.css" rel="stylesheet">
+    <link href="../images/favicon.ico" rel="shortcut icon">
+</head>
+<body>
+<div id="panseqImage">
+    <p>Pan~genomic sequence analysis</p>
+</div>
+
+
+<div id="nav">
+    <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="novel.html">Novel Regions</a></li>
+        <li><a href="pan.html">Pan-genome</a></li>
+        <li><a href="loci.html">Loci</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+    </ul>
+</div>
+
+<p>
+    Your job has been submitted.
+    Results, when available can be retrieved from:
+
+    $resultsUrl
+
+    Please bookmark this address and return in a few minutes to retrieve your results.
+</p>
+</body>
+</html>
+
+
+
+END_HTML
+
+    print $cgi->header() . $hereDoc;
+
+    #print $cgi->redirect("/page/submitted.html");
 }
 else{
-
-
     print STDERR "processing the submission\n";
 
     #we need to determine what run mode (pan, novel, loci)
     my $runMode = $cgi->param('runMode');
-    my $serverSettings = _loadServerSettings();
+
 
     if($runMode eq 'novel'){
         foreach my $k(keys %{$cgi->{'param'}}){
@@ -36,7 +78,7 @@ else{
 
 
         #for a novel run we need both query / reference directories
-        my $newDir = $serverSettings->{'outputDirectory'} . _createBaseDirectoryName();
+       my $newDir = $serverSettings->{'newDir'};
         my $queryDir = $newDir . 'query/';
         my $refDir = $newDir . 'reference/';
         my $resultsDir = $newDir . 'results/';
@@ -71,8 +113,8 @@ else{
 
         my $batchFile = _createBatchFile(\%runSettings);
         _downloadUserSelections(\%runSettings);
-        _checkFiles($serverSettings, [$queryDir, $refDir]);
-        _runPanseq($serverSettings, $batchFile);
+        _checkFiles([$queryDir, $refDir]);
+        _runPanseq($batchFile);
 
     }
     elsif($runMode eq 'pan'){
@@ -88,7 +130,6 @@ else{
 }
 
 sub _checkFiles{
-    my $serverSettings = shift;
     my $directoriesRef = shift;
 
     foreach my $dir(@{$directoriesRef}){
@@ -101,7 +142,6 @@ sub _checkFiles{
 
 
 sub _runPanseq{
-    my $serverSettings = shift;
     my $configFile = shift;
 
     #requires SLURM to be operational
@@ -109,10 +149,12 @@ sub _runPanseq{
     my $systemExit = system($systemLine);
 
     if($systemExit == 0){
-        #panseq finished properly, send to results html
+        #panseq finished properly, make download html
+        print STDERR "Success!! Wohoo!\n";
 
     }
     else{
+        print STDERR "Failure! Boohoo!\n";
         #error in system call
         #send to error html
     }
@@ -204,6 +246,10 @@ sub _loadServerSettings{
 
         $settings{$la[0]}=$la[1];
     }
+
+    #create newDir for output
+    $settings{'newDir'} =  $settings{'outputDirectory'} . _createBaseDirectoryName();
+
     return \%settings;
 }
 

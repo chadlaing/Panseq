@@ -1,6 +1,9 @@
 #!/usr/bin/env perl
 use strict;
 use warnings FATAL => 'all';
+use FindBin;
+use lib "$FindBin::Bin/../../";
+use Modules::Fasta::SequenceName;
 
 
 my $inputDir = $ARGV[0];
@@ -23,10 +26,20 @@ foreach my $file(@{$fileNames}){
     my $outFH = IO::File->new('>' . $inputDir . $filename . '.checked') or die "$!";
 
     while(my $line = $inFH->getline){
-        if($line =~ m/^>/){
+        $line =~ s/\R//g;
+        my $sn = Modules::Fasta::SequenceName->new($line);
+
+
+        #if the line is the same as the sequence name, then the header
+        #is being used directly, which means multiple fasta sequences
+        #will be treated as distinct genomes.
+        #to overcome this, the filename is used as the lcl|| name.
+        #this means people can upload files without modding the headers
+        #if there is a single genome per file.
+        if($line eq ('>' . $sn->name())){
             $line =~ s/>/>lcl\|$filename\|/;
         }
-        $outFH->print($line);
+        $outFH->print($line . "\n");
     }
     $inFH->close();
     $outFH->close();
