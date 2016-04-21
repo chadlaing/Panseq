@@ -3,17 +3,14 @@ use strict;
 use warnings FATAL => 'all';
 
 
-
 my $inputDir = $ARGV[0];
-my $outputDir = $ARGV[1];
-
 my $fileNames = _getFileNamesFromDirectory($inputDir);
 
 
 foreach my $file(@{$fileNames}){
     my $filename;
 
-    if($file =~ m/(^.+)\.fasta/){
+    if($file =~ m/(^.+)/){
         $filename = $1;
         $filename =~ s/\./_/g;
     }
@@ -23,7 +20,7 @@ foreach my $file(@{$fileNames}){
     }
 
     my $inFH = IO::File->new('<'. $inputDir . $file) or die "$!";
-    my $outFH = IO::File->new('>' . $outputDir . $filename . '_lcl.fasta') or die "$!";
+    my $outFH = IO::File->new('>' . $inputDir . $filename . '.checked') or die "$!";
 
     while(my $line = $inFH->getline){
         if($line =~ m/^>/){
@@ -31,9 +28,11 @@ foreach my $file(@{$fileNames}){
         }
         $outFH->print($line);
     }
-
     $inFH->close();
     $outFH->close();
+
+    #remove unchecked file
+    unlink($inputDir . $file);
 }
 
 

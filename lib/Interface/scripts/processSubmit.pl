@@ -71,6 +71,7 @@ else{
 
         my $batchFile = _createBatchFile(\%runSettings);
         _downloadUserSelections(\%runSettings);
+        _checkFiles($serverSettings, [$queryDir, $refDir]);
         _runPanseq($serverSettings, $batchFile);
 
     }
@@ -86,11 +87,25 @@ else{
     }
 }
 
+sub _checkFiles{
+    my $serverSettings = shift;
+    my $directoriesRef = shift;
+
+    foreach my $dir(@{$directoriesRef}){
+        #requires functional SLURM
+        my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'Interface/scripts/single_file_check.pl ' . $dir;
+        system($systemLine);
+    }
+}
+
+
 
 sub _runPanseq{
     my $serverSettings = shift;
     my $configFile = shift;
-    my $systemLine = 'perl ' . $serverSettings->{'panseqDirectory'} . 'panseq.pl ' . $configFile;
+
+    #requires SLURM to be operational
+    my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'panseq.pl ' . $configFile;
     my $systemExit = system($systemLine);
 
     if($systemExit == 0){
