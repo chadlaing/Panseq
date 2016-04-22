@@ -18,7 +18,10 @@ if(!defined $pid){
 
 if($pid){
 
-    my $resultsUrl = 'panseq/page/' . $serverSettings->{'newDir'};
+    my $newDir = $serverSettings->{'newDir'};
+    $newDir =~ s/\/$//;
+
+    my $resultsUrl = '/panseq/page/' . $newDir . '.html';
 
 my $hereDoc = <<END_HTML;
 <!DOCTYPE html>
@@ -37,11 +40,11 @@ my $hereDoc = <<END_HTML;
 
 <div id="nav">
     <ul>
-        <li><a href="index.html">Home</a></li>
-        <li><a href="novel.html">Novel Regions</a></li>
-        <li><a href="pan.html">Pan-genome</a></li>
-        <li><a href="loci.html">Loci</a></li>
-        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="/page/index.html">Home</a></li>
+        <li><a href="/page/novel.html">Novel Regions</a></li>
+        <li><a href="/page/pan.html">Pan-genome</a></li>
+        <li><a href="/page/loci.html">Loci</a></li>
+        <li><a href="/page/faq.html">FAQ</a></li>
     </ul>
 </div>
 
@@ -49,7 +52,7 @@ my $hereDoc = <<END_HTML;
     Your job has been submitted.
     Results, when available can be retrieved from:
 
-    $resultsUrl
+    <a href="$resultsUrl">$resultsUrl</a>
 
     Please bookmark this address and return in a few minutes to retrieve your results.
 </p>
@@ -154,6 +157,8 @@ sub _runPanseq{
 
     }
     else{
+        #copy the error html to the result html
+
         print STDERR "Failure! Boohoo!\n";
         #error in system call
         #send to error html

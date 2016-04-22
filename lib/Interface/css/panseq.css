@@ -12,6 +12,7 @@ body{
     color: #2b2b2b;
     margin-left:15%;
     margin-right:15%;
+    width:85em;
 }
 
 .font{
@@ -53,7 +54,8 @@ h1{
 
 p{
     float:left;
-    width: 100%;
+    width: 45em;
+    line-height: 1.3em;
 }
 
 
@@ -77,6 +79,7 @@ input{
 }
 
 button{
+    float:left;
     font-size: 1.2em;
     color: #f77669;
     border: solid;
