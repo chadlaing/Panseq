@@ -4,6 +4,7 @@ use warnings FATAL => 'all';
 use CGI;
 use Data::Dumper;
 use File::Path qw/make_path/;
+use File::Copy;
 use Net::FTP;
 use Archive::Extract;
 
@@ -18,10 +19,7 @@ if(!defined $pid){
 
 if($pid){
 
-    my $newDir = $serverSettings->{'newDir'};
-    $newDir =~ s/\/$//;
-
-    my $resultsUrl = '/panseq/page/' . $newDir . '.html';
+    my $resultsUrl = '/panseq/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $hereDoc = <<END_HTML;
 <!DOCTYPE html>
@@ -158,7 +156,14 @@ sub _runPanseq{
     }
     else{
         #copy the error html to the result html
+        #with File::Copy
 
+        my $tempHtml =  $serverSettings->{'panseqDirectory'} . 'Interface/html/'. 'error.html';
+        my $outHtml = $serverSettings->{'outputDirectory'} .  $serverSettings->{'newDir'}  . $serverSettings->{'resultsHtml'};
+        my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
+
+        copy($tempHtml, $outHtml) or die "Could not copy $tempHtml to $outHtml $!\n";
+        symlink($outHtml, $symFile) or die "Coluld not create symlink to $symFile $!\n";
         print STDERR "Failure! Boohoo!\n";
         #error in system call
         #send to error html
@@ -253,7 +258,12 @@ sub _loadServerSettings{
     }
 
     #create newDir for output
+
     $settings{'newDir'} =  _createBaseDirectoryName();
+
+    my $newDir = $settings{'newDir'};
+    $newDir =~ s/\/$//;
+    $settings{'resultsHtml'} = $newDir . '.html';
 
     return \%settings;
 }
