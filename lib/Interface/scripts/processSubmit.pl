@@ -85,8 +85,14 @@ else{
         unless(_createDirectory($newDir) == 1){
             _makeErrorPage();
         }
-        _createDirectory($queryDir);
-        _createDirectory($refDir);
+
+        unless(_createDirectory($queryDir) == 1){
+            _makeErrorPage();
+        }
+
+        unless(_createDirectory($refDir) == 1){
+            _makeErrorPage();
+        }
 
         #create a hash of settings
         #base directory is used in the Panseq program to mean results dir
@@ -113,7 +119,15 @@ else{
         );
 
         my $batchFile = _createBatchFile(\%runSettings);
-        _downloadUserSelections(\%runSettings);
+        if($batchFile eq 0){
+            _makeErrorPage();
+        }
+        else{
+            unless(_downloadUserSelections(\%runSettings) == 1){
+                _makeErrorPage();
+            }
+        }
+
 
         my @qFiles = $cgi->upload('userQueryFiles');
         _uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'});
@@ -216,9 +230,6 @@ sub _downloadUserSelections{
         elsif($p =~ m/^r_(.+)/){
             push @ncbiReferenceGenomes, $1;
         }
-        else {
-            print STDERR "$p no match\n";
-        }
     }
 
     #if no selections, skip
@@ -229,9 +240,9 @@ sub _downloadUserSelections{
     #sets up the parameters for ncbi ftp connection
     my $host = 'ftp.ncbi.nlm.nih.gov';
     #constructs the connection
-    my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1) or die "Cannot connect to genbank: $@";
+    my $ftp = Net::FTP->new($host, Debug => 1,Passive => 1) or die ("Cannot connect to genbank: $@" and return 0);
     #log in as anonymous, use email as password
-    $ftp->login("anonymous",'chadlaing@inoutbox.com') or die "Cannot login ", $ftp->message;
+    $ftp->login("anonymous",'chadlaing@inoutbox.com') or die ("Cannot login " . $ftp->message and return 0);
 
 
     $ftp->binary();
@@ -241,7 +252,7 @@ sub _downloadUserSelections{
         my $localFile = $runSettings->{'queryDirectory'} . $q;
 
         push @allDownloadedFiles, $localFile;
-        $ftp->get($ncbiFile, $localFile) or die "Cannot get $q", $ftp->message;
+        $ftp->get($ncbiFile, $localFile) or die ("Cannot get $q" . $ftp->message and return 0);
     }
 
     foreach my $r(@ncbiReferenceGenomes){
@@ -249,7 +260,7 @@ sub _downloadUserSelections{
         my $localFile = $runSettings->{'referenceDirectory'} . $r;
 
         push @allDownloadedFiles, $localFile;
-        $ftp->get($ncbiFile, $localFile) or die ("Cannot get $r" . $ftp->message);
+        $ftp->get($ncbiFile, $localFile) or die ("Cannot get $r" . $ftp->message and return 0);
     }
     $ftp->ascii();
 
@@ -257,10 +268,11 @@ sub _downloadUserSelections{
     #extract them all
     foreach my $f(@allDownloadedFiles){
         my $extracter = Archive::Extract->new('archive'=>$f, type=>'gz');
-        $extracter->extract(to=>$f . '.fna') or die ("Could not extract $f\n" and next);
+        $extracter->extract(to=>$f . '.fna') or die ("Could not extract $f\n" and return 0);
         unlink $f;
     }
 
+    return 1;
 }
 
 
@@ -268,7 +280,7 @@ sub _createBatchFile{
     my $paramRef = shift;
 
     my $batchFile = $paramRef->{'outputDirectory'} . 'panseq.batch';
-    open(my $batchFH, '>', $batchFile) or die "Could not create $batchFile\n$!";
+    open(my $batchFH, '>', $batchFile) or die ("Could not create $batchFile\n$!" and return 0);
 
     foreach my $k(sort keys %{$paramRef}){
         $batchFH->print($k . "\t" . $paramRef->{$k} . "\n");
