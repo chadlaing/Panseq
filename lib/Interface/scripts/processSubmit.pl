@@ -128,12 +128,17 @@ else{
             }
         }
 
-
         my @qFiles = $cgi->upload('userQueryFiles');
-        _uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'});
+        unless(_uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'}) == 1){
+            _makeErrorPage();
+        }
 
         my @rFiles = $cgi->upload('userReferenceFiles');
-        _uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'});
+        unless(_uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) ==1){
+            _makeErrorPage();
+        }
+
+
         _checkFiles([$queryDir, $refDir]);
 
 
@@ -170,7 +175,7 @@ sub _uploadUserFiles{
         $cleanedFile =~ s/\W/_/g;
 
         my $inFH = $f->handle;
-        open(my $outFH, '>', $outputDir . $cleanedFile) or die "Cannot create cleaned file from user upload\n";
+        open(my $outFH, '>', $outputDir . $cleanedFile) or die ("Cannot create cleaned file from user upload\n" and return 0);
 
         #upload file using 1024 byte buffer
         my $buffer;
@@ -181,6 +186,8 @@ sub _uploadUserFiles{
         }
         $outFH->close();
     }
+
+    return 1;
 }
 
 
@@ -191,8 +198,14 @@ sub _checkFiles{
     foreach my $dir(@{$directoriesRef}){
         #requires functional SLURM
         my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'Interface/scripts/single_file_check.pl ' . $dir;
-        system($systemLine);
+        my $systemCode = system($systemLine);
+
+        unless($systemCode == 0){
+            return 0;
+        }
     }
+
+    return 1;
 }
 
 sub _makeErrorPage{
