@@ -62,8 +62,6 @@ my $hereDoc = <<END_HTML;
 END_HTML
 
     print $cgi->header() . $hereDoc;
-
-    #print $cgi->redirect("/page/submitted.html");
 }
 else{
     print STDERR "processing the submission\n";
@@ -114,6 +112,12 @@ else{
 
         my $batchFile = _createBatchFile(\%runSettings);
         _downloadUserSelections(\%runSettings);
+
+        my @qFiles = $cgi->upload('userQueryFiles');
+        _uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'});
+
+        my @rFiles = $cgi->upload('userReferenceFiles');
+        _uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'});
         _checkFiles([$queryDir, $refDir]);
         _runPanseq($batchFile);
 
@@ -129,6 +133,36 @@ else{
         exit(1);
     }
 }
+
+
+sub _uploadUserFiles{
+    my $filesRef = shift;
+    my $outputDir = shift;
+
+    #make sure there are files to upload
+    unless(scalar(@{$filesRef}) > 0){
+        return 1;
+    }
+
+    foreach my $f(@{$filesRef}){
+        my $cleanedFile = $f;
+        $cleanedFile =~ s/\W/_/g;
+
+        my $inFH = $f->handle;
+        open(my $outFH, '>', $outputDir . $cleanedFile) or die "Cannot create cleaned file from user upload\n";
+
+        #upload file using 1024 byte buffer
+        my $buffer;
+        my $bytesread = $inFH->read( $buffer, 1024 );
+        while ($bytesread) {
+            $outFH->print($buffer);
+            $bytesread = $inFH->read( $buffer, 1024 );
+        }
+        $outFH->close();
+    }
+}
+
+
 
 sub _checkFiles{
     my $directoriesRef = shift;
@@ -189,6 +223,10 @@ sub _downloadUserSelections{
         }
     }
 
+    #if no selections, skip
+    unless(scalar(@ncbiQueryGenomes) > 0 || scalar(@ncbiReferenceGenomes) > 0){
+        return 1;
+    }
 
     #sets up the parameters for ncbi ftp connection
     my $host = 'ftp.ncbi.nlm.nih.gov';
