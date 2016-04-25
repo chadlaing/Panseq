@@ -19,7 +19,7 @@ if(!defined $pid){
 
 if($pid){
 
-    my $resultsUrl = '/panseq/page/output/' . $serverSettings->{'resultsHtml'};
+    my $resultsUrl = '/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $hereDoc = <<END_HTML;
 <!DOCTYPE html>
@@ -27,8 +27,8 @@ my $hereDoc = <<END_HTML;
 <head>
     <meta charset="UTF-8">
     <title>Panseq</title>
-    <link href="../css/panseq.css" rel="stylesheet">
-    <link href="../images/favicon.ico" rel="shortcut icon">
+    <link href="/page/../css/panseq.css" rel="stylesheet">
+    <link href="/page/../images/favicon.ico" rel="shortcut icon">
 </head>
 <body>
 <div id="panseqImage">
@@ -159,11 +159,11 @@ sub _runPanseq{
         #with File::Copy
 
         my $tempHtml =  $serverSettings->{'panseqDirectory'} . 'Interface/html/'. 'error.html';
-        my $outHtml = $serverSettings->{'outputDirectory'} .  $serverSettings->{'newDir'}  . $serverSettings->{'resultsHtml'};
+        #my $outHtml = $serverSettings->{'outputDirectory'} .  $serverSettings->{'newDir'}  . $serverSettings->{'resultsHtml'};
         my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
 
-        copy($tempHtml, $outHtml) or die "Could not copy $tempHtml to $outHtml $!\n";
-        symlink($outHtml, $symFile) or die "Coluld not create symlink to $symFile $!\n";
+        #copy($tempHtml, $outHtml) or die "Could not copy $tempHtml to $outHtml $!\n";
+        symlink($tempHtml, $symFile) or die "Coluld not create symlink to $symFile $!\n";
         print STDERR "Failure! Boohoo!\n";
         #error in system call
         #send to error html
