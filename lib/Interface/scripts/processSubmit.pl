@@ -82,7 +82,9 @@ else{
         my $refDir = $newDir . 'reference/';
         my $resultsDir = $newDir . 'results/';
 
-        _createDirectory($newDir);
+        unless(_createDirectory($newDir) == 1){
+            _makeErrorPage();
+        }
         _createDirectory($queryDir);
         _createDirectory($refDir);
 
@@ -119,7 +121,12 @@ else{
         my @rFiles = $cgi->upload('userReferenceFiles');
         _uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'});
         _checkFiles([$queryDir, $refDir]);
-        _runPanseq($batchFile);
+
+
+        #check that panseq finished correctly
+        unless(_runPanseq($batchFile) == 1){
+            _makeErrorPage();
+        }
 
     }
     elsif($runMode eq 'pan'){
@@ -174,7 +181,11 @@ sub _checkFiles{
     }
 }
 
-
+sub _makeErrorPage{
+    my $tempHtml =  $serverSettings->{'panseqDirectory'} . 'Interface/html/'. 'error.html';
+    my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
+    symlink($tempHtml, $symFile) or die "Coluld not create symlink to $symFile $!\n";
+}
 
 sub _runPanseq{
     my $configFile = shift;
@@ -184,23 +195,10 @@ sub _runPanseq{
     my $systemExit = system($systemLine);
 
     if($systemExit == 0){
-        #panseq finished properly, make download html
-        print STDERR "Success!! Wohoo!\n";
-
+       return 1;
     }
     else{
-        #copy the error html to the result html
-        #with File::Copy
-
-        my $tempHtml =  $serverSettings->{'panseqDirectory'} . 'Interface/html/'. 'error.html';
-        #my $outHtml = $serverSettings->{'outputDirectory'} .  $serverSettings->{'newDir'}  . $serverSettings->{'resultsHtml'};
-        my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
-
-        #copy($tempHtml, $outHtml) or die "Could not copy $tempHtml to $outHtml $!\n";
-        symlink($tempHtml, $symFile) or die "Coluld not create symlink to $symFile $!\n";
-        print STDERR "Failure! Boohoo!\n";
-        #error in system call
-        #send to error html
+        return 0;
     }
 }
 
@@ -324,13 +322,13 @@ sub _createDirectory{
     if(defined $dirName){
         #we don't want any permission issues, so don't downgrade the directory permissions
         umask(0);
-
         #from File::Path
-        make_path($dirName) or die "Couldn't create fastaBase $dirName\n";
+        make_path($dirName) or die ("Couldn't create fastaBase $dirName\n" and return 0);
+
+        return 1;
     }
     else{
-        print STDERR "undefined directory name in _createDirectory\n";
-        exit(1);
+        return 0;
     }
 
 }
