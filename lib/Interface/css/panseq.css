@@ -58,10 +58,12 @@ p{
     line-height: 1.3em;
 }
 
+.mainBody p{
+    font-size: 1.5em;
+}
 
 h1 ~ p{
-    font-size: 1.5em;
-    margin-top:0;
+     margin-top:0;
     padding-top:0;
     margin-bottom:0;
 }
@@ -77,6 +79,7 @@ input{
     width:5em;
     color: #2b2b2b;
 }
+
 
 button{
     float:left;
@@ -167,217 +170,3 @@ button{
 .mainBody h1{
     margin-top: 1em;
 }
-
-/*footer{*/
-	/*float:left;*/
-  /*width:100%;*/
-  /*text-align:center;*/
-  /*margin-top:1em;*/
-/*}*/
-
-/*select{*/
-	/*float:left;*/
-	/*width:10em;*/
-/*}*/
-
-/*.panseqDescription{*/
-  /*font-size: 1.5em;*/
-  /*font-weight: bold;*/
-/*}*/
-
-/*.codeFormat{*/
-  /*font-size: 1em;*/
-  /*padding-left:4em;*/
-  /*font-family: "Source Code Pro";*/
-  /*line-height: 1em;*/
-/*}*/
-
-/*#submitButton{*/
-  /*float:left;*/
-  /*margin-left:1.66em;*/
-  /*margin-top:0.5em;*/
-  /*margin-bottom: 0em;*/
-  /*font-size: 1.5em;*/
-/*}*/
-
-/*#submitLine{*/
-  /*float:left;*/
-  /*width:100%;*/
-  /*margin-bottom: 0.5em;*/
-  /*margin-top: 0.2em;*/
-  /*padding: 1em;*/
-/*}*/
-
-/*#submitLine >p >span{*/
-  /*float:left;*/
-  /*font-size: 1.5em;*/
-  /*margin-top: 0.6em;*/
-  /*margin-left:1em;*/
-/*}*/
-
-/*#submitLine >p >span >input{*/
-  /*width:25em;*/
-/*}*/
-
-
-
-
-
-/*h3 > span{*/
-  /*font-size: 2em;*/
-/*}*/
-
-/*.strainHalf, .paramHalf{*/
-  /*float:left;*/
-  /*padding-left:1em;*/
-  /*margin-left:1em;*/
-  /*height:60em;*/
-/*}*/
-
-/*.strainHalf{*/
-  /*width:70em;*/
-/*}*/
-
-/*.paramHalf{*/
- /*!* .width:40em;*!*/
-/*}*/
-
-/*.halfPage h2 ~ p{*/
-  /*padding-left:1em;*/
-/*}*/
-
-/*.pageHeader{*/
-  /*width:100%;*/
-  /*float:left;*/
-  /*margin:0.1em;*/
-  /*font-size: 3em;*/
-  /*text-align: center;*/
-/*}*/
-
-/*.pageWrapper{*/
-  /*float:left;*/
-  /*margin-left: 5em;*/
-  /*width:60%;*/
-  /*font-size: 2em;*/
-  /*line-height: 2em;*/
-/*}*/
-
-/*.panseqDescription ~ p >p{*/
-  /*padding-left: 2em;*/
-/*}*/
-
-/*#settingsOutput{*/
-  /*float:left;*/
-  /*line-height: 1.2em;*/
-/*}*/
-
-/*#settingsOutput > div{*/
-  /*float:left;*/
-  /*width:100%;*/
-/*}*/
-
-/*#settingsOutput > div > span{*/
-  /*width:20em;*/
-/*}*/
-
-/*!*http://www.quirksmode.org/css/clearing.html*/
-/*For getting the nav tabs to display horizontally*/
-/*The floats were messed up with jQueryUI*/
-/**!*/
-/*.nav{*/
-	/*font-size:2em;*/
-	/*!*overflow:hidden;*!*/
-	/*width:100%;*/
-/*}*/
-
-/*.nav ul li{*/
-	/*list-style-type: none;*/
-	/*float:left;*/
-	/*margin-left: 0em;*/
-/*}*/
-
-/*#tabs{*/
-  /*float:left;*/
-  /*width:100%;*/
-/*}*/
-
-/*#tabs ul li{*/
-  /*font-weight: bold;*/
-/*}*/
-
-/*.strainSelectionRow{*/
-  /*float:left;*/
-/*}*/
-
-/*.selectionContainer{*/
-	/*float: left;*/
-	/*width:25em;*/
-	/*height:25em;*/
-	/*margin:0.2em;*/
-	/*padding:0.2em;*/
-	/*border:0.1em solid;*/
-/*}*/
-
-/*.listContainer{*/
-	/*float:left;*/
-	/*width:23em;*/
-	/*height:19em;*/
-	/*overflow-y:auto;*/
-  /*overflow-x:hidden; */
-  /*padding:0;*/
-  /*margin:0;*/
-/*}*/
-
-/*.listContainer ul{*/
-  /*padding:0;*/
-  /*margin: 0;*/
-/*}*/
-
-/*.listContainer li{*/
-	/*list-style-type: none;*/
-  /*margin-bottom:1em;*/
-/*}*/
-
-/*.listContainer + input{*/
-  /*float:left;*/
-  /*width:100%;*/
-/*}*/
-
-/*#userNovel, #userPan, #userLoci{*/
-  /*height:65em;*/
-/*}*/
-
-/*.selectionTitle{*/
-  /*float:left;*/
-  /*margin:0;*/
-  /*text-align: center;*/
-  /*margin-top:0.5em;*/
-  /*margin-bottom: 0.5em;*/
-  /*width:100%;*/
-/*}*/
-
-/*.transferContainer{*/
-  /*padding-top: 4em;*/
-  /*float:left;*/
-  /*height: 15em;*/
-  /*width:14em;*/
-/*}*/
-/*!*multi-list transfer from http://jquerywall.com/demo-multi-transfer-jquery-ui-selectable!*/*/
-/*!* source and target styles *!*/
-
-/*!* transfer styles *!*/
-
-/*#query-transfer-buttons-novel button, #query-transfer-buttons button, #reference-transfer-buttons button*/
-/*{*/
-  /*float:left;*/
-  /*cursor:pointer;*/
-  /*padding: 0;*/
-  /*width: 12em;*/
-  /*margin-left: 1em;*/
-  /*margin-right: 1em;*/
-/*}*/
-
-/*#queryFiles, #referenceFiles{*/
-  /*.float:left;*/
-  /*margin-top:1em;*/
-/*}*/

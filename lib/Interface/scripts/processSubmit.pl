@@ -7,6 +7,7 @@ use File::Path qw/make_path/;
 use File::Copy;
 use Net::FTP;
 use Archive::Extract;
+use Carp;
 
 my $cgi = CGI->new();
 my $serverSettings = _loadServerSettings();
@@ -65,6 +66,11 @@ END_HTML
 }
 else{
     print STDERR "processing the submission\n";
+
+    #We need to close STDERR / STDOUT, otherwise Apache will wait for the
+    #analyses to complete before showing the in-progress page.
+    close STDERR;
+    close STDOUT;
 
     #we need to determine what run mode (pan, novel, loci)
     my $runMode = $cgi->param('runMode');
@@ -139,11 +145,18 @@ else{
         }
 
 
-        _checkFiles([$queryDir, $refDir]);
+        unless(_checkFiles([$queryDir, $refDir]) == 1){
+            _makeErrorPage();
+        }
 
 
         #check that panseq finished correctly
         unless(_runPanseq($batchFile) == 1){
+            _makeErrorPage();
+        }
+
+        #everything went peachy, no errors, so link to the download page
+        unless(_createDownloadPage() ==1){
             _makeErrorPage();
         }
 
@@ -157,6 +170,76 @@ else{
     else{
         print STDERR "Panseq unknown runmode\n";
         exit(1);
+    }
+}
+
+
+
+sub _createDownloadPage{
+    #check if zip file exists
+    my $resultsFile = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'} . 'results/panseq_results.zip';
+    print STDERR "Creating new download page $resultsFile\n";
+    if(-e $resultsFile){
+
+        my $downloadHtml =   $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'} . 'download.html';
+        my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
+        my $outputResultsSym = '/page/output/' . $serverSettings->{resultsHtml} . '.zip';
+        my $serverResultsSym = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml} . '.zip';
+
+my $hereDoc = <<END_HTML;
+<!DOCTYPE html>
+    <html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Panseq</title>
+    <link href="/page/../css/panseq.css" rel="stylesheet">
+    <link href="/page/../images/favicon.ico" rel="shortcut icon">
+</head>
+<body>
+<div id="panseqImage">
+    <p>Pan~genomic sequence analysis</p>
+</div>
+
+
+<div id="nav">
+    <ul>
+        <li><a href="/page/index.html">Home</a></li>
+        <li><a href="/page/novel.html">Novel Regions</a></li>
+        <li><a href="/page/pan.html">Pan-genome</a></li>
+        <li><a href="/page/loci.html">Loci</a></li>
+        <li><a href="/page/faq.html">FAQ</a></li>
+    </ul>
+</div>
+
+<p>
+   Please click here:<a href="$outputResultsSym" download="panseq_results.zip"> Panseq Results </a>to download your results.
+</p>
+</body>
+</html>
+
+END_HTML
+
+        open(my $outFH, '>', $downloadHtml) or die ("Could not create $downloadHtml" and return 0);
+        $outFH->print($hereDoc);
+
+
+
+        if(-e $symFile){
+            unlink($symFile);
+        }
+        symlink($downloadHtml, $symFile);
+
+
+       if(-e $serverResultsSym){
+           unlink($serverResultsSym);
+
+       }
+        symlink($resultsFile, $serverResultsSym);
+        return 1;
+    }
+    else{
+        print STDERR "Could not find $resultsFile\n";
+        return 0;
     }
 }
 
@@ -211,7 +294,11 @@ sub _checkFiles{
 sub _makeErrorPage{
     my $tempHtml =  $serverSettings->{'panseqDirectory'} . 'Interface/html/'. 'error.html';
     my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
-    symlink($tempHtml, $symFile) or die "Coluld not create symlink to $symFile $!\n";
+
+    if(-e $symFile){
+        unlink($symFile);
+    }
+    symlink($tempHtml, $symFile);
 }
 
 sub _runPanseq{
