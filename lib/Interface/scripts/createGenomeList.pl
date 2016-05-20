@@ -4,24 +4,31 @@ use warnings FATAL => 'all';
 use File::Copy;
 
 my $genomeList = $ARGV[0] // die "no genome list file specified!\n";
-my $htmlFile = $ARGV[1] // die "no HTML file specified!\n";
+my $fullFile = $ARGV[1] // die "no full HTML file specified!\n";
+my $reducedFile = $ARGV[2] // die "no reduced HTML file specified!";
 
 
+
+#we will make a _full and _reduced version to facilitate page loading
+#_full will contain the entire set of genbank data (~15MB HTML file)
+#_reduced version will contain every Nth item
 #make a copy of the original, read it in
 #write out over the original, with the new data
 #keep the temp file around for disasters
 
 #with File::Copy
-my $tempFile = $htmlFile . '_temp';
-copy($htmlFile, $tempFile) or die "Could not create temp html file!\n";
-
+my $fullTempFile = $fullFile . '_temp';
+my $reducedTempFile = $reducedFile . '_temp';
+copy($fullFile, $fullTempFile) or die "Could not create temp full html file!\n";
+copy($reducedFile, $reducedTempFile) or die "Could not create temp reduced html file\n";
 
 #write out the new html file with new data
 open(my $genomeFH, '<', $genomeList) or die "$!";
-open(my $htmlFH, '>', $htmlFile) or die "$!";
+open(my $fullFH, '>', $fullFile) or die "$!";
+open(my $reducedFH, '>', $reducedFile) or die "$!";
 
 
-my %genomeHash=();
+my %fullHash;
 while(my $line = $genomeFH->getline()){
     next if $. == 1;
 
@@ -38,11 +45,10 @@ while(my $line = $genomeFH->getline()){
     else{
         die "Could not get FTP location for $organismName\n";
     }
-
-    $genomeHash{$ftpName}=$organismName . ', ' . $strainName;
+    $fullHash{$ftpName}=$organismName . ', ' . $strainName;
 }
 
-open(my $tempFH, '<', $tempFile) or die "Could not open $tempFile $!\n";
+open(my $tempFH, '<', $reducedTempFile) or die "Could not open $reducedTempFile $!\n";
 my $switch = 0;
 my $prefix = 'q_';
 while(my $line = $tempFH->getline()){
@@ -52,13 +58,20 @@ while(my $line = $tempFH->getline()){
             next;
         }
         else{
-            foreach my $k(sort {$genomeHash{$a} cmp $genomeHash{$b}} keys %genomeHash){
-                $htmlFH->print('<li><input type="checkbox" name="' . $prefix . $k  . '">' . $genomeHash{$k} . '</li>' . "\n");
+            my $counter =0;
+            foreach my $k(sort {$fullHash{$a} cmp $fullHash{$b}} keys %fullHash){
+                if($counter % 100 == 0){
+                    $reducedFH->print('<li><input type="checkbox" name="' . $prefix . $k  . '">' . $fullHash{$k} . '</li>' . "\n");
+                }
+
+                $fullFH->print('<li><input type="checkbox" name="' . $prefix . $k  . '">' . $fullHash{$k} . '</li>' . "\n");
+                $counter++;
             }
             $switch=0;
         }
     }
-    $htmlFH->print($line);
+    $fullFH->print($line);
+    $reducedFH->print($line);
 
     if($line =~ m/\Flip the switch/){
         $switch = 1;
