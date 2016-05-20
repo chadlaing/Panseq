@@ -50,6 +50,7 @@ while(my $line = $genomeFH->getline()){
 
 open(my $tempFH, '<', $reducedTempFile) or die "Could not open $reducedTempFile $!\n";
 my $switch = 0;
+my $reducedOnly = 0;
 my $prefix = 'q_';
 while(my $line = $tempFH->getline()){
     if($switch == 1){
@@ -70,8 +71,23 @@ while(my $line = $tempFH->getline()){
             $switch=0;
         }
     }
-    $fullFH->print($line);
-    $reducedFH->print($line);
+
+    if($line =~ m/\<\!--Reduced Only--\>/){
+        $reducedOnly++;
+    }
+
+    if($reducedOnly > 0){
+        $reducedFH->print($line);
+    }
+    else{
+        $fullFH->print($line);
+        $reducedFH->print($line);
+    }
+
+    if($reducedOnly == 2){
+        $reducedOnly=0;
+    }
+
 
     if($line =~ m/\Flip the switch/){
         $switch = 1;
