@@ -9,9 +9,11 @@ use Net::FTP;
 use Archive::Extract;
 use Carp;
 
+
 my $cgi = CGI->new();
 my $serverSettings = _loadServerSettings();
 my $NCBI_PREFIX = '/genomes/all/';
+my $RESULTS_URL = '/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $pid = fork();
 if(!defined $pid){
@@ -20,7 +22,6 @@ if(!defined $pid){
 
 if($pid){
 
-    my $resultsUrl = '/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $hereDoc = <<END_HTML;
 <!DOCTYPE html>
@@ -47,14 +48,17 @@ my $hereDoc = <<END_HTML;
     </ul>
 </div>
 
+<div class="mainBody">
+<h1>Your job has been submitted.</h1>
+
 <p>
-    Your job has been submitted.
     Results, when available can be retrieved from:
 
-    <a href="$resultsUrl">$resultsUrl</a>
+    <a href="$RESULTS_URL">$RESULTS_URL</a>
 
     Please bookmark this address and return in a few minutes to retrieve your results.
 </p>
+</div>
 </body>
 </html>
 
@@ -64,24 +68,42 @@ END_HTML
 
     print $cgi->header() . $hereDoc;
 }
-else{
-    print STDERR "processing the submission\n";
+else {
+    my $gid = fork();
+    if(!defined $gid){
+        die "cannot fork process!\n $!";
+    };
+    open STDIN, "</dev/null";
+    open STDOUT, ">/dev/null";
+    open STDERR, ">/dev/null";
 
-    #We need to close STDERR / STDOUT, otherwise Apache will wait for the
-    #analyses to complete before showing the in-progress page.
-    close STDERR;
-    close STDOUT;
+    if($gid){
+        return 1;
+    }
+    else{
+        #We need to close STDERR otherwise Apache will wait for the
+        #analyses to complete before showing the in-progress page.
+        my $output = _launchPanseq();
+    }
+
+}
+
+
+sub _launchPanseq{
+
+
+    #link the waiting html to the current html page
+    my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
+    my $waitingHtml = $serverSettings->{panseqDirectory} . 'Interface/html/waiting.html';
+    symlink($waitingHtml, $symFile);
+
 
     #we need to determine what run mode (pan, novel, loci)
     my $runMode = $cgi->param('runMode');
 
 
     if($runMode eq 'novel'){
-        foreach my $k(keys %{$cgi->{'param'}}){
-            print STDERR "$k\n";
-        }
-
-
+#
         #for a novel run we need both query / reference directories
         my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
         my $queryDir = $newDir . 'query/';
@@ -168,9 +190,10 @@ else{
 
     }
     else{
-        print STDERR "Panseq unknown runmode\n";
-        exit(1);
+        #croak "Panseq unknown runmode\n";
+        return 0;
     }
+    return 1;
 }
 
 
@@ -178,7 +201,7 @@ else{
 sub _createDownloadPage{
     #check if zip file exists
     my $resultsFile = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'} . 'results/panseq_results.zip';
-    print STDERR "Creating new download page $resultsFile\n";
+
     if(-e $resultsFile){
 
         my $downloadHtml =   $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'} . 'download.html';
@@ -211,9 +234,12 @@ my $hereDoc = <<END_HTML;
     </ul>
 </div>
 
+<div class="mainBody">
+<h1>Analyses Completed</h1>
 <p>
    Please click here:<a href="$outputResultsSym" download="panseq_results.zip"> Panseq Results </a>to download your results.
 </p>
+</div>
 </body>
 </html>
 
@@ -238,7 +264,7 @@ END_HTML
         return 1;
     }
     else{
-        print STDERR "Could not find $resultsFile\n";
+        #carp "No Reults!";
         return 0;
     }
 }
