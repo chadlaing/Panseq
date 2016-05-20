@@ -32,7 +32,7 @@
         <!--Reduced Only-->
 
         <form action="/process/processSubmit.pl" method="post" enctype="multipart/form-data">
-        <input type="hidden" name="runMode" value="novel"/>
+        <input type="hidden" name="runMode" value="pan"/>
         <h1>Select Parameters</h1>
         <p>
             Minimum Novel Region Size <input name="minimumNovelRegionSize" type="number" min="0" max="10000" step="50" value="500">
@@ -63,9 +63,9 @@
             l: <input name="nucL" type="number" min="1" max="100" step="1" value="20">
         </p>
 
-        <h1>Select Query Strains</h1>
+        <h1>Select Strains</h1>
         <p>
-            Upload Query Strains:
+            Upload Strains:
             <input type="file" name="userQueryFiles" multiple class="fileUpload">
         </p>
         <p>
@@ -132,7 +132,7 @@
 <li><input type="checkbox" name="q_GCF_001530055.1_ASM153005v1">Burkholderia cepacia, strain=MSMB1332WGS</li>
 <li><input type="checkbox" name="q_GCF_000755845.1_ASM75584v1">Burkholderia mallei, strain=6</li>
 <li><input type="checkbox" name="q_GCF_000774405.1_BCW_25">Burkholderia pseudomallei ABCPW 91, strain=ABCPW 91</li>
-<li><input type="checkbox" name="q_GCF_001446055.1_ASM144605v1">Burkholderia pseudomallei NCTC 13178, strain=NCTC 13178</li>
+<li><input type="checkbox" name="q_GCF_000511895.1_ASM51189v1">Burkholderia pseudomallei NCTC 13178, strain=NCTC 13178</li>
 <li><input type="checkbox" name="q_GCF_000757075.1_BDM">Burkholderia pseudomallei, strain=BDM</li>
 <li><input type="checkbox" name="q_GCF_001326915.1_7910_7_25">Burkholderia pseudomallei, strain=DM15342/00</li>
 <li><input type="checkbox" name="q_GCF_000515195.1_ASM51519v1">Burkholderia sp. JPY366, strain=JPY366</li>
@@ -146,7 +146,7 @@
 <li><input type="checkbox" name="q_GCF_001545415.1_ASM154541v1">Campylobacter coli, strain=SH-CCF11C627</li>
 <li><input type="checkbox" name="q_GCF_000466105.2_ASM46610v2">Campylobacter jejuni subsp. jejuni 00-2426, strain=00-2426</li>
 <li><input type="checkbox" name="q_GCF_000943485.1_ASM94348v1">Campylobacter jejuni subsp. jejuni, strain=P5-2209</li>
-<li><input type="checkbox" name="q_GCF_001407755.1_33_S32">Campylobacter jejuni, strain=Campylobacter jejuni</li>
+<li><input type="checkbox" name="q_GCF_900000215.1_50_S47">Campylobacter jejuni, strain=Campylobacter jejuni</li>
 <li><input type="checkbox" name="q_GCF_001231625.1_7038_3_61">Campylobacter jejuni, strain=OXC6311</li>
 <li><input type="checkbox" name="q_GCF_001231405.1_7065_7_87">Campylobacter jejuni, strain=OXC6435</li>
 <li><input type="checkbox" name="q_GCF_001239205.1_7213_3_12">Campylobacter jejuni, strain=OXC6555</li>
@@ -180,10 +180,10 @@
 <li><input type="checkbox" name="q_GCF_001526145.1_ASM152614v1">Enterobacter cloacae, strain=SMART_1287</li>
 <li><input type="checkbox" name="q_GCF_001475415.1_SMART_1112.v1">Enterobacter hormaechei subsp. oharae, strain=SMART_1112</li>
 <li><input type="checkbox" name="q_GCF_000814905.1_ASM81490v1">Enterobacter sp. Bisph1, strain=Bisph1</li>
-<li><input type="checkbox" name="q_GCF_000407565.1_Ente_ceco_ATCC43198_V1">Enterococcus cecorum DSM 20682 = ATCC 43198, strain=ATCC 43198</li>
+<li><input type="checkbox" name="q_GCF_000492155.1_Ente_ceco_ATCC43198_V2">Enterococcus cecorum DSM 20682 = ATCC 43198, strain=ATCC 43198</li>
 <li><input type="checkbox" name="q_GCF_000390885.1_Ente_faec_7430315-3_V1">Enterococcus faecalis EnGen0084, strain=7430315-3</li>
 <li><input type="checkbox" name="q_GCF_000478325.1_Ente_faec_T15_V1">Enterococcus faecalis EnGen0286, strain=T15</li>
-<li><input type="checkbox" name="q_GCF_000982595.1_JH2">Enterococcus faecalis JH2-2, strain=JH2-2</li>
+<li><input type="checkbox" name="q_GCF_000479105.1_Ente_faec_JH2-2_V1">Enterococcus faecalis JH2-2, strain=JH2-2</li>
 <li><input type="checkbox" name="q_GCF_001056125.1_ASM105612v1">Enterococcus faecalis, strain=258.rep1_EFLS</li>
 <li><input type="checkbox" name="q_GCF_000239115.1_ASM23911v2">Enterococcus faecium E4452, strain=E4452</li>
 <li><input type="checkbox" name="q_GCF_000395585.1_Ente_faec_UAA722_V1">Enterococcus faecium EnGen0165, strain=UAA722</li>
@@ -213,7 +213,7 @@
 <li><input type="checkbox" name="q_GCF_000357705.2_ASM35770v2">Escherichia coli P0305260.2, strain=P0305260.2</li>
 <li><input type="checkbox" name="q_GCF_000267605.2_ASM26760v2">Escherichia coli TW09098, strain=TW09098</li>
 <li><input type="checkbox" name="q_GCF_000488075.1_Esch_coli_UMEA_3426-1_V1">Escherichia coli UMEA 3426-1, strain=UMEA 3426-1</li>
-<li><input type="checkbox" name="q_GCF_001268385.1_1.EC2719.1">Escherichia coli, </li>
+<li><input type="checkbox" name="q_GCF_000941995.1_FHI59">Escherichia coli, </li>
 <li><input type="checkbox" name="q_GCF_001265625.1_100854">Escherichia coli, strain=100854</li>
 <li><input type="checkbox" name="q_GCF_001373215.1_207A_L2_assembly">Escherichia coli, strain=207A_L2</li>
 <li><input type="checkbox" name="q_GCF_001284485.1_8205_3_8">Escherichia coli, strain=401553</li>
@@ -221,7 +221,7 @@
 <li><input type="checkbox" name="q_GCF_001515725.1_ASM151572v1">Escherichia coli, strain=ACN002</li>
 <li><input type="checkbox" name="q_GCF_001572005.1_ASM157200v1">Escherichia coli, strain=CFSAN025107</li>
 <li><input type="checkbox" name="q_GCF_001007915.1_ASM100791v1">Escherichia coli, strain=CFSAN029787</li>
-<li><input type="checkbox" name="q_GCF_000753315.1_FHI35">Escherichia coli, strain=E. coli</li>
+<li><input type="checkbox" name="q_GCF_000753195.1_FHI17">Escherichia coli, strain=E. coli</li>
 <li><input type="checkbox" name="q_GCF_000935555.1_ASM93555v1">Escherichia coli, strain=F5524-c2</li>
 <li><input type="checkbox" name="q_GCF_001519405.1_ASM151940v1">Escherichia coli, strain=GN02091</li>
 <li><input type="checkbox" name="q_GCF_001521575.1_ASM152157v1">Escherichia coli, strain=GN03324</li>
@@ -237,7 +237,7 @@
 <li><input type="checkbox" name="q_GCF_000317225.1_FisPCC7521_1.0">Fischerella thermalis PCC 7521, strain=PCC 7521</li>
 <li><input type="checkbox" name="q_GCF_000769935.1_ASM76993v1">Flavobacterium subsaxonicum WB 4.1-42 = DSM 21790, strain=WB 4.1-42</li>
 <li><input type="checkbox" name="q_GCF_000628985.1_Fran_tula_Schu_S4_NR-643_V1">Francisella tularensis subsp. tularensis str. SCHU S4 substr. NR-643, strain=Schu S4 substr. NR-643</li>
-<li><input type="checkbox" name="q_GCF_000455905.1_de_novo">Fusobacterium hwasookii ChDC F206, strain=ChDC F206</li>
+<li><input type="checkbox" name="q_GCF_001455085.1_ASM145508v1">Fusobacterium hwasookii ChDC F206, strain=ChDC F206</li>
 <li><input type="checkbox" name="q_GCF_000771975.1_ASM77197v1">Gallibacterium anatis, strain=1797</li>
 <li><input type="checkbox" name="q_GCF_000445995.2_ASM44599v2">Geobacillus sp. JF8, strain=JF8</li>
 <li><input type="checkbox" name="q_GCF_001580785.1_ASM158078v1">Gluconobacter japonicus, strain=LMG 1373</li>
@@ -257,7 +257,7 @@
 <li><input type="checkbox" name="q_GCF_000694155.1_Kleb_pneu_CHS_62_V1">Klebsiella pneumoniae CHS 62, strain=CHS 62</li>
 <li><input type="checkbox" name="q_GCF_000566785.1_Kleb_pneu_UCI_41_V1">Klebsiella pneumoniae UCI 41, strain=UCI 41</li>
 <li><input type="checkbox" name="q_GCF_000695935.1_ASM69593v1">Klebsiella pneumoniae subsp. pneumoniae KPNIH27, strain=KPNIH27</li>
-<li><input type="checkbox" name="q_GCF_000821765.1_25BO">Klebsiella pneumoniae, </li>
+<li><input type="checkbox" name="q_GCF_000821865.1_30BO">Klebsiella pneumoniae, </li>
 <li><input type="checkbox" name="q_GCF_001064955.1_ASM106495v1">Klebsiella pneumoniae, strain=436_KPNE</li>
 <li><input type="checkbox" name="q_GCF_001031465.1_Kleb_pneu_CHS118_V1">Klebsiella pneumoniae, strain=CHS118</li>
 <li><input type="checkbox" name="q_GCF_001033245.1_Kleb_pneu_CHS229_V1">Klebsiella pneumoniae, strain=CHS229</li>
@@ -267,7 +267,7 @@
 <li><input type="checkbox" name="q_GCF_000389675.2_ASM38967v2">Lactobacillus acidophilus La-14, strain=La-14</li>
 <li><input type="checkbox" name="q_GCF_000165885.1_ASM16588v1">Lactobacillus crispatus CTV-05, strain=CTV-05</li>
 <li><input type="checkbox" name="q_GCF_001436045.1_ASM143604v1">Lactobacillus frumenti DSM 13145, strain=DSM 13145</li>
-<li><input type="checkbox" name="q_GCF_001433975.1_ASM143397v1">Lactobacillus johnsonii ATCC 33200, strain=ATCC 33200</li>
+<li><input type="checkbox" name="q_GCF_000159355.1_ASM15935v1">Lactobacillus johnsonii ATCC 33200, strain=ATCC 33200</li>
 <li><input type="checkbox" name="q_GCF_000958505.1_ASM95850v1">Lactobacillus paracasei NRIC 1917, strain=NRIC1917</li>
 <li><input type="checkbox" name="q_GCF_001436855.1_ASM143685v1">Lactobacillus plantarum, strain=DSM 13273</li>
 <li><input type="checkbox" name="q_GCF_001044075.1_ASM104407v1">Lactobacillus rhamnosus, strain=Lr138</li>
@@ -353,7 +353,7 @@
 <li><input type="checkbox" name="q_GCF_900033655.1_14555_5_92">Neisseria meningitidis, strain=2842STDY5881433</li>
 <li><input type="checkbox" name="q_GCF_900027415.1_14355_7_3">Neisseria meningitidis, strain=2842STDY5881632</li>
 <li><input type="checkbox" name="q_GCF_001152665.1_6714_2_6">Neisseria meningitidis, strain=NM1837</li>
-<li><input type="checkbox" name="q_GCF_000985915.1_NgalHAMBI1145Draft">Neorhizobium galegae bv. officinalis, </li>
+<li><input type="checkbox" name="q_GCF_000986015.1_NgalHAMBI490Draft">Neorhizobium galegae bv. officinalis, </li>
 <li><input type="checkbox" name="q_GCF_000308615.1_ASM30861v1">Nocardia jiangxiensis NBRC 101359, strain=NBRC 101359</li>
 <li><input type="checkbox" name="q_GCF_000755305.1_ASM75530v1">Nonlabens sediminis, strain=JCM 19294</li>
 <li><input type="checkbox" name="q_GCF_000286155.1_AWRIB418_v1">Oenococcus oeni AWRIB418, strain=AWRIB418</li>
@@ -378,13 +378,13 @@
 <li><input type="checkbox" name="q_GCF_000629105.1_Pseu_aeru_BWH031_V1">Pseudomonas aeruginosa BWH031, strain=BWH031</li>
 <li><input type="checkbox" name="q_GCF_000506225.1_JD325.contigs">Pseudomonas aeruginosa JD325, strain=JD325</li>
 <li><input type="checkbox" name="q_GCF_000412475.1_ASM41247v1">Pseudomonas aeruginosa str. J 1532, strain=J 1532</li>
-<li><input type="checkbox" name="q_GCF_001374695.1_225_Tsb_2_contigs_500">Pseudomonas aeruginosa, </li>
+<li><input type="checkbox" name="q_GCF_001373815.1_243_15_121C_contigs_500">Pseudomonas aeruginosa, </li>
 <li><input type="checkbox" name="q_GCF_001445005.1_ASM144500v1">Pseudomonas aeruginosa, strain=ATCC 43731</li>
 <li><input type="checkbox" name="q_GCF_000797325.1_AZPAE12422">Pseudomonas aeruginosa, strain=AZPAE12422</li>
 <li><input type="checkbox" name="q_GCF_000795065.1_AZPAE14812">Pseudomonas aeruginosa, strain=AZPAE14812</li>
 <li><input type="checkbox" name="q_GCF_000789885.1_AZPAE14915">Pseudomonas aeruginosa, strain=AZPAE14915</li>
 <li><input type="checkbox" name="q_GCF_000792965.1_AZPAE15016">Pseudomonas aeruginosa, strain=AZPAE15016</li>
-<li><input type="checkbox" name="q_GCF_000823945.1_LES_CF_sputum_CF03_contigs_10_a1">Pseudomonas aeruginosa, strain=Liverpool Epidemic Strain</li>
+<li><input type="checkbox" name="q_GCF_000824065.1_LES_CF_sputum_CF03_contigs_18_a1">Pseudomonas aeruginosa, strain=Liverpool Epidemic Strain</li>
 <li><input type="checkbox" name="q_GCF_001181685.1_P55_London_26_VIM_2_05_13">Pseudomonas aeruginosa, strain=P55_London_26_VIM_2_05_13</li>
 <li><input type="checkbox" name="q_GCF_001024755.1_ASM102475v1">Pseudomonas aeruginosa, strain=Pae_CF67.05c</li>
 <li><input type="checkbox" name="q_GCF_001035795.1_ASM103579v1">Pseudomonas aeruginosa, strain=Pae_CF67.10g</li>
@@ -392,7 +392,7 @@
 <li><input type="checkbox" name="q_GCF_001450165.1_WH-SGI-V-07370">Pseudomonas aeruginosa, strain=WH-SGI-V-07370</li>
 <li><input type="checkbox" name="q_GCF_001452305.1_WH-SGI-V-07645">Pseudomonas aeruginosa, strain=WH-SGI-V-07645</li>
 <li><input type="checkbox" name="q_GCF_000935825.1_PAVEPAVT10-G1">Pseudomonas avellanae, strain=PaVt10</li>
-<li><input type="checkbox" name="q_GCF_000285955.1_ASM28595v1">Pseudomonas fluorescens Wayne1, strain=Wayne1</li>
+<li><input type="checkbox" name="q_GCF_000285355.1_ASM28535v1">Pseudomonas fluorescens Wayne1, strain=Wayne1</li>
 <li><input type="checkbox" name="q_GCF_000287395.1_Pmen01">Pseudomonas mendocina DLHK, strain=DLHK</li>
 <li><input type="checkbox" name="q_GCF_001515585.1_ASM151558v2">Pseudomonas putida, strain=1A00316</li>
 <li><input type="checkbox" name="q_GCF_000282555.1_Pseudomonas.strGM102_v1.0">Pseudomonas sp. GM102, strain=GM102</li>
@@ -421,8 +421,8 @@
 <li><input type="checkbox" name="q_GCF_001478105.1_Salmonella_enterica_CVM_N31384-SQ_v1.0">Salmonella enterica subsp. enterica serovar Kentucky, strain=CVM N31384</li>
 <li><input type="checkbox" name="q_GCF_000964185.1_ASM96418v1">Salmonella enterica subsp. enterica serovar Mishmarhaemek, strain=OLC-1602</li>
 <li><input type="checkbox" name="q_GCF_000487655.1_ASM48765v1">Salmonella enterica subsp. enterica serovar Nchanga str. CFSAN001092, strain=CFSAN001092</li>
-<li><input type="checkbox" name="q_GCF_000985555.1_PA075">Salmonella enterica subsp. enterica serovar Paratyphi A, </li>
-<li><input type="checkbox" name="q_GCF_000983235.1_PA035">Salmonella enterica subsp. enterica serovar Paratyphi A, </li>
+<li><input type="checkbox" name="q_GCF_000984795.1_PA087">Salmonella enterica subsp. enterica serovar Paratyphi A, </li>
+<li><input type="checkbox" name="q_GCF_000984025.1_PA112">Salmonella enterica subsp. enterica serovar Paratyphi A, </li>
 <li><input type="checkbox" name="q_GCF_001245345.1_Salmonella_enterica_CVM_N50422_v1.0">Salmonella enterica subsp. enterica serovar Saintpaul, strain=CVM N50422</li>
 <li><input type="checkbox" name="q_GCF_001534825.1_ASM153482v1">Salmonella enterica subsp. enterica serovar Tennessee, strain=CFSAN001389</li>
 <li><input type="checkbox" name="q_GCF_001089865.1_9475_6_9">Salmonella enterica subsp. enterica serovar Typhi, strain=1008634</li>
@@ -552,7 +552,7 @@
 <li><input type="checkbox" name="q_GCF_001175105.1_6817_1_55">Streptococcus equi subsp. equi, strain=EQUI0008</li>
 <li><input type="checkbox" name="q_GCF_001175425.1_6903_4_69">Streptococcus equi subsp. equi, strain=EQUI0118</li>
 <li><input type="checkbox" name="q_GCF_001178845.1_6830_4_80">Streptococcus equi subsp. equi, strain=EQUI0225</li>
-<li><input type="checkbox" name="q_GCF_000474095.1_ASM47409v1">Streptococcus intermedius SK54, strain=SK54</li>
+<li><input type="checkbox" name="q_GCF_000258445.1_SintermediusSK54v1.0">Streptococcus intermedius SK54, strain=SK54</li>
 <li><input type="checkbox" name="q_GCF_000522885.1_out_k43_n4_samp19-contigs.fa">Streptococcus mutans B23Sm1, strain=B23Sm1</li>
 <li><input type="checkbox" name="q_GCF_000229845.1_SMUT7-NEX_10-279">Streptococcus mutans TCI-279, strain=TCI-279</li>
 <li><input type="checkbox" name="q_GCF_001588725.1_ASM158872v1">Streptococcus parasanguinis, strain=POW10</li>
@@ -561,15 +561,15 @@
 <li><input type="checkbox" name="q_GCF_000019025.1_ASM1902v1">Streptococcus pneumoniae Taiwan19F-14, strain=Taiwan19F-14</li>
 <li><input type="checkbox" name="q_GCF_001113445.1_5756_6_2">Streptococcus pneumoniae, strain=0278</li>
 <li><input type="checkbox" name="q_GCF_001330315.1_5366_8_5">Streptococcus pneumoniae, strain=09B01073</li>
-<li><input type="checkbox" name="q_GCF_001089025.1_6630_2_8">Streptococcus pneumoniae, strain=11A</li>
+<li><input type="checkbox" name="q_GCF_001335555.1_6631_4_21">Streptococcus pneumoniae, strain=11A</li>
 <li><input type="checkbox" name="q_GCF_001136565.1_6631_4_10">Streptococcus pneumoniae, strain=16F</li>
-<li><input type="checkbox" name="q_GCF_001168905.1_6259_8_23">Streptococcus pneumoniae, strain=19F</li>
+<li><input type="checkbox" name="q_GCF_001155325.1_6631_6_4">Streptococcus pneumoniae, strain=19F</li>
 <li><input type="checkbox" name="q_GCF_900038115.1_11658_2_90">Streptococcus pneumoniae, strain=2245STDY5608978</li>
 <li><input type="checkbox" name="q_GCF_900052695.1_11657_4_50">Streptococcus pneumoniae, strain=2245STDY5609138</li>
 <li><input type="checkbox" name="q_GCF_900060515.1_12291_5_5">Streptococcus pneumoniae, strain=2245STDY5699120</li>
 <li><input type="checkbox" name="q_GCF_900051175.1_13414_1_75">Streptococcus pneumoniae, strain=2245STDY5819496</li>
 <li><input type="checkbox" name="q_GCF_900052175.1_13414_3_18">Streptococcus pneumoniae, strain=2245STDY5819631</li>
-<li><input type="checkbox" name="q_GCF_001093705.1_6631_4_4">Streptococcus pneumoniae, strain=23A</li>
+<li><input type="checkbox" name="q_GCF_001157445.1_9803_7_7">Streptococcus pneumoniae, strain=23A</li>
 <li><input type="checkbox" name="q_GCF_900061875.1_10678_7_67">Streptococcus pneumoniae, strain=2690STDY5561685</li>
 <li><input type="checkbox" name="q_GCF_900055815.1_10702_5_19">Streptococcus pneumoniae, strain=2690STDY5561801</li>
 <li><input type="checkbox" name="q_GCF_900065225.1_10702_5_8">Streptococcus pneumoniae, strain=2690STDY5561925</li>
@@ -586,9 +586,9 @@
 <li><input type="checkbox" name="q_GCF_900024835.1_12754_2_62">Streptococcus pneumoniae, strain=2842STDY5753627</li>
 <li><input type="checkbox" name="q_GCF_900031535.1_12754_3_67">Streptococcus pneumoniae, strain=2842STDY5753728</li>
 <li><input type="checkbox" name="q_GCF_900021095.1_14355_8_75">Streptococcus pneumoniae, strain=2842STDY5881862</li>
-<li><input type="checkbox" name="q_GCF_001107525.1_6631_7_9">Streptococcus pneumoniae, strain=32F</li>
+<li><input type="checkbox" name="q_GCF_001152425.1_6631_1_18">Streptococcus pneumoniae, strain=32F</li>
 <li><input type="checkbox" name="q_GCF_001109385.1_6999_7_20">Streptococcus pneumoniae, strain=397079</li>
-<li><input type="checkbox" name="q_GCF_001106505.1_6593_5_13">Streptococcus pneumoniae, strain=6B</li>
+<li><input type="checkbox" name="q_GCF_001103825.1_9803_8_57">Streptococcus pneumoniae, strain=6B</li>
 <li><input type="checkbox" name="q_GCF_001126205.1_7444_8_11">Streptococcus pneumoniae, strain=9611+04103</li>
 <li><input type="checkbox" name="q_GCF_900065285.1_4948_3_8">Streptococcus pneumoniae, strain=B15567</li>
 <li><input type="checkbox" name="q_GCF_001126425.1_7622_2_5">Streptococcus pneumoniae, strain=BR1014</li>
@@ -625,8 +625,8 @@
 <li><input type="checkbox" name="q_GCF_001203035.1_6755_1_11">Streptococcus pneumoniae, strain=SMRU779</li>
 <li><input type="checkbox" name="q_GCF_001192315.1_6755_3_18">Streptococcus pneumoniae, strain=SMRU882</li>
 <li><input type="checkbox" name="q_GCF_001142905.1_6259_1_14">Streptococcus pneumoniae, strain=SN26573</li>
-<li><input type="checkbox" name="q_GCF_001196045.1_6731_1_13">Streptococcus pneumoniae, strain=type strain: N</li>
-<li><input type="checkbox" name="q_GCF_001089305.1_6630_1_24">Streptococcus pneumoniae, strain=type strain: N</li>
+<li><input type="checkbox" name="q_GCF_001161045.1_6631_3_22">Streptococcus pneumoniae, strain=type strain: N</li>
+<li><input type="checkbox" name="q_GCF_001145905.1_6630_1_19">Streptococcus pneumoniae, strain=type strain: N</li>
 <li><input type="checkbox" name="q_GCF_000628405.1_Stre_pyog_ABC020014764_V1">Streptococcus pyogenes ABC020014764, strain=ABC020014764</li>
 <li><input type="checkbox" name="q_GCF_000631165.1_Stre_pyog_ABC020052378_V1">Streptococcus pyogenes ABC020052378, strain=ABC020052378</li>
 <li><input type="checkbox" name="q_GCF_000772245.1_ASM77224v1">Streptococcus pyogenes, strain=1E1</li>

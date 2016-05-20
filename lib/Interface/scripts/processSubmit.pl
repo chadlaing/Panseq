@@ -102,13 +102,13 @@ sub _launchPanseq{
     my $runMode = $cgi->param('runMode');
 
 
-    if($runMode eq 'novel'){
+    if($runMode eq 'novel' || $runMode eq 'pan'){
 #
         #for a novel run we need both query / reference directories
         my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
+        my $resultsDir = $newDir . 'results/';
         my $queryDir = $newDir . 'query/';
         my $refDir = $newDir . 'reference/';
-        my $resultsDir = $newDir . 'results/';
 
         unless(_createDirectory($newDir) == 1){
             _makeErrorPage();
@@ -118,8 +118,10 @@ sub _launchPanseq{
             _makeErrorPage();
         }
 
-        unless(_createDirectory($refDir) == 1){
-            _makeErrorPage();
+        if($runMode eq 'novel'){
+            unless(_createDirectory($refDir) == 1){
+                _makeErrorPage();
+            }
         }
 
         #create a hash of settings
@@ -127,24 +129,33 @@ sub _launchPanseq{
         #in this hash the results dir is one level down from the base dir
         #baseDirectory in Panseq really should have been called results,
         #but it is too late for that change now
-
         my %runSettings = (
-            queryDirectory => $queryDir,
-            referenceDirectory => $refDir,
-            mummerDirectory => $serverSettings->{'mummerDirectory'},
-            blastDirectory => $serverSettings->{'blastDirectory'},
-            numberOfCores => $serverSettings->{'numberOfCores'},
-            baseDirectory => $resultsDir,
-            numberOfCores => $serverSettings->{'numberOfCores'},
-            muscleExecutable => $serverSettings->{'muscleExecutable'},
-            outputDirectory => $newDir,
-            runMode => 'novel',
-            nucB => $cgi->param('nucB'),
-            nucC => $cgi->param('nucC'),
-            nucD => $cgi->param('nucD'),
-            nucG => $cgi->param('nucG'),
-            nucL => $cgi->param('nucL')
+            queryDirectory     => $queryDir,
+            mummerDirectory    => $serverSettings->{'mummerDirectory'},
+            blastDirectory     => $serverSettings->{'blastDirectory'},
+            numberOfCores      => $serverSettings->{'numberOfCores'},
+            baseDirectory      => $resultsDir,
+            numberOfCores      => $serverSettings->{'numberOfCores'},
+            muscleExecutable   => $serverSettings->{'muscleExecutable'},
+            outputDirectory    => $newDir,
+            nucB               => $cgi->param( 'nucB' ),
+            nucC               => $cgi->param( 'nucC' ),
+            nucD               => $cgi->param( 'nucD' ),
+            nucG               => $cgi->param( 'nucG' ),
+            nucL               => $cgi->param( 'nucL' )
         );
+
+        if($runMode eq 'novel') {
+            $runSettings{runMode}='novel';
+            $runSettings{referenceDirectory} = $refDir;
+        }
+        else{
+            #run mode is pan
+            $runSettings{runMode} = 'pan';
+            $runSettings{fragmentationSize} = $cgi->param('fragmentationSize');
+            $runSettings{coreGenomeThreshold} = $cgi->param('coreGenomeThreshold');
+            $runSettings{blastWordSize} = $cgi->param('blastWordSize');
+        }
 
         my $batchFile = _createBatchFile(\%runSettings);
         if($batchFile eq 0){
@@ -161,16 +172,20 @@ sub _launchPanseq{
             _makeErrorPage();
         }
 
-        my @rFiles = $cgi->upload('userReferenceFiles');
-        unless(_uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) ==1){
-            _makeErrorPage();
+        if($runMode eq 'novel'){
+            my @rFiles = $cgi->upload('userReferenceFiles');
+            unless(_uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) ==1){
+                _makeErrorPage();
+            }
+
+            unless(_checkFiles([$refDir]) == 1){
+                _makeErrorPage();
+            }
         }
 
-
-        unless(_checkFiles([$queryDir, $refDir]) == 1){
+        unless(_checkFiles([$queryDir]) == 1){
             _makeErrorPage();
         }
-
 
         #check that panseq finished correctly
         unless(_runPanseq($batchFile) == 1){
