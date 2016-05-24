@@ -60,6 +60,8 @@ Chad Laing (chadlaing@gmail.com)
 
 package Modules::LociSelector::LociSelector;
 
+use strict;
+use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use IO::File;

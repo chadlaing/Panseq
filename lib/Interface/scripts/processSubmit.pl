@@ -101,18 +101,19 @@ sub _launchPanseq{
     #we need to determine what run mode (pan, novel, loci)
     my $runMode = $cgi->param('runMode');
 
+    #we need a new directory regardless of the mode
+    my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
+    unless(_createDirectory($newDir) == 1){
+        _makeErrorPage();
+    }
 
     if($runMode eq 'novel' || $runMode eq 'pan'){
 #
         #for a novel run we need both query / reference directories
-        my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
         my $resultsDir = $newDir . 'results/';
         my $queryDir = $newDir . 'query/';
         my $refDir = $newDir . 'reference/';
 
-        unless(_createDirectory($newDir) == 1){
-            _makeErrorPage();
-        }
 
         unless(_createDirectory($queryDir) == 1){
             _makeErrorPage();
@@ -196,9 +197,6 @@ sub _launchPanseq{
         unless(_createDownloadPage() ==1){
             _makeErrorPage();
         }
-
-    }
-    elsif($runMode eq 'pan'){
 
     }
     elsif($runMode eq 'loci'){

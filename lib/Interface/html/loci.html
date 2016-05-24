@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Panseq</title>
+    <link href="/page/../css/panseq.css" rel="stylesheet">
+    <link href="/page/../images/favicon.ico" rel="shortcut icon">
+</head>
+<body>
+<div id="panseqImage">
+    <p>Pan~genomic sequence analysis</p>
+</div>
+
+<div id="nav">
+    <ul>
+        <li><a href="/page/index.html">Home</a></li>
+        <li><a href="/page/novel.html">Novel Regions</a></li>
+        <li><a href="/page/pan.html">Pan-genome</a></li>
+        <li><a href="/page/loci.html">Loci</a></li>
+        <li><a href="/page/faq.html">FAQ</a></li>
+    </ul>
+</div>
+
+
+    <div class="mainBody">
+
+        <h1>Loci Finder</h1>
+        <p>
+            The Loci Finder constructs loci sets that are maximized with respect to the unique number of fingerprints, as well as the discriminatory power of the loci among the input dataset. Input is a tab-delimited file with row names identifying the loci, and column names identifying the strains or genomes the loci are found in. Missing data may be denoted by the characters '?', '-', or '.'
+        </p>
+
+        <form action="/process/processSubmit.pl" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="runMode" value="loci"/>
+        <h1>Select Parameters</h1>
+        <p>
+
+        </p>
+    </div>
+
+</body>
+
+<footer class="horWrapper">
+    &copy; 2016 Public Health Agency of Canada. All Rights Reserved.
+</footer>
+
+</html>
