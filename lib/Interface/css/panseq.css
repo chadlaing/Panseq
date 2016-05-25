@@ -56,11 +56,24 @@ h1{
     width: 100%;
 }
 
+h1 ~ h2{
+    float:left;
+    margin-top:1.5em;
+    margin-bottom:0.3em;
+}
+
 p{
     float:left;
     width: 45em;
     line-height: 1.3em;
 }
+
+h2 ~ p{
+    float:left;
+    padding-top: 30em;
+    background-color: red;
+}
+
 
 .mainBody p{
     font-size: 1.5em;
@@ -101,6 +114,25 @@ button{
     /*display:inline-block;*/
     /*text-align:left;*/
     font-size:1.4em;
+}
+
+p + .cBlock{
+    margin-top: 0.5em;
+}
+
+.cBlock + p{
+    margin-top: 0.5em;
+}
+
+.cBlock{
+    font-size: 1.4em;
+    width:100%;
+    margin-left: 3em;
+    margin-bottom: 0em;
+    font-family: Courier;
+    float:left;
+    display:inline-block;
+
 }
 
 .horWrapper{

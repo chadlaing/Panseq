@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Panseq</title>
-    <link href="/css/panseq.css" rel="stylesheet">
-    <link href="/images/favicon.ico" rel="shortcut icon">
+    <link href="/panseq/css/panseq.css" rel="stylesheet">
+    <link href="/panseq/images/favicon.ico" rel="shortcut icon">
 </head>
 <body>
 <div id="panseqImage">
@@ -13,30 +13,92 @@
 
 <div id="nav">
     <ul>
-        <li><a href="/page/index.html">Home</a></li>
-        <li><a href="/page/novel.html">Novel Regions</a></li>
-        <li><a href="/page/pan.html">Pan-genome</a></li>
-        <li><a href="/page/loci.html">Loci</a></li>
-        <li><a href="/page/faq.html">FAQ</a></li>
+        <li><a href="/panseq/page/index.html">Home</a></li>
+        <li><a href="/panseq/page/novel.html">Novel Regions</a></li>
+        <li><a href="/panseq/page/pan.html">Pan-genome</a></li>
+        <li><a href="/panseq/page/loci.html">Loci</a></li>
+        <li><a href="/panseq/page/faq.html">FAQ</a></li>
     </ul>
 </div>
 
 
     <div class="mainBody">
 
-        <h1>Loci Finder</h1>
+        <h1>Frequently Asked Questions</h1>
+        <h2>How do I retrieve my results?</h2>
         <p>
-            The Loci Finder constructs loci sets that are maximized with respect to the unique number of fingerprints, as well as the discriminatory power of the loci among the input dataset. Input is a tab-delimited file with row names identifying the loci, and column names identifying the strains or genomes the loci are found in. Missing data may be denoted by the characters '?', '-', or '.'
+            Visit the link provided after clicking "Analyze!" any time in the subsequent month to download a .zip file of your results.
         </p>
 
-        <form action="/process/processSubmit.pl" method="post" enctype="multipart/form-data">
-            <input type="hidden" name="runMode" value="loci"/>
-        <h1>Select Parameters</h1>
-        <p>
-
+        <h2>How do I compare my own sequences?</h2>
+        <p>In either the Novel Regions or the Pan-Genome tab, click the "Browse", or "Choose Files" button under the "Select Query Strains" or "Select Reference Strains" heading. You may select more than one file at a time. All files selected this way will be uploaded and included in the analyses when the "Analyze!" button is pressed.
         </p>
-    </div>
 
+        <h2>What format should my uploaded sequences be in?</h2>
+        <p>
+            Panseq currently only accepts fasta or multi-fasta formatted files. More than one genome may be in a single file, but for all files with multiple genomes, a distinct identifier must be present in the fasta header of each contig belonging to the same genome.
+
+            The unique identifier could be the strain name or anything else of your choosing, but it must be included using the "local" designation: lcl|unique_identifer|. To reformat the contigs, find and replace all ">" characters in your multi-fasta file with >lcl|unique_identifer|. Thus, if the unique identifiers were "strain1", and "strain2" the reformatted contigs would look as follows:
+        </p>
+
+        <p>
+            <div class="cBlock">>lcl|strain1|contig000001</div>
+            <div class="cBlock">ACTGTTT...</div>
+        </p>
+
+        <p>
+            <div class="cBlock">>lcl|strain1|contig000002</div>
+            <div class="cBlock">CGGGATT...</div>
+        </p>
+
+        <p>
+            <div class="cBlock">>lcl|strain2|contig000001</div>
+            <div class="cBlock">ACTGTTT...</div>
+        </p>
+
+        <p>
+            <div class="cBlock">>lcl|strain2|contig000002</div>
+            <div class="cBlock">CGGGATT...</div>
+        </p>
+
+    <p>
+            Common database file formats are supported by default. For example ref|, gb|, emb|, dbj|, and gi| do not need to be modified as described above. For legacy purposes, the name=|unique_identifier| is supported in addition to lcl|unique_identifier|. Please note that spaces are not permitted in the unique identifier. Only letters (A-Z, a-z), digits (0-9) and the underscore "_" are valid characters.
+
+            Files that contain multiple fasta sequences without any of the above identifiers in their header will be treated as coming from the same genome, and be named according the file that was submitted.
+        </p>
+
+
+        <h2>How does the Novel Region Finder work?</h2>
+        <p>
+            The Novel Region Finder currently identifies any genomic regions present in any of the "Selected Query" sequences that are not present in any of the "Selected Reference" sequences, and returns these regions in multi-fasta format. These comparisons are done using the nucmer program from MUMmer v3, the parameters of which can be adjusted by the user prior to submitting an analysis. A sample of the output from novelRegions.fasta looks as follows:
+        </p>
+            <p>
+                <div class="cBlock">>lcl|strain1|contig000001_(505..54222)</div>
+                <div class="cBlock">CCGTACGGGATTA...</div>
+            </p>
+        <p>
+            Where the name of the contig containing the novel region is listed, followed by the nucleotide positions that were determined to be "novel" based on the comparison run. Lastly, the corresponding novel nucleotide sequence is included.
+        </p>
+
+    <h2>How do Pan-Genome Analyses work?</h2>
+        <p>
+            All of the "Selected Query" strains are used to determine a non-redundant pan-genome. This is done by choosing a seed sequence for the pan-genome and iteratively building the pan-genome by comparing non-seed sequences to the "pan-genome", using the Novel Region Finder described above. For each comparison, sequences not present in the "pan-genome" are added, and the expanded "pan-genome" is used for the comparison against the next sequence. This iteration continues until a non-redundant pan-genome has been constructed.
+        </p>
+
+        <p>
+            Following the creation of this pan-genome for the selected sequences, the pan-genome is segmented into fragments of user-defined size. These fragments are subsequently queried against all of the sequences in the "Selected Query" list using BLASTn. The presence or absence of each pan-genome fragment is determined for each "Selected Query", based on the Sequence Identity threshold set by the user. Pan-genome fragments present in a minimum number of genomes (determined by the core genome threshold) are aligned using Muscle.
+        </p>
+
+        <p>
+            Single nucleotide polymorphisms (SNPs) in these alignments are determined and used to generate a Phylip formatted file of all SNPs for use in downstream phylogenetic analyses. A phylip formatted file of pan-genome fragment presence / absence is also created, as are tab-delimited tables for both SNP and pan-genome fragment presence / absence (snp_table.txt and binary_table.txt, respectively), and a detailed result file listing the names, positions and values of the SNP and binary data (core_snps.txt and pan_genome.txt).
+        </p>
+
+        <p>
+            The detailed results file provides data in six columns: Locus Id, Locus Name, Genome, Allele, Start bp and Contig. Locus Id will be a 10-digit number that is a unique identifier for the locus; this number is used in the tabular output for both the SNP and binary data, and can be used for cross-referencing. Locus Name and Genome provide the human-readable names for the locus and the Genome. The Allele columns lists the actual data for the comparison. For pan-genome fragment presence / absence this is binary "0" or "1" data. For the SNP table, this is "A", "C", "T", "G" or "-". Start bp refers to the nucleotide position of the locus in base pairs, for example "45933"; the nucleotide position information is for the start of the fragment for the binary data. Lastly, the Contig column lists the name of the contig the locus is found on, which may differ than the Genome column, for genomes comprised of multi-fasta files.
+        </p>
+
+
+</div>
 </body>
 
 <footer class="horWrapper">
