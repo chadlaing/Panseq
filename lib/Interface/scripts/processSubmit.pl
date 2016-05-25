@@ -13,7 +13,7 @@ use Carp;
 my $cgi = CGI->new();
 my $serverSettings = _loadServerSettings();
 my $NCBI_PREFIX = '/genomes/all/';
-my $RESULTS_URL = '/page/output/' . $serverSettings->{'resultsHtml'};
+my $RESULTS_URL = '/panseq/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $pid = fork();
 if(!defined $pid){
@@ -29,8 +29,8 @@ my $hereDoc = <<END_HTML;
 <head>
     <meta charset="UTF-8">
     <title>Panseq</title>
-    <link href="/page/../css/panseq.css" rel="stylesheet">
-    <link href="/page/../images/favicon.ico" rel="shortcut icon">
+    <link href="/panseq/css/panseq.css" rel="stylesheet">
+    <link href="/panseq/images/favicon.ico" rel="shortcut icon">
 </head>
 <body>
 <div id="panseqImage">
@@ -40,11 +40,11 @@ my $hereDoc = <<END_HTML;
 
 <div id="nav">
     <ul>
-        <li><a href="/page/index.html">Home</a></li>
-        <li><a href="/page/novel.html">Novel Regions</a></li>
-        <li><a href="/page/pan.html">Pan-genome</a></li>
-        <li><a href="/page/loci.html">Loci</a></li>
-        <li><a href="/page/faq.html">FAQ</a></li>
+        <li><a href="/panseq/page/index.html">Home</a></li>
+        <li><a href="/panseq/page/novel.html">Novel Regions</a></li>
+        <li><a href="/panseq/page/pan.html">Pan-genome</a></li>
+        <li><a href="/panseq/page/loci.html">Loci</a></li>
+        <li><a href="/panseq/page/faq.html">FAQ</a></li>
     </ul>
 </div>
 
@@ -219,7 +219,7 @@ sub _createDownloadPage{
 
         my $downloadHtml =   $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'} . 'download.html';
         my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
-        my $outputResultsSym = '/page/output/' . $serverSettings->{resultsHtml} . '.zip';
+        my $outputResultsSym = '/panseq/page/output/' . $serverSettings->{resultsHtml} . '.zip';
         my $serverResultsSym = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml} . '.zip';
 
 my $hereDoc = <<END_HTML;
@@ -228,8 +228,8 @@ my $hereDoc = <<END_HTML;
 <head>
     <meta charset="UTF-8">
     <title>Panseq</title>
-    <link href="/page/../css/panseq.css" rel="stylesheet">
-    <link href="/page/../images/favicon.ico" rel="shortcut icon">
+    <link href="/panseq/css/panseq.css" rel="stylesheet">
+    <link href="/panseq/images/favicon.ico" rel="shortcut icon">
 </head>
 <body>
 <div id="panseqImage">
@@ -239,11 +239,11 @@ my $hereDoc = <<END_HTML;
 
 <div id="nav">
     <ul>
-        <li><a href="/page/index.html">Home</a></li>
-        <li><a href="/page/novel.html">Novel Regions</a></li>
-        <li><a href="/page/pan.html">Pan-genome</a></li>
-        <li><a href="/page/loci.html">Loci</a></li>
-        <li><a href="/page/faq.html">FAQ</a></li>
+        <li><a href="/panseq/page/index.html">Home</a></li>
+        <li><a href="/panseq/page/novel.html">Novel Regions</a></li>
+        <li><a href="/panseq/page/pan.html">Pan-genome</a></li>
+        <li><a href="/panseq/page/loci.html">Loci</a></li>
+        <li><a href="/panseq/page/faq.html">FAQ</a></li>
     </ul>
 </div>
 
