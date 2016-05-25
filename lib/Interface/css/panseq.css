@@ -70,8 +70,8 @@ p{
 
 h2 ~ p{
     float:left;
-    padding-top: 30em;
-    background-color: red;
+    /*padding-top: 30em;*/
+    /*background-color: red;*/
 }
 
 
