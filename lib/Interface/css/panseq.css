@@ -49,6 +49,12 @@ ul{
     margin-bottom: 2em;
 }
 
+
+.mainBody ul li{
+    overflow: hidden;
+    margin-left:0em;
+}
+
 h1{
     float:left;
     margin-top: 1em;
@@ -77,6 +83,10 @@ h2 ~ p{
 
 .mainBody p{
     font-size: 1.5em;
+}
+
+#faq p +p{
+    margin-top: 1.3em;
 }
 
 h1 ~ p{
@@ -108,20 +118,9 @@ button{
     margin-top: 1em;
 }
 
-
 .mainBody{
     float:left;
-    /*display:inline-block;*/
-    /*text-align:left;*/
     font-size:1.4em;
-}
-
-p + .cBlock{
-    margin-top: 0.5em;
-}
-
-.cBlock + p{
-    margin-top: 0.5em;
 }
 
 .cBlock{
@@ -182,10 +181,10 @@ p + .cBlock{
     margin-top:1em;
     float:left;
     border:1px solid #2b2b2b;
-    width:50em;
+    width:60em;
     height:10em;
     overflow-y: scroll;
-    overflow-x: auto;
+    overflow-x: hidden;
     padding-left:0;
     margin-left:0;
 }
@@ -195,6 +194,11 @@ p + .cBlock{
     padding-left: 0;
     margin-left: 0;
     text-align: left;
+    overflow-x: hidden;
+}
+
+.selectBox ul li{
+    overflow: hidden;
 }
 
 

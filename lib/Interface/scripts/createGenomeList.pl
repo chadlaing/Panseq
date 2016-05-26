@@ -37,6 +37,26 @@ while(my $line = $genomeFH->getline()){
 
     my $organismName = $la[7];
     my $strainName = $la[8];
+    my $isolateName = $la[9];
+    my $asmName = $la[15];
+
+    my $fullName = $organismName;
+    if($strainName ne ""){
+        $strainName =~ s/strain=//;
+
+        #prevent duplicates like Campylobacter jejuni, Campylobacter jejuni,
+        if($strainName ne $fullName){
+            $fullName .= ', ' . $strainName;
+        }
+    }
+
+    if($isolateName ne ""){
+        $fullName .= ', ' . $isolateName;
+    }
+
+    if($asmName ne ""){
+        $fullName .= ', ' . $asmName;
+    }
 
     my $ftpName;
     if($la[19] =~ m/genomes\/all\/(.+)/){
@@ -45,7 +65,7 @@ while(my $line = $genomeFH->getline()){
     else{
         die "Could not get FTP location for $organismName\n";
     }
-    $fullHash{$ftpName}=$organismName . ', ' . $strainName;
+    $fullHash{$ftpName}=$fullName;
 }
 
 open(my $tempFH, '<', $reducedTempFile) or die "Could not open $reducedTempFile $!\n";
