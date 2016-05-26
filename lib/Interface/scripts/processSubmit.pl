@@ -73,26 +73,22 @@ else {
     if(!defined $gid){
         die "cannot fork process!\n $!";
     };
-    open STDIN, "</dev/null";
-    open STDOUT, ">/dev/null";
-    open STDERR, ">/dev/null";
+#    open STDIN, "</dev/null";
+#    open STDOUT, ">/dev/null";
+#    open STDERR, ">/dev/null";
 
     if($gid){
-        return 1;
+        #good
     }
     else{
         #We need to close STDERR otherwise Apache will wait for the
         #analyses to complete before showing the in-progress page.
-        my $output = _launchPanseq();
-
+        _launchPanseq();
     }
-
 }
 
 
 sub _launchPanseq{
-
-
     #link the waiting html to the current html page
     my $symFile = $serverSettings->{panseqDirectory} . 'Interface/html/output/' . $serverSettings->{resultsHtml};
     my $waitingHtml = $serverSettings->{panseqDirectory} . 'Interface/html/waiting.html';
@@ -103,8 +99,8 @@ sub _launchPanseq{
     my $runMode = $cgi->param('runMode');
 
     #we need a new directory regardless of the mode
-    my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
-    unless(_createDirectory($newDir) == 1){
+    my $newDir = eval{$serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'}};
+    if($@){
         _makeErrorPage();
     }
 
@@ -115,13 +111,14 @@ sub _launchPanseq{
         my $queryDir = $newDir . 'query/';
         my $refDir = $newDir . 'reference/';
 
-
-        unless(_createDirectory($queryDir) == 1){
+        eval{_createDirectory($queryDir)};
+        if($@){
             _makeErrorPage();
         }
 
         if($runMode eq 'novel'){
-            unless(_createDirectory($refDir) == 1){
+            eval{_createDirectory($refDir)};
+            if($@){
                 _makeErrorPage();
             }
         }
@@ -158,65 +155,62 @@ sub _launchPanseq{
             $runSettings{coreGenomeThreshold} = $cgi->param('coreGenomeThreshold');
             $runSettings{blastWordSize} = $cgi->param('blastWordSize');
         }
-
-        my $batchFile = _createBatchFile(\%runSettings);
-        if($batchFile eq 0){
+        my $batchFile = eval{_createBatchFile(\%runSettings)};
+        if($@){
             _makeErrorPage();
         }
         else{
-            unless(_downloadUserSelections(\%runSettings) == 1){
+            eval{_downloadUserSelections(\%runSettings)};
+            if($@){
                 _makeErrorPage();
             }
         }
 
+
         my @qFiles = $cgi->upload('userQueryFiles');
-        unless(_uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'}) == 1){
+        eval{_uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'}) };
+        if($@){
             _makeErrorPage();
         }
 
 
-        open(my $outFH, '>', "/home/chad/panseqServer/panseq.finish") or die "$!";
-
         if($runMode eq 'novel'){
             my @rFiles = $cgi->upload('userReferenceFiles');
-            unless(_uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) ==1){
+
+            eval{ _uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) };
+            if($@){
                 _makeErrorPage();
             }
 
-            my $checkedRefFileStatus = _checkFiles([$refDir]);
-            $outFH->print("checkedRefFileStatus: $checkedRefFileStatus\n");
-            unless($checkedRefFileStatus == 1){
+            eval{ _checkFiles([$refDir])};
+            if($@){
                 _makeErrorPage();
             }
         }
 
-        my $checkedQueryFileStatus = _checkFiles([$queryDir]);
-        $outFH->print("checkedQueryFileStatus: $checkedQueryFileStatus\n");
-        unless($checkedQueryFileStatus == 1){
+        eval{  _checkFiles([$queryDir]) };
+        if($@){
             _makeErrorPage();
         }
 
         #check that panseq finished correctly
-        my $panseqExitStatus = _runPanseq($batchFile);
-        $outFH->print("panseqExitStatus: $panseqExitStatus\n");
-        unless($panseqExitStatus == 1){
+        eval{_runPanseq($batchFile)};
+        if($@){
             _makeErrorPage();
         }
 
         #everything went peachy, no errors, so link to the download page
-        unless(_createDownloadPage() ==1){
+        eval{_createDownloadPage()};
+        if($@){
             _makeErrorPage();
         }
-
     }
     elsif($runMode eq 'loci'){
 
     }
     else{
-        #croak "Panseq unknown runmode\n";
-        return 0;
+        _makeErrorPage();
     }
-    return 1;
 }
 
 
@@ -327,18 +321,13 @@ sub _uploadUserFiles{
 sub _checkFiles{
     my $directoriesRef = shift;
 
-    foreach my $dir(@{$directoriesRef}){
+    foreach my $dir(@{$directoriesRef}) {
         #requires functional SLURM
-        my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'Interface/scripts/single_file_check.pl ' . $dir;
-        my $systemCode = readpipe("$systemLine");
-        return $systemCode;
-#        unless($systemCode == 0){
-#            return 0;
-#        }
+        my $systemLine = 'srun perl '.$serverSettings->{'panseqDirectory'}.'Interface/scripts/single_file_check.pl '.$dir;
+        system( $systemLine );
     }
-
-    return 1;
 }
+
 
 sub _makeErrorPage{
     my $tempHtml =  $serverSettings->{'panseqDirectory'} . 'Interface/html/'. 'error.html';
@@ -355,14 +344,7 @@ sub _runPanseq{
 
     #requires SLURM to be operational
     my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'panseq.pl ' . $configFile;
-    my $systemExit = readpipe("$systemLine");
-    return $systemExit;
-#    if($systemExit == 0){
-#       return 1;
-#    }
-#    else{
-#        return $systemExit;
-#    }
+    system($systemLine);
 }
 
 
@@ -420,8 +402,6 @@ sub _downloadUserSelections{
         $extracter->extract(to=>$f . '.fna') or die ("Could not extract $f\n" and return 0);
         unlink $f;
     }
-
-    return 1;
 }
 
 
@@ -429,7 +409,7 @@ sub _createBatchFile{
     my $paramRef = shift;
 
     my $batchFile = $paramRef->{'outputDirectory'} . 'panseq.batch';
-    open(my $batchFH, '>', $batchFile) or die ("Could not create $batchFile\n$!" and return 0);
+    open(my $batchFH, '>', $batchFile) or die ("Could not create $batchFile\n$!");
 
     foreach my $k(sort keys %{$paramRef}){
         $batchFH->print($k . "\t" . $paramRef->{$k} . "\n");
@@ -484,12 +464,7 @@ sub _createDirectory{
         #we don't want any permission issues, so don't downgrade the directory permissions
         umask(0);
         #from File::Path
-        make_path($dirName) or die ("Couldn't create fastaBase $dirName\n" and return 0);
+        make_path($dirName) or die ("Couldn't create fastaBase $dirName\n");
 
-        return 1;
     }
-    else{
-        return 0;
-    }
-
 }
