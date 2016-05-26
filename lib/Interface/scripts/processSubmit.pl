@@ -84,6 +84,7 @@ else {
         #We need to close STDERR otherwise Apache will wait for the
         #analyses to complete before showing the in-progress page.
         my $output = _launchPanseq();
+
     }
 
 }
@@ -173,23 +174,32 @@ sub _launchPanseq{
             _makeErrorPage();
         }
 
+
+        open(my $outFH, '>', "/home/chad/panseqServer/panseq.finish") or die "$!";
+
         if($runMode eq 'novel'){
             my @rFiles = $cgi->upload('userReferenceFiles');
             unless(_uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) ==1){
                 _makeErrorPage();
             }
 
-            unless(_checkFiles([$refDir]) == 1){
+            my $checkedRefFileStatus = _checkFiles([$refDir]);
+            $outFH->print("checkedRefFileStatus: $checkedRefFileStatus\n");
+            unless($checkedRefFileStatus == 1){
                 _makeErrorPage();
             }
         }
 
-        unless(_checkFiles([$queryDir]) == 1){
+        my $checkedQueryFileStatus = _checkFiles([$queryDir]);
+        $outFH->print("checkedQueryFileStatus: $checkedQueryFileStatus\n");
+        unless($checkedQueryFileStatus == 1){
             _makeErrorPage();
         }
 
         #check that panseq finished correctly
-        unless(_runPanseq($batchFile) == 1){
+        my $panseqExitStatus = _runPanseq($batchFile);
+        $outFH->print("panseqExitStatus: $panseqExitStatus\n");
+        unless($panseqExitStatus == 1){
             _makeErrorPage();
         }
 
@@ -320,11 +330,11 @@ sub _checkFiles{
     foreach my $dir(@{$directoriesRef}){
         #requires functional SLURM
         my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'Interface/scripts/single_file_check.pl ' . $dir;
-        my $systemCode = system($systemLine);
-
-        unless($systemCode == 0){
-            return 0;
-        }
+        my $systemCode = readpipe("$systemLine");
+        return $systemCode;
+#        unless($systemCode == 0){
+#            return 0;
+#        }
     }
 
     return 1;
@@ -345,14 +355,14 @@ sub _runPanseq{
 
     #requires SLURM to be operational
     my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'panseq.pl ' . $configFile;
-    my $systemExit = system($systemLine);
-
-    if($systemExit == 0){
-       return 1;
-    }
-    else{
-        return 0;
-    }
+    my $systemExit = readpipe("$systemLine");
+    return $systemExit;
+#    if($systemExit == 0){
+#       return 1;
+#    }
+#    else{
+#        return $systemExit;
+#    }
 }
 
 
