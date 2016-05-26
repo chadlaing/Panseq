@@ -397,6 +397,9 @@ sub _downloadUserSelections{
 
         push @allDownloadedFiles, $localFile;
         $ftp->get($ncbiFile, $localFile) or die ("Cannot get $q" . $ftp->message and return 0);
+
+        #don't get banned from NCBI
+        sleep 3;
     }
 
     foreach my $r(@ncbiReferenceGenomes){
@@ -405,6 +408,9 @@ sub _downloadUserSelections{
 
         push @allDownloadedFiles, $localFile;
         $ftp->get($ncbiFile, $localFile) or die ("Cannot get $r" . $ftp->message and return 0);
+
+        #don't get banned from NCBI
+        sleep 3;
     }
     $ftp->ascii();
 
