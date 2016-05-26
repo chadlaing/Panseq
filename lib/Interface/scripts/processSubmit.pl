@@ -114,12 +114,14 @@ sub _launchPanseq{
         eval{_createDirectory($queryDir)};
         if($@){
             _makeErrorPage();
+            die($@);
         }
 
         if($runMode eq 'novel'){
             eval{_createDirectory($refDir)};
             if($@){
                 _makeErrorPage();
+                die($@);
             }
         }
 
@@ -158,11 +160,13 @@ sub _launchPanseq{
         my $batchFile = eval{_createBatchFile(\%runSettings)};
         if($@){
             _makeErrorPage();
+            die($@);
         }
         else{
             eval{_downloadUserSelections(\%runSettings)};
             if($@){
                 _makeErrorPage();
+                die($@);
             }
         }
 
@@ -171,6 +175,7 @@ sub _launchPanseq{
         eval{_uploadUserFiles(\@qFiles, $runSettings{'queryDirectory'}) };
         if($@){
             _makeErrorPage();
+            die($@);
         }
 
 
@@ -180,29 +185,34 @@ sub _launchPanseq{
             eval{ _uploadUserFiles(\@rFiles, $runSettings{'referenceDirectory'}) };
             if($@){
                 _makeErrorPage();
+                die($@);
             }
 
             eval{ _checkFiles([$refDir])};
             if($@){
                 _makeErrorPage();
+                die($@);
             }
         }
 
         eval{  _checkFiles([$queryDir]) };
         if($@){
             _makeErrorPage();
+            die($@);
         }
 
         #check that panseq finished correctly
-        eval{_runPanseq($batchFile)};
+        eval '_runPanseq($batchFile)';
         if($@){
             _makeErrorPage();
+            die($@);
         }
 
         #everything went peachy, no errors, so link to the download page
         eval{_createDownloadPage()};
         if($@){
             _makeErrorPage();
+            die($@);
         }
     }
     elsif($runMode eq 'loci'){
@@ -210,9 +220,9 @@ sub _launchPanseq{
     }
     else{
         _makeErrorPage();
+        die($@);
     }
 }
-
 
 
 sub _createDownloadPage{
@@ -344,7 +354,10 @@ sub _runPanseq{
 
     #requires SLURM to be operational
     my $systemLine = 'srun perl ' . $serverSettings->{'panseqDirectory'} . 'panseq.pl ' . $configFile;
-    system($systemLine);
+    my $panseqReturn = eval{readpipe($systemLine)};
+    unless($panseqReturn =~ m/Creating zip file/){
+        _makeErrorPage();
+    }
 }
 
 
