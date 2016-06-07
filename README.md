@@ -53,7 +53,7 @@ The following free, external programs must also be installed:
 
 * [MUMmer:](http://mummer.sourceforge.net)
 * [BLAST+:](http://blast.ncbi.nlm.nih.gov/Blast.cgi)
-* [Muscle:](www.drive5.com/muscle)
+* [Muscle:](http://www.drive5.com/muscle)
 
 ## Testing your installation
 
