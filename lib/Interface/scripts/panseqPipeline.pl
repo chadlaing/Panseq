@@ -9,8 +9,10 @@ use Net::FTP;
 use Archive::Extract;
 use Carp;
 
+
 my $cgi = CGI->new();
 my $serverSettings = _loadServerSettings();
+my $NCBI_PREFIX = '/genomes/all/';
 my $RESULTS_URL = '/panseq/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $pid = fork();
@@ -97,7 +99,10 @@ sub _launchPanseq{
     my $runMode = $cgi->param('runMode');
 
     #we need a new directory regardless of the mode
-    my $newDir = $serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'};
+    my $newDir = eval{$serverSettings->{'outputDirectory'} . $serverSettings->{'newDir'}};
+    if($@){
+        _makeErrorPage();
+    }
 
     if($runMode eq 'novel' || $runMode eq 'pan'){
 #
