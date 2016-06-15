@@ -2,14 +2,18 @@
 
 use strict;
 use warnings;
-use Test::More tests=>26;
-use Test::Pretty;
+#use Test::More tests=>26;
+#use Test::Pretty;
+use Test2::Bundle::Extended;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
 use IO::File;
 use File::Copy;
 use File::Basename;
 use Getopt::Long;
+
+#set up plan
+plan 26;
 
 #test options
 my $blastDirectory = '/usr/bin/';
@@ -149,7 +153,7 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	_removeIDColumn("$SCRIPT_LOCATION/$test/");
 
     #remove fast headers for Fragments files, as they include the IDs, which change every run
-	
+
 	my $md5 = _getMD5("$SCRIPT_LOCATION/$test/");
 	is($md5->{'coreSnps'},$md5Sum{"${test}CoreSnps"},"${test}CoreSnps generated correctly");
 	is($md5->{'panGenome'},$md5Sum{"${test}PanGenome"},"${test}PanGenome generated correctly");
@@ -166,14 +170,16 @@ foreach my $test(@{['plasmids','query','genomes']}){
         is($md5->{'accessoryFragments'},$md5Sum{"${test}AccessoryFragments"},"${test}AccessoryFragments generated correctly");
         is($md5->{'coreFragments'},$md5Sum{"${test}CoreFragments"},"${test}CoreFragments generated correctly");
     }
-	
+
+
 	if($removeRun == 1){
 		_removeRun($test);
 	}
 	
 }
 
-
+#end
+done_testing;
 
 sub _getFilesFromDirectory{
 	my $directory = shift;
