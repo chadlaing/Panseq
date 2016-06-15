@@ -4,7 +4,7 @@ use strict;
 use warnings;
 #use Test::More tests=>26;
 #use Test::Pretty;
-use Test2::Bundle::Extended;
+use Test2::Bundle::Extended qw{in_set};
 use File::Path qw/remove_tree/;
 use Digest::MD5;
 use IO::File;
@@ -94,7 +94,7 @@ my %genomesConfig=(
 );
 
 my %md5Sum=(
-	plasmidsCoreSnps=>'a7d2902d80543446a6701e8f8770301b',
+	plasmidsCoreSnps=>in_set('a7d2902d80543446a6701e8f8770301b','1a7a78da13820f54bb619a4df0f2df2f'),
     plasmidsPanGenome=>'168d75b59dbe825cd91222906a4f5645',
     plasmidsBinaryTable=>'fbfffe4e58a1dfc1cd04cb29b5146c0d',
     plasmidsSnpTable=>'188356ccf7f73066c333e82dd18e531d',
@@ -120,6 +120,12 @@ my %md5Sum=(
     querySnpPhylip=>'972f68dff31780ddab9c1ac87b78eddd',
     queryAlleles=>'7aec36d7ee53447e0dd5e82be3d2f9bc',
     queryNameConversion=>'e90cc17adc92f2d63106d58dff86860a'
+);
+
+
+my %newMd5Sum = (
+	plasmidsCoreSnps=>'1a7a78da13820f54bb619a4df0f2df2f',
+	plasmidsPanGenome=>'de611f27d9691d4f2e798007ab49583a',
 );
 
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
