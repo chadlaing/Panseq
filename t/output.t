@@ -2,8 +2,6 @@
 
 use strict;
 use warnings;
-#use Test::More tests=>26;
-#use Test::Pretty;
 use Test2::Bundle::Extended qw{in_set};
 use File::Path qw/remove_tree/;
 use Digest::MD5;

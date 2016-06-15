@@ -4,11 +4,13 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test::More tests=>7;
-use Test::Pretty;
+use Test2::Bundle::Extended qw{in_set};
 use Log::Log4perl qw/:easy/;
 use Modules::NovelRegion::NovelRegionFinder;
 use Modules::Setup::Settings;
+
+#expected
+plan 7;
 
 my $settings = Modules::Setup::Settings->new();
 
@@ -77,7 +79,7 @@ is($novelRegions2->{'query'},',4321..4999,5501..5629,6901..7000', ',4321..4999,5
 
 $logger->info("Finished testing NovelRegionFinder");
 
-
+done_testing;
 
 
 

@@ -4,8 +4,10 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test::More tests=>15;
-use Test::Pretty;
+use Test2::Bundle::Extended qw{in_set};
+
+#expected
+plan 15;
 
 use Modules::Fasta::SequenceName;
 
@@ -77,3 +79,4 @@ foreach my $test(keys %testValues){
 	is($sn->name,$testValues{$test}->{'correct'}, 'Name is the expected ' . $testValues{$test}->{'correct'} . ' in Modules::Fasta::SequenceName->name(' . $test . ')');
 }
 
+done_testing;
