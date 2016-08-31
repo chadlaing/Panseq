@@ -13,8 +13,8 @@ before_install:
 
 install:
   - perl Build.PL
-  - ./Build --installdeps && travis_wait
-  #- cpanm --verbose --installdeps --notest .
+  #- ./Build --installdeps && travis_wait
+  - cpanm --verbose --installdeps --notest .
 
 
 script: ./Build test
