@@ -843,7 +843,7 @@ sub _printSnpTable{
 	my @output;
 	foreach my $id(sort keys %{$snpStringHash}){
 		my $printLine = "\n";
-		foreach my $genome(sort keys %{$snpStringHash->{$id}}){
+		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
 			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome})
 		}
 		push @output, $printLine;
@@ -860,7 +860,7 @@ sub _printSnpPhylip{
 
 	my %printHash;
 	foreach my $id(sort keys %{$snpStringHash}){
-		foreach my $genome(sort keys %{$snpStringHash->{$id}}){
+		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
 			if(defined $printHash{$genome}){
 				$printHash{$genome} .= $snpStringHash->{$id}->{$genome};
 			}
