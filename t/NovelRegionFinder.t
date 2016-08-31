@@ -79,7 +79,6 @@ is($novelRegions2->{'query'},',4321..4999,5501..5629,6901..7000', ',4321..4999,5
 
 $logger->info("Finished testing NovelRegionFinder");
 
-done_testing;
 
 
 

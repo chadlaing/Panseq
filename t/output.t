@@ -182,9 +182,6 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	
 }
 
-#end
-done_testing;
-
 sub _getFilesFromDirectory{
 	my $directory = shift;
 	

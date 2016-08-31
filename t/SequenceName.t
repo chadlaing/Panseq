@@ -78,5 +78,3 @@ foreach my $test(keys %testValues){
 	my $sn = Modules::Fasta::SequenceName->new($testValues{$test}->{'string'});
 	is($sn->name,$testValues{$test}->{'correct'}, 'Name is the expected ' . $testValues{$test}->{'correct'} . ' in Modules::Fasta::SequenceName->name(' . $test . ')');
 }
-
-done_testing;
