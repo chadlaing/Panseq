@@ -4,13 +4,13 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test2::Bundle::Extended qw{in_set};
+use Test2::Bundle::Extended;
 use Log::Log4perl qw/:easy/;
 use Modules::NovelRegion::NovelRegionFinder;
 use Modules::Setup::Settings;
 
 #expected
-plan(7);
+Test2::Bundle::Extended::plan(7);
 
 my $settings = Modules::Setup::Settings->new();
 

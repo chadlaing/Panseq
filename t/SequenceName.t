@@ -4,10 +4,10 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test2::Bundle::Extended qw{in_set};
+use Test2::Bundle::Extended;
 
 #expected
-plan(15);
+Test2::Bundle::Extended::plan(15);
 
 use Modules::Fasta::SequenceName;
 

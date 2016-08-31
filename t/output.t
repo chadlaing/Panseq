@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test2::Bundle::Extended qw{in_set};
+use Test2::Bundle::Extended;
 use File::Path qw/remove_tree/;
 use Digest::MD5;
 use IO::File;
@@ -11,7 +11,7 @@ use File::Basename;
 use Getopt::Long;
 
 #set up plan
-plan(26);
+Test2::Bundle::Extended::plan(26);
 
 #test options
 my $blastDirectory = '/usr/bin/';
