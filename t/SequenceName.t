@@ -7,7 +7,7 @@ use lib "$FindBin::Bin/../lib/";
 use Test2::Bundle::Extended qw{in_set};
 
 #expected
-plan 15;
+plan(15);
 
 use Modules::Fasta::SequenceName;
 

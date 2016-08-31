@@ -11,7 +11,7 @@ use File::Basename;
 use Getopt::Long;
 
 #set up plan
-plan 26;
+plan(26);
 
 #test options
 my $blastDirectory = '/usr/bin/';

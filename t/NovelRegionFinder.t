@@ -10,7 +10,7 @@ use Modules::NovelRegion::NovelRegionFinder;
 use Modules::Setup::Settings;
 
 #expected
-plan 7;
+plan(7);
 
 my $settings = Modules::Setup::Settings->new();
 
