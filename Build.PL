@@ -28,6 +28,7 @@ my $build=Module::Build->new(
 		'Tie::Log4perl'=>0,
 		'Archive::Zip'=>0,
 		'Test2::Bundle::Extended'=>0,
+		'Test2::Suite'=>0,
 		'Getopt::Long'=>0,
 		'Digest::MD5'=>0
 	}
