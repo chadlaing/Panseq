@@ -10,7 +10,11 @@ before_install:
   - wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.29/ncbi-blast-2.2.29+-1.x86_64.rpm -O /tmp/blast.rpm
   - sudo alien -i /tmp/blast.rpm
 
+
 install:
+  - perl Build.PL
+  #- ./Build --installdeps && travis_wait
   - cpanm --verbose --installdeps --notest .
 
-script: "perl Build.PL && ./Build && travis_wait ./Build test"
+
+script: ./Build test

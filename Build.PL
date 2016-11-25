@@ -7,10 +7,10 @@ use IO::File;
 
 my $build=Module::Build->new(
 	module_name => 'Panseq',
-	dist_version => '4',
+	dist_version => '2016',
 	license => 'perl',
 	dist_abstract => 'Panseq: pan-genomic sequence analysis',
-	dist_author => 'Chad Laing <chadlaing@gmail.com>',
+	dist_author => 'Chad Laing <chadlaing@inoutbox.com>',
 	requires =>{
 		'Carp' => 0,
 		'perl' => '5.10.0',
@@ -27,7 +27,8 @@ my $build=Module::Build->new(
 		'File::Basename'=>0,
 		'Tie::Log4perl'=>0,
 		'Archive::Zip'=>0,
-		'Test::Pretty'=>0,
+		'Test2::Bundle::Extended'=>0,
+		'Test2::Suite'=>0,
 		'Getopt::Long'=>0,
 		'Digest::MD5'=>0
 	}

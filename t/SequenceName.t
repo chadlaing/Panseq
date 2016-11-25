@@ -1,11 +1,13 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib/";
-use Test::More tests=>15;
-use Test::Pretty;
+use Test2::Bundle::Extended;
+
+#expected
+Test2::Bundle::Extended::plan(15);
 
 use Modules::Fasta::SequenceName;
 
@@ -76,4 +78,3 @@ foreach my $test(keys %testValues){
 	my $sn = Modules::Fasta::SequenceName->new($testValues{$test}->{'string'});
 	is($sn->name,$testValues{$test}->{'correct'}, 'Name is the expected ' . $testValues{$test}->{'correct'} . ' in Modules::Fasta::SequenceName->name(' . $test . ')');
 }
-
