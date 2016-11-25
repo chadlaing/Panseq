@@ -70,6 +70,7 @@ while(my $line = $genomeFH->getline()){
 
 open(my $tempFH, '<', $reducedTempFile) or die "Could not open $reducedTempFile $!\n";
 my $switch = 0;
+my $switchCounter = 0;
 my $reducedOnly = 0;
 my $prefix = 'q_';
 while(my $line = $tempFH->getline()){
@@ -111,6 +112,11 @@ while(my $line = $tempFH->getline()){
 
     if($line =~ m/\Flip the switch/){
         $switch = 1;
+        $switchCounter++;
+
+        if($switchCounter == 2){
+            $prefix = 'r_';
+        }
     }
 }
 

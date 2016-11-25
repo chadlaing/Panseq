@@ -6,7 +6,7 @@ use Data::Dumper;
 use File::Path qw/make_path/;
 use File::Copy;
 use Net::FTP;
-use Archive::Extract;
+use Archive::Zip;
 use Carp;
 
 my $cgi = CGI->new();
