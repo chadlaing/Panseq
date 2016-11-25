@@ -11,6 +11,7 @@ use Carp;
 
 my $cgi = CGI->new();
 my $serverSettings = _loadServerSettings();
+my $NCBI_PREFIX = '/genomes/all/';
 my $RESULTS_URL = '/panseq/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $pid = fork();
