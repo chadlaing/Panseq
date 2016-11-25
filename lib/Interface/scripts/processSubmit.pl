@@ -329,7 +329,7 @@ sub _checkFiles{
 
     foreach my $dir(@{$directoriesRef}) {
         #requires functional SLURM
-        my $systemLine = 'srun perl '.$serverSettings->{'panseqDirectory'}.'Interface/scripts/single_file_check.pl '.$dir;
+        my $systemLine = 'srun perl '. $serverSettings->{'panseqDirectory'}.'Interface/scripts/single_file_check.pl '.$dir;
         system( $systemLine );
     }
 }
