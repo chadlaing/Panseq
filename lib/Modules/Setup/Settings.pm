@@ -122,6 +122,16 @@ sub mummerDirectory {
 	$self->{'_mummerDirectory'} = shift // return $self->{'_mummerDirectory'};
 }
 
+sub cdhitDirectory{
+	my $self = shift;
+	$self->{'_cdhitDirectory'} = shift // return $self->{'_cdhitDirectory'}
+}
+
+sub cdhit{
+	my $self = shift;
+	$self->{'_cdhit'} = shift // return $self->{'_cdhit'}
+}
+
 sub minimumNovelRegionSize {
 	my $self = shift;
 	$self->{'_minimumNovelRegionSize'} = shift // return $self->{'_minimumNovelRegionSize'};

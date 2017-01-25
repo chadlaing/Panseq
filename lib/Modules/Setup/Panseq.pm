@@ -254,6 +254,7 @@ sub _launchPanseq{
 	#perform pan-genomic analyses
 	if(defined $self->settings->runMode && $self->settings->runMode eq 'pan'){
 		$self->_performPanGenomeAnalyses($files,$iterativeNovelRegions);
+
 		#with File::Copy
 		move($iterativeNovelRegions,$self->settings->baseDirectory . 'panGenome.fasta');
 	}
@@ -263,6 +264,41 @@ sub _launchPanseq{
 		move($iterativeNovelRegions, $self->settings->baseDirectory . 'novelRegions.fasta') or $self->logger->logdie("$!");
 	}
 }
+
+
+=head3
+
+Run cd-hit-est on pan-genome fragments to remove duplication
+
+=cut
+
+sub _runCdhit{
+	my $self = shift;
+	my $fragmentFile = shift;
+
+
+	my $outputFile = $self->settings->baseDirectory . 'cdhit.fasta';
+	my $cdhitLine =
+		       'cd-hit-est -T ' .
+			   $self->settings->numberOfCores .
+			   ' -c ' .
+				'0.9' .
+			   #$self->settings->percentIdentityCutoff .
+			   ' -s ' .
+			   '0.9' .
+			   #$self->settings->percentIdentityCutoff .
+			   ' -i ' .
+			   $fragmentFile .
+			   ' -o ' .
+			   $outputFile;
+	$self->logger->info("Running cd-hit with:\n$cdhitLine");
+	system($cdhitLine);
+	return $outputFile;
+}
+
+
+
+
 
 
 =head3
