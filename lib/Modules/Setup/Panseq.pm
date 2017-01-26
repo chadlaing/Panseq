@@ -402,6 +402,16 @@ sub _performPanGenomeAnalyses{
 		$panGenomeFile = $segmenter->outputFile;
 	}	
 
+	#run cdhit if so desired
+	my $postCdhit;
+	if($self->settings->cdhit){
+		$postCdhit = $self->_runCdhit($panGenomeFile);
+	}
+	else{
+		$postCdhit = $panGenomeFile;
+		#no cdhit
+	}
+
 	my $dbCreator = Modules::Alignment::MakeBlastDB->new(
 		'dbtype'=>'nucl',
 		'blastDirectory'=>$self->settings->blastDirectory,

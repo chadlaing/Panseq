@@ -100,6 +100,7 @@ Advanced Options
 	overwrite	1
 	maxNumberResultsInMemory 	500
 	blastWordSize	11
+	cdhit   1
 
 
 * ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
@@ -144,6 +145,7 @@ Advanced Options
 
 * 'blastWordSize' sets the word size for the blastn portion of Panseq. The default value is 20, but for small values of 'fragmentationSize' or 'percentIdentityCutoff', hits may be missed unless this value is lowered. (The default value for the blastn program is 11; Panseq sets this to 20 as the default).
 
+* `cdhit` defaults to 0, and determines whether or not `cd-hit-est` is run on the generated pan-genome before screening the pan-genome against all genomes. Percent identity cutoff for cd-hit-est is taken from the Panseq settings file.
 
 ## Format of multi-fasta files ##
 
