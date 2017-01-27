@@ -132,6 +132,13 @@ sub run{
 sub _externalProgramTest{
 	my $self = shift;
 
+	if ($self->settings->cdhit){
+		unless(-e $self->settings->cdhitDirectory . 'cd-hit-est'){
+			$self->logger->fatal($self->_missingExternalMessage($self->settings->cdhitDirectory, 'cdhitDirectory'));
+			exit(1);
+		}
+	}
+
 	unless(-e $self->settings->blastDirectory . 'blastn'){
 		$self->logger->fatal($self->_missingExternalMessage($self->settings->blastDirectory,'blastDirectory'));
 		exit(1);
@@ -276,16 +283,16 @@ sub _runCdhit{
 	my $self = shift;
 	my $fragmentFile = shift;
 
-
+	my $decimalPercentIdentityCutoff = $self->settings->percentIdentityCutoff / 100;
 	my $outputFile = $self->settings->baseDirectory . 'cdhit.fasta';
 	my $cdhitLine =
 		       'cd-hit-est -T ' .
 			   $self->settings->numberOfCores .
 			   ' -c ' .
-				'0.9' .
+			   $decimalPercentIdentityCutoff .
 			   #$self->settings->percentIdentityCutoff .
 			   ' -s ' .
-			   '0.9' .
+			   $decimalPercentIdentityCutoff .
 			   #$self->settings->percentIdentityCutoff .
 			   ' -i ' .
 			   $fragmentFile .
@@ -295,10 +302,6 @@ sub _runCdhit{
 	system($cdhitLine);
 	return $outputFile;
 }
-
-
-
-
 
 
 =head3
