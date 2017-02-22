@@ -434,7 +434,7 @@ sub _getGenomeName{
         $gName = $1;
     }
     else{
-        die "Unable to find genome name!";
+        die "Unable to find genome name in $name\n!";
         exit(1);
     }
     return $gName;
