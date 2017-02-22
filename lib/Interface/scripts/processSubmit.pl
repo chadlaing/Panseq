@@ -71,9 +71,9 @@ else {
     if(!defined $gid){
         die "cannot fork process!\n $!";
     };
-#    open STDIN, "</dev/null";
-#    open STDOUT, ">/dev/null";
-#    open STDERR, ">/dev/null";
+    open STDIN, "</dev/null";
+    open STDOUT, ">/dev/null";
+    open STDERR, ">/dev/null";
 
     if($gid){
         #good
