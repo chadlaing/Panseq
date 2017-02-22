@@ -17,9 +17,15 @@ my $type = $ARGV[1] // die "no type of 'pan' or 'novel' specified!\n";
 #the base version has no list elements, but is otherwise identical
 #and includes the following text
 
-my $REDUCED_TEXT = q{
+my $REDUCED_TEXT_NOVEL = q{
     <p>
         IMPORTANT: To speed page loading, this view contains only 1% of the total genomes available for comparison. To load the complete set of genomes, please click <a href="/panseq/page/novel_full.html">Full Genome Set</a>
+    </p>
+};
+
+my $REDUCED_TEXT_PAN = q{
+    <p>
+        IMPORTANT: To speed page loading, this view contains only 1% of the total genomes available for comparison. To load the complete set of genomes, please click <a href="/panseq/page/pan_full.html">Full Genome Set</a>
     </p>
 };
 
@@ -96,7 +102,16 @@ open(my $baseFH, '<', $baseFile) or die "Couldn't open $baseFile $!\n";
 
 while(my $line = $baseFH->getline()){
     if($line =~ m/--Reduced Only--/){
-        $reducedFH->print($REDUCED_TEXT);
+        if($type eq 'novel'){
+            $reducedFH->print($REDUCED_TEXT_NOVEL);
+        }
+        elsif($type eq 'pan'){
+            $reducedFH->print($REDUCED_TEXT_PAN);
+        }
+        else{
+            die "Unknown type. Please choose novel or pan\n";
+            exit(1);
+        }
     }
 
     # <li><input type="checkbox" name="q_GCA_000160075.2_ASM16007v2">Abiotrophia defectiva ATCC 49176 </li>
