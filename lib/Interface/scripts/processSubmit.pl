@@ -152,6 +152,7 @@ sub _launchPanseq{
             $runSettings{coreGenomeThreshold} = $cgi->param('coreGenomeThreshold');
             $runSettings{blastWordSize} = $cgi->param('blastWordSize');
         }
+
         my $batchFile = eval{_createBatchFile(\%runSettings)};
         if($@){
             _makeErrorPage();
@@ -197,7 +198,7 @@ sub _launchPanseq{
         }
 
         #check that panseq finished correctly
-        eval '_runPanseq($batchFile)';
+        eval _runPanseq($batchFile);
         if($@){
             _makeErrorPage();
             die($@);
@@ -373,7 +374,6 @@ sub _downloadUserSelections{
 
     #if no selections, skip
     unless(scalar(@ncbiQueryGenomes) > 0 || scalar(@ncbiReferenceGenomes) > 0){
-        die "No genomes selected!\n";
         return 1;
     }
 
