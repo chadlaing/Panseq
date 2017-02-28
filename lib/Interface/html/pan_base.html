@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Panseq</title>
+    <link href="/panseq/css/panseq.css" rel="stylesheet">
+    <link href="/panseq/images/favicon.ico" rel="shortcut icon">
+</head>
+<body>
+<div id="panseqImage">
+    <p>Pan~genomic sequence analysis</p>
+</div>
+
+
+<div id="nav">
+    <ul>
+        <li><a href="/panseq/page/index.html">Home</a></li>
+        <li><a href="/panseq/page/novel.html">Novel Regions</a></li>
+        <li><a href="/panseq/page/pan.html">Pan-genome</a></li>
+        <li><a href="/panseq/page/loci.html">Loci</a></li>
+        <li><a href="/panseq/page/faq.html">FAQ</a></li>
+    </ul>
+</div>
+
+    <div class="mainBody">
+        <h1>Pan Genome Analyses</h1>
+        <!--Reduced Only-->
+
+        <form action="/panseq/process/processSubmit.pl" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="runMode" value="pan"/>
+        <h1>Select Parameters</h1>
+        <p>
+            Minimum Novel Region Size <input name="minimumNovelRegionSize" type="number" min="0" max="10000" step="50" value="500">
+        </p>
+
+        <p>
+            Percent Identity Cutoff: <input name="percentIdentityCutoff" type="number" min="50" max="100" value="85">
+        </p>
+
+            <p>
+                Fragmentation Size: <input name="fragmentationSize" type="number" min="100" max="1000000" value="500" step="50">
+            </p>
+
+            <p>
+                Core Genome Threshold: <input name="coreGenomeThreshold" type="number" min="2" max="1000" step="1" value="3">
+            </p>
+
+            <p>
+                Blast Word Size: <input name="blastWordSize" type="number" min="7" max="100" value="20" step="1">
+            </p>
+
+        <p>
+            Nucmer Values:
+            b: <input name="nucB" type="number" min="0" max="10000" step="1" value="200">
+            c: <input name="nucC" type="number" min="0" max="1000" step="1" value="50">
+            d: <input name="nucD" type="number" min="0" max="1" step="0.01" value="0.12">
+            g: <input name="nucG" type="number" min="1" max="5000" step="1" value="100">
+            l: <input name="nucL" type="number" min="1" max="100" step="1" value="20">
+        </p>
+
+        <h1>Select Strains</h1>
+        <p>
+            Upload Strains:
+            <input type="file" name="userQueryFiles" multiple class="fileUpload">
+        </p>
+        <p>
+        <div class="selectBox">
+        <ul>
+            <!--Query-->
+        </ul>
+        </div>
+
+        <p>
+        <button type="submit">Analyze!</button>
+        </p>
+
+        </form>
+    </div>
+
+</body>
+
+<footer class="horWrapper">
+    &copy; 2016 Public Health Agency of Canada. All Rights Reserved.
+</footer>
+
+</html>

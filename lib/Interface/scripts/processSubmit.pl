@@ -11,7 +11,6 @@ use Carp;
 
 my $cgi = CGI->new();
 my $serverSettings = _loadServerSettings();
-my $NCBI_PREFIX = '/genomes/all/';
 my $RESULTS_URL = '/panseq/page/output/' . $serverSettings->{'resultsHtml'};
 
 my $pid = fork();
@@ -374,6 +373,7 @@ sub _downloadUserSelections{
 
     #if no selections, skip
     unless(scalar(@ncbiQueryGenomes) > 0 || scalar(@ncbiReferenceGenomes) > 0){
+        die "No genomes selected!\n";
         return 1;
     }
 
@@ -387,9 +387,14 @@ sub _downloadUserSelections{
 
     $ftp->binary();
     my @allDownloadedFiles;
+    my $ncbiPrefix = '/genomes/all/';
+
     foreach my $q(@ncbiQueryGenomes){
-        my $ncbiFile = $NCBI_PREFIX . $q . '/' . $q . '_genomic.fna.gz';
-        my $localFile = $runSettings->{'queryDirectory'} . $q;
+        my $genomeName = _getGenomeName($q);
+
+        #the FTP path is given in $q, need to specify the _genomic.fna.gz
+        my $ncbiFile = $ncbiPrefix .  $q . '/' . $genomeName . '_genomic.fna.gz';
+        my $localFile = $runSettings->{'queryDirectory'} . $genomeName;
 
         push @allDownloadedFiles, $localFile;
         $ftp->get($ncbiFile, $localFile) or die ("Cannot get $q" . $ftp->message and return 0);
@@ -399,8 +404,10 @@ sub _downloadUserSelections{
     }
 
     foreach my $r(@ncbiReferenceGenomes){
-        my $ncbiFile = $NCBI_PREFIX . $r . '/' . $r . '_genomic.fna.gz';
-        my $localFile = $runSettings->{'referenceDirectory'} . $r;
+        my $genomeName = _getGenomeName($r);
+
+        my $ncbiFile = $ncbiPrefix . $r . '/' . $genomeName . '_genomic.fna.gz';
+        my $localFile = $runSettings->{'referenceDirectory'} . $genomeName;
 
         push @allDownloadedFiles, $localFile;
         $ftp->get($ncbiFile, $localFile) or die ("Cannot get $r" . $ftp->message and return 0);
@@ -418,6 +425,21 @@ sub _downloadUserSelections{
         unlink $f;
     }
 }
+
+sub _getGenomeName{
+    my $name = shift;
+
+    my $gName;
+    if($name =~ m/\/(GC(F|A)_.+)$/){
+        $gName = $1;
+    }
+    else{
+        die "Unable to find genome name in $name\n!";
+        exit(1);
+    }
+    return $gName;
+}
+
 
 
 sub _createBatchFile{
