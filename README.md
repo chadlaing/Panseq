@@ -145,7 +145,7 @@ Advanced Options
 
 * 'blastWordSize' sets the word size for the blastn portion of Panseq. The default value is 20, but for small values of 'fragmentationSize' or 'percentIdentityCutoff', hits may be missed unless this value is lowered. (The default value for the blastn program is 11; Panseq sets this to 20 as the default).
 
-* `cdhit` defaults to 0, and determines whether or not `cd-hit-est` is run on the generated pan-genome before screening the pan-genome against all genomes. Percent identity cutoff for cd-hit-est is taken from the Panseq settings file.
+* `cdhit` defaults to 0, and determines whether or not `cd-hit-est` is run on the generated pan-genome before screening the pan-genome fragments. Percent identity cutoff for cd-hit-est is taken from `percentIdentityCutoff`.
 
 ## Format of multi-fasta files ##
 
