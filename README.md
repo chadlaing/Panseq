@@ -144,6 +144,16 @@ Advanced Options
 
 * `blastWordSize` [20] sets the word size for the blastn portion of _**Panseq**_. For small values of `fragmentationSize` or `percentIdentityCutoff`, hits may be missed unless this value is lowered. (The default value for the `blastn` program is 11; _**Panseq**_ sets this to 20 as the default).
 
+* `nucB` [200] sets the `b` parameter when running `nucmer`.
+
+* `nucC` [65] sets the `c` parameter when running `nucmer`.
+
+* `nucD` [0.12] sets the `d` parameter when running `nucmer`.
+
+* `nucG` [90] sets the `g` parameter when running `nucmer`.
+
+* `nucL` [20] sets the `nucL` parameter when running `nucmer`.
+
 * `cdhit` [0] determines whether or not `cd-hit-est` is run on the pan-genome before identifying the distribution of the pan-genome (and SNPs among core regions) among the input sequences. Percent identity cutoff for `cd-hit-est` is taken from `percentIdentityCutoff`.
 
 ## Format of multi-fasta files ##
