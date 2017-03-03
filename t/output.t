@@ -128,12 +128,12 @@ if(defined $cdhitDirectory){
 
 
 my %md5Sum=(
-	plasmidsCoreSnps=>in_set('a7d2902d80543446a6701e8f8770301b','1a7a78da13820f54bb619a4df0f2df2f','1133816b845a5391f552e8e60b0eed8b'),
-    plasmidsPanGenome=>in_set('168d75b59dbe825cd91222906a4f5645','de611f27d9691d4f2e798007ab49583a', 'e60ab1fb4adaf0e13ac342a482cc4a96', '35c7ee30137ccf2737b6e1717149620c'),
+	plasmidsCoreSnps=>in_set('a7d2902d80543446a6701e8f8770301b','1a7a78da13820f54bb619a4df0f2df2f','1133816b845a5391f552e8e60b0eed8b','388ad37fe11273ece738664fd00ae121'),
+    plasmidsPanGenome=>in_set('168d75b59dbe825cd91222906a4f5645','de611f27d9691d4f2e798007ab49583a', 'e60ab1fb4adaf0e13ac342a482cc4a96', '35c7ee30137ccf2737b6e1717149620c','18b07b36e448492ac162624e36628444'),
     plasmidsBinaryTable=>in_set('fbfffe4e58a1dfc1cd04cb29b5146c0d','387d3415808e3ed9ef0ffa60c6b7fd67'),
-    plasmidsSnpTable=>in_set('188356ccf7f73066c333e82dd18e531d','2e69ced50fb7d1f13e84e00dfdbd2b5a','b8624a47c1edc7193d01a8b07c039e27'),
+    plasmidsSnpTable=>in_set('188356ccf7f73066c333e82dd18e531d','2e69ced50fb7d1f13e84e00dfdbd2b5a','b8624a47c1edc7193d01a8b07c039e27', '5e03e2cdc49d4d4d1a33cf124f192ee2'),
     plasmidsBinaryPhylip=>in_set('db5e15a38d9b7b7be53811df302d7558','b418d9d4a7c404ba859a40b2540a30ec'),
-    plasmidsSnpPhylip=>in_set('6c8f15448b0f19be9efbb79e16256350','4ae7de5409064454c0b8c17d47cd10c8','52b8a7b0e45e8e0ccdcddebd47e4c3a4'),
+    plasmidsSnpPhylip=>in_set('6c8f15448b0f19be9efbb79e16256350','4ae7de5409064454c0b8c17d47cd10c8','52b8a7b0e45e8e0ccdcddebd47e4c3a4','922767f0f9205ea242303ee766014624'),
     plasmidsCoreFragments=>in_set('2fa21523c2c0e9abde0836f2a754640e', 'ba16baa4bf8786d2d6ab961f6bff4c54'),
     plasmidsAccessoryFragments=>in_set('f17e29fd8ca3dbaac3033ce188018465','3c853ac88d7ea51c757b60fc9edda08f'),
     plasmidsNameConversion=>'da9678fa95a0def763ad014ec7153779',
