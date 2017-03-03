@@ -275,7 +275,8 @@ sub _launchPanseq{
 
 =head3
 
-Run cd-hit-est on pan-genome fragments to remove duplication
+Run cd-hit-est on pan-genome fragments to remove duplication.
+Memory limit removed.
 
 =cut
 
@@ -286,7 +287,7 @@ sub _runCdhit{
 	my $decimalPercentIdentityCutoff = $self->settings->percentIdentityCutoff / 100;
 	my $outputFile = $self->settings->baseDirectory . 'cdhit.fasta';
 	my $cdhitLine =
-		       'cd-hit-est -T ' .
+		       'cd-hit-est -M 0 -T ' .
 			   $self->settings->numberOfCores .
 			   ' -c ' .
 			   $decimalPercentIdentityCutoff .
@@ -299,7 +300,12 @@ sub _runCdhit{
 			   ' -o ' .
 			   $outputFile;
 	$self->logger->info("Running cd-hit with:\n$cdhitLine");
-	system($cdhitLine);
+
+    my $cdHitRun = eval{system($cdhitLine)};
+    if($cdHitRun){
+        $self->logger->fatal("cd-hit failed to run properly $cdHitRun\n");
+        exit(1);
+    }
 	return $outputFile;
 }
 
@@ -426,7 +432,7 @@ sub _performPanGenomeAnalyses{
 	$dbCreator->run();
 	
 	my $splitter= Modules::Fasta::FastaFileSplitter->new(
-		inputFile=>$panGenomeFile,
+		inputFile=>$postCdhit,
 		numberOfSplits=>$self->settings->numberOfCores,
 		baseDirectory=>$self->settings->baseDirectory
 	);

@@ -9,21 +9,24 @@ use IO::File;
 use File::Copy;
 use File::Basename;
 use Getopt::Long;
+use File::Which;
 
 #set up plan
 Test2::Bundle::Extended::plan(26);
 
 #test options
-my $blastDirectory = '/usr/bin/';
-my $mummerDirectory = '/usr/bin/';
-my $muscleExecutable = '/usr/bin/muscle';
 my $numberOfCores = 1;
 my $type = 'genomes';
 my $removeRun = 1;
+my $blastDirectory = undef;
+my $mummerDirectory = undef;
+my $muscleExecutable = undef;
+my $cdhitDirectory = undef;
 
  GetOptions ('blastDirectory=s' => \$blastDirectory,
              'mummerDirectory=s' => \$mummerDirectory,
              'muscleExecutable=s' => \$muscleExecutable,
+             'cdhitDirectory=s' => \$cdhitDirectory,
              'type=s' => \$type,
              'removeRun=i' => \$removeRun,
              #Because of the change in splitting the fasta file, the number of cores
@@ -33,6 +36,20 @@ my $removeRun = 1;
              #'numberOfCores=i' => \$numberOfCores
              );
 
+
+#if not specified, check for cd-hit
+unless(defined $cdhitDirectory){
+    my @cdArray = fileparse(which 'cd-hit-est');
+    $cdhitDirectory = $cdArray[1];
+}
+else{
+    print STDERR "cdhitDirectory defined as $cdhitDirectory\n";
+}
+
+
+
+
+
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
 print "SCRIPT_LOCATION: $SCRIPT_LOCATION\n";
@@ -41,12 +58,9 @@ my %plasmidsConfig=(
 	queryDirectory=>"$SCRIPT_LOCATION/data/plasmids/",
 	baseDirectory=>"$SCRIPT_LOCATION/plasmids/",
 	numberOfCores=>$numberOfCores,
-	mummerDirectory=>$mummerDirectory,
-	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>500,
-	muscleExecutable=>$muscleExecutable,
 	fragmentationSize=>'500',
-	percentIdentityCutoff=>'90',
+	percentIdentityCutoff=>90,
 	coreGenomeThreshold=>'2',
 	runMode=>'pan',
     nameOrId=>'name',
@@ -61,11 +75,7 @@ my %queryConfig=(
 	baseDirectory=>"$SCRIPT_LOCATION/query/",
 	numberOfCores=>$numberOfCores,
 	nameOrId=>'name',
-	mummerDirectory=>$mummerDirectory,
-	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>1,
-	novelRegionFinderMode=>"no_duplicates",
-	muscleExecutable=>$muscleExecutable,
 	fragmentationSize=>0,
 	percentIdentityCutoff=>90,
 	coreGenomeThreshold=>2,
@@ -79,11 +89,7 @@ my %genomesConfig=(
 	baseDirectory=>"$SCRIPT_LOCATION/genomes/",
 	numberOfCores=>$numberOfCores,
     nameOrId=>'name',
-	mummerDirectory=>$mummerDirectory,
-	blastDirectory=>$blastDirectory,
 	minimumNovelRegionSize=>"1000",
-	novelRegionFinderMode=>"no_duplicates",
-	muscleExecutable=>$muscleExecutable,
 	fragmentationSize=>'1000',
 	percentIdentityCutoff=>'90',
 	coreGenomeThreshold=>'3',
@@ -91,15 +97,45 @@ my %genomesConfig=(
 	overwrite=>1
 );
 
+#if supplied from the command line, add
+if(defined $blastDirectory){
+    $plasmidsConfig{blastDirectory} = $blastDirectory;
+    $queryConfig{blastDirectory} = $blastDirectory;
+    $genomesConfig{blastDirectory} = $blastDirectory;
+}
+
+if(defined $mummerDirectory){
+    $plasmidsConfig{mummerDirectory} = $mummerDirectory;
+    $queryConfig{mummerDirectory} = $mummerDirectory;
+    $genomesConfig{mummerDirectory} = $mummerDirectory;
+}
+
+if(defined $muscleExecutable){
+    $plasmidsConfig{muscleExecutable} = $muscleExecutable;
+    $queryConfig{muscleExecutable} = $muscleExecutable;
+    $genomesConfig{muscleExecutable} = $muscleExecutable;
+}
+
+if(defined $cdhitDirectory){
+    $plasmidsConfig{cdhitDirectory} = $cdhitDirectory;
+    $plasmidsConfig{cdhit} = 1;
+    $queryConfig{cdhitDirectory} = $cdhitDirectory;
+    $genomesConfig{cdhitDirectory} = $cdhitDirectory;
+}
+
+
+
+
+
 my %md5Sum=(
-	plasmidsCoreSnps=>in_set('a7d2902d80543446a6701e8f8770301b','1a7a78da13820f54bb619a4df0f2df2f'),
-    plasmidsPanGenome=>in_set('168d75b59dbe825cd91222906a4f5645','de611f27d9691d4f2e798007ab49583a', 'e60ab1fb4adaf0e13ac342a482cc4a96'),
-    plasmidsBinaryTable=>'fbfffe4e58a1dfc1cd04cb29b5146c0d',
-    plasmidsSnpTable=>in_set('188356ccf7f73066c333e82dd18e531d','2e69ced50fb7d1f13e84e00dfdbd2b5a'),
-    plasmidsBinaryPhylip=>'db5e15a38d9b7b7be53811df302d7558',
-    plasmidsSnpPhylip=>in_set('6c8f15448b0f19be9efbb79e16256350','4ae7de5409064454c0b8c17d47cd10c8'),
-    plasmidsCoreFragments=>'2fa21523c2c0e9abde0836f2a754640e',
-    plasmidsAccessoryFragments=>'f17e29fd8ca3dbaac3033ce188018465',
+	plasmidsCoreSnps=>in_set('a7d2902d80543446a6701e8f8770301b','1a7a78da13820f54bb619a4df0f2df2f','1133816b845a5391f552e8e60b0eed8b'),
+    plasmidsPanGenome=>in_set('168d75b59dbe825cd91222906a4f5645','de611f27d9691d4f2e798007ab49583a', 'e60ab1fb4adaf0e13ac342a482cc4a96', '35c7ee30137ccf2737b6e1717149620c'),
+    plasmidsBinaryTable=>in_set('fbfffe4e58a1dfc1cd04cb29b5146c0d','387d3415808e3ed9ef0ffa60c6b7fd67'),
+    plasmidsSnpTable=>in_set('188356ccf7f73066c333e82dd18e531d','2e69ced50fb7d1f13e84e00dfdbd2b5a','b8624a47c1edc7193d01a8b07c039e27'),
+    plasmidsBinaryPhylip=>in_set('db5e15a38d9b7b7be53811df302d7558','b418d9d4a7c404ba859a40b2540a30ec'),
+    plasmidsSnpPhylip=>in_set('6c8f15448b0f19be9efbb79e16256350','4ae7de5409064454c0b8c17d47cd10c8','52b8a7b0e45e8e0ccdcddebd47e4c3a4'),
+    plasmidsCoreFragments=>in_set('2fa21523c2c0e9abde0836f2a754640e', 'ba16baa4bf8786d2d6ab961f6bff4c54'),
+    plasmidsAccessoryFragments=>in_set('f17e29fd8ca3dbaac3033ce188018465','3c853ac88d7ea51c757b60fc9edda08f'),
     plasmidsNameConversion=>'da9678fa95a0def763ad014ec7153779',
 	genomesCoreSnps=>in_set('83beb7f1fbdcf2f6cb38cb5604b8385b','445a61d3f5cda294630fe24806d5c33b','2441e0d01b5be5a44260173b112685e3'),
     genomesPanGenome=>in_set('3e00bb9e7d7fa9b02b34052fd005fa00','865f831d6255fa110c13a2309ba1aeb9','46fa77ff7c402d76a954698862fb55c7'),
@@ -121,11 +157,6 @@ my %md5Sum=(
 );
 
 
-my %newMd5Sum = (
-	plasmidsCoreSnps=>'1a7a78da13820f54bb619a4df0f2df2f',
-	plasmidsPanGenome=>'de611f27d9691d4f2e798007ab49583a',
-);
-
 #create the Batch files and test the output of Panseq to ensure no breaking changes have occurred
 #generate data first, so all tests are at the bottom of the output
 foreach my $test(@{['plasmids','query','genomes']}){
@@ -144,7 +175,11 @@ foreach my $test(@{['plasmids','query','genomes']}){
 	}	
 	
 	_createBatchFile(\%config,$test);
-	_runPanseq($test);
+	my $error = eval{_runPanseq($test)};
+    if($error){
+        print STDERR "Error in running Panseq, $error\n";
+        exit(1);
+    }
 }
 
 #compare the digests of the files for correctness

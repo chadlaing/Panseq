@@ -2,11 +2,11 @@
 
 ## OVERVIEW
 
-Panseq determines the core and accessory regions among a collection of genomic sequences based on user-defined parameters. It readily extracts regions unique to a genome or group of genomes, identifies SNPs within shared core genomic regions, constructs files for use in phylogeny programs based on both the presence/absence of accessory regions and SNPs within core regions.
+_**Panseq**_ determines the core and accessory regions among a collection of genomic sequences based on user-defined parameters. It readily extracts regions unique to a genome or group of genomes, identifies SNPs within shared core genomic regions, constructs files for use in phylogeny programs based on both the presence/absence of accessory regions and SNPs within core regions.
 
 It also provides a loci selector that efficiently computes the most discriminatory loci from a tab-delimited dataset.
 
-If you find Panseq useful please cite:
+If you find _**Panseq**_ useful please cite:
 
 > Pan-genome sequence analysis using Panseq: an online tool for the rapid analysis of core and accessory genomic regions.
 > Laing C, Buchanan C, Taboada EN, Zhang Y, Kropinski A, Villegas A, Thomas JE, Gannon VP.
@@ -19,7 +19,7 @@ If you find Panseq useful please cite:
 
 ## USAGE
 
-The Panseq standalone script can be accessed from:
+The _**Panseq**_ standalone script can be accessed from:
 
 > lib/panseq.pl
 
@@ -30,20 +30,12 @@ The loci finder can be accessed from:
 
 ## SETUP
 
-Panseq requires Perl 5.10 or greater, the provided Perl modules, and the following CPAN packages:
+_**Panseq**_ requires Perl 5.10 or greater, and the following CPAN package to be installed:
 
-* Parallel::ForkManager
-* Log::Log4perl
-* Role::Tiny
-* Bio::SeqIO
-* Bio::DB::Fasta
-* Bio::Seq
-* Tie::Log4perl
-* Archive::Zip
-* Test::Pretty
-* Digest::MD5
-
-To install, and automatically retrieve the CPAN packages, do the following:
+    Module::Build
+    
+This package can be installed from the command-line using `cpan -i Module::Build`.
+Following this, to install, and automatically retrieve the required CPAN packages for _**Panseq**_, do the following:
 
 	perl Build.PL
 	./Build installdeps
@@ -55,27 +47,25 @@ The following free, external programs must also be installed:
 * [BLAST+:](http://blast.ncbi.nlm.nih.gov/Blast.cgi)
 * [Muscle:](http://www.drive5.com/muscle)
 
+and optionally
+
+* [cd-hit](http://weizhongli-lab.org/cd-hit/)
+
 ## Testing your installation
 
 	perl t/output.t
 
-This will run a test suite against the included test data to ensure that Panseq is configured and working correctly. All tests should pass. The default location for the external programs used by the test suite are as follows:
+This will run a test suite against the included test data to ensure that _**Panseq**_ is configured and working correctly. All tests should pass. The `cd-hit` tests will only be run if `cd-hit` is found. _**Panseq**_ checks for the installed programs on the local path, but they can be optionally specified as follows:
 
-	blastDirectory = '/usr/bin/';
-	mummerDirectory = '/usr/bin/';
-	muscleExecutable = '/usr/bin/muscle';
+	perl t/output.t --blastDirectory '/home/user/local_blast/' --mummerDirectory '/home/user/local_mummer/' --cdhitDirectory '/home/user/cdhit' --muscleExecutable '/home/dir/muscle_executable'
 
-If your system setup is different, pass the optional argument for each external program to the script. For example:
+## Running _**Panseq**_
 
-	perl t/output.t --blastDirectory '/home/user/local_blast/' --mummerDirectory '/home/user/local_mummer/'  --muscleExecutable '/home/dir/muscle_executable'
-
-## Running Panseq
-
-All the adjustments to Panseq are made by modifying a tab-delimited configuration file, which is specified as the only argument to the script.
+All the adjustments to _**Panseq**_ are made by modifying a tab-delimited configuration file, which is specified as the only argument to the script.
 
 	perl lib/panseq.pl settings.txt
 
-Below is an example configuration file for panseq.pl:
+Below is an example configuration file for `panseq.pl`:
 
 	queryDirectory	/home/phac/panseq/queryLarge/
 	referenceDirectory	/home/phac/panseq/referenceLarge/
@@ -90,9 +80,11 @@ Below is an example configuration file for panseq.pl:
 	percentIdentityCutoff	85
 	coreGenomeThreshold	2
 	runMode 	pan
+	
 Advanced Options
 
 	queryFile	/home/phac/fileOfQuerySequence.fasta
+	cdhitDirectory  /home/phac/cd-hit/
 	storeAlleles	1
 	allelesToKeep	2
 	nameOrId	name
@@ -100,56 +92,63 @@ Advanced Options
 	overwrite	1
 	maxNumberResultsInMemory 	500
 	blastWordSize	11
+	nucB    200
+	nucC    65
+	nucD    0.12
+	nucG    90
+	nucL    20
 	cdhit   1
 
+### Settings and their [DEFAULTS]
 
-* ‘queryDirectory’ should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. Panseq will use the entire contents of this folder. 
+* `queryDirectory` [REQUIRED] should contain the full directory path of the folder where all of the query sequences you are interested in comparing reside. _**Panseq**_ will use the entire contents of this folder. 
 
-* ‘referenceDirectory’ should contain the full directory path of the folder where all of the reference sequences you are interested in comparing reside. Panseq only uses this folder for Novel Region Comparisons of type 'common_to_all' and 'no_duplicates'. All other analyses use the contents of the Query folder only.
+* `baseDirectory` [REQUIRED] is the directory where all the output from _**Panseq**_ is placed, and should be the full directory path. 
 
-* ‘baseDirectory’ is the directory where all the output from Panseq is placed, and should be the full directory path. 
+* `runMode` [REQUIRED] can be either `novel` or `pan`, for novel-region finding and pan-genome analyses respectively.
 
-* 'numberOfCores' sets the number of processors available to Panseq. Increasing this can reduce run times.
+* `referenceDirectory` [OPTIONAL] should contain the full directory path of the folder where all of the reference sequences you are interested in comparing reside. During the identification of novel regions step, these reference sequences will be screened out.
 
-* 'mummerDirectory' specifies the full path to the folder containing the nucmer program.
+* `queryFile` [OPTIONAL] is an input file of fasta-formatted sequences. If the mode is set to `pan`, the sequences in the `queryFile` will be used instead of generation a pan-genome. Thus, the distribution and SNPs of the input sequences will be determined for all genomes in the queryDirectory. This can be useful, for example, for quickly generating a table of + / - values for a set of input genes against a set of genomes in the `queryDirectory`.
 
-* 'blastDirectory' specifies the full path to the BLAST+ bin directory.
+* `numberOfCores` [1] sets the number of processors available to _**Panseq**_. Increasing this can reduce run times.
 
-* 'minimumNovelRegionSize' sets the size in bp of the smallest region that will be kept by the Novel Region Finder; all regions found below this value will not be kept.
+* `mummerDirectory` [$PATH] specifies the full path to the folder containing the `nucmer` program.
 
-* 'novelRegionFinderMode'  sets the type of novel region analysis that will be performed. ‘no_duplicates’ finds the novel regions among one or more query strains with respect to the reference strains selected. This is currently the only option.
+* `blastDirectory` [$PATH] specifies the full path to the `blast+` bin directory.
 
-* 'muscleExecutable' specifies the full path to the muscle executable file.
+* `cdhitDirectory` [$PATH] specifies the full path to the `cd-hit` program directory. 
 
-* 'fragmentationSize' when running in mode `pan' determines the size of the fragments that the genomic sequences are segmented into.
+* `muscleExecutable` [$PATH] specifies the full path to the `muscle` executable file.
 
-* 'percentIdentityCutoff' when running in mode `pan' sets the threshold of sequence identity for determining whether a fragment is part of the ‘core’ or ‘accessory’ genome.
+* `minimumNovelRegionSize` [0] sets the size in bp of the smallest region that will be kept by the Novel Region Finder; all regions found below this value will not be kept.
 
-* 'coreGenomeThreshold' defines the number of the initial sequences that a segment must be found in to be considered part of the 'core' genome; multi-fasta files of a single sequence are treated as a single sequence.
+* `fragmentationSize` [0] when running in mode `pan` determines the size of the fragments that the genomic sequences are segmented into. When set to `0`, no fragmentation of the input is done, which can be useful if specifying input via the `queryFile` option.
 
-* 'runMode' can be either 'novel' or 'pan', for novel-region finding and pan-genome analyses respectively.
+* `percentIdentityCutoff` [85] when running in mode `pan` sets the threshold of sequence identity for determining whether a fragment is part of the `core` or `accessory` genome.
 
-* 'queryFile' is an input file of fasta-formatted sequences. If the mode is set to 'pan', this causes the sequences in queryFile to be used instead of generating a pan-genome. Thus, the distribution and SNPs of the input sequences will be determined for all genomes in the queryDirectory.
+* `coreGenomeThreshold` [3] defines the number of input sequences that a segment must be found in to be considered part of the `core` genome; multi-fasta files of a single genome are treated as a single sequence.
 
-* 'storeAlleles' if set to 1, will store the allele matching the query sequence for each of the genomes and output them to locus_alleles.txt
 
-* 'allelesToKeep' if set, and if storeAlleles is selected, determines the number of alleles per genome to keep, if multiple exist. They will be output to the locus_alleles.txt file, and every allele after the first will be appended with a _a# tag, where # is the allele number (eg. _a2).
+* `storeAlleles` [0] if set to 1, will store the allele matching the query sequence for each of the genomes and output them to `locus_alleles.txt`.
 
-* 'nameOrId' defaults to id and determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files binary_table.txt and snp_table.txt
+* `allelesToKeep` [1] if set, and if `storeAlleles` is set, determines the number of alleles per genome to keep, if multiple exist. They will be output to the `locus_alleles.txt` file, and every allele after the first will be appended with a `_a#` tag, where `#` is the allele number (eg. `_a2`).
 
-* 'frameshift' defaults to 0, and includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
+* `nameOrId` [`id`] determines whether the individual locus ID string of numbers is output, or the name based on the query sequence in the files `binary_table.txt` and `snp_table.txt`.
 
-* 'overwrite' defaults to 0, and determines whether or not the specified baseDirectory will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
+* `frameshift` [0] includes frameshift only differences in SNP counts. Default behavior is to include only positions where there are also nucleotide differences. If gap-only differences are required, set this option to 1.
 
-* 'maxNumberResultsInMemory' sets the number of pan-genome results to process before emptying the memory buffers and printing to file. The default is 500. Set this number higher if you want to limit the number of I/O operations. If you run into memory issues, lower this number.
+* `overwrite` [0] determines whether or not the specified `baseDirectory` will be overwritten if it already exists. This will cause all data in the existing directory to be lost. 
 
-* 'blastWordSize' sets the word size for the blastn portion of Panseq. The default value is 20, but for small values of 'fragmentationSize' or 'percentIdentityCutoff', hits may be missed unless this value is lowered. (The default value for the blastn program is 11; Panseq sets this to 20 as the default).
+* `maxNumberResultsInMemory` [500] sets the number of pan-genome results to process before emptying the memory buffers and printing to file. Set this number higher if you want to limit the number of I/O operations. If you run into memory issues, lower this number.
 
-* `cdhit` defaults to 0, and determines whether or not `cd-hit-est` is run on the generated pan-genome before screening the pan-genome fragments. Percent identity cutoff for cd-hit-est is taken from `percentIdentityCutoff`.
+* `blastWordSize` [20] sets the word size for the blastn portion of _**Panseq**_. For small values of `fragmentationSize` or `percentIdentityCutoff`, hits may be missed unless this value is lowered. (The default value for the `blastn` program is 11; _**Panseq**_ sets this to 20 as the default).
+
+* `cdhit` [0] determines whether or not `cd-hit-est` is run on the pan-genome before identifying the distribution of the pan-genome (and SNPs among core regions) among the input sequences. Percent identity cutoff for `cd-hit-est` is taken from `percentIdentityCutoff`.
 
 ## Format of multi-fasta files ##
 
-Panseq currently only accepts fasta or multi-fasta formatted files. More than one genome may be in a single file, but for all genomes consisting of more than one contig, a distinct identifier must be present in the fasta header of each contig belonging to the same genome. For example, you have just assembled a new genome and are eager to analyze it. Your file consists of a number of contigs, similar to:
+_**Panseq**_ currently only accepts fasta or multi-fasta formatted files. More than one genome may be in a single file, but for all genomes consisting of more than one contig, a distinct identifier must be present in the fasta header of each contig belonging to the same genome. For example, you have just assembled a new genome and are eager to analyze it. Your file consists of a number of contigs, similar to:
 
 	>contig000001
 	ACTGTTT...
@@ -182,7 +181,7 @@ Common database file formats are supported by default, such as ref|, gb|, emb|, 
 - `snp_table.txt`: the nucleotide values for all SNPs found in the "core" genome regions in tab-delimited table format.
 
 
-##Detailed explanation of Panseq
+##Detailed explanation of _**Panseq**_
 
 ###Novel Region Finder
  The Novel Region Finder currently has two modes implemented: "no_duplicates" and "unique". The no_duplicates mode identifies any genomic regions present in any of the query sequences that are not present in any of the reference sequences, and returns these regions in multi-fasta format. The "unique" mode finds genomic regions that are unique to each of the query sequences and not present in any of the reference sequences.

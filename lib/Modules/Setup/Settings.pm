@@ -7,6 +7,8 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../../";
 use Log::Log4perl;
+use File::Which;
+use File::Basename;
 
 #object creation
 sub new {
@@ -351,6 +353,37 @@ sub _trailingSlash{
 sub _setDefaults{
 	my $self=shift;
 
+    unless(defined $self->blastDirectory){
+        my $exe = which 'blastn';
+        if(defined $exe){
+            my @parts = fileparse($exe);
+            $self->blastDirectory($parts[1]);
+        }
+    }
+
+    unless(defined $self->mummerDirectory){
+        my $exe = which 'nucmer';
+        if(defined $exe){
+            my @parts = fileparse($exe);
+            $self->mummerDirectory($parts[1]);
+        }
+    }
+
+    unless(defined $self->muscleExecutable){
+        my $exe = which 'muscle';
+        if(defined $exe){
+            $self->muscleExecutable($exe);
+        }
+    }
+
+    unless(defined $self->cdhitDirectory){
+        my $exe = which 'cd-hit-est';
+        if(defined $exe){
+            my @parts = fileparse($exe);
+            $self->cdhitDirectory($parts[1]);
+        }
+    }
+
 	unless(defined $self->minimumNovelRegionSize){
 		$self->minimumNovelRegionSize(0);
 		$self->logger->info("Setting default minimumNovelRegionSize to 0");
@@ -424,6 +457,14 @@ sub _setDefaults{
 	unless(defined $self->nucL){
 			$self->nucL(20);
 	}
+
+    unless(defined $self->numberOfCores){
+        $self->numberOfCores(1);
+    }
+
+    unless(defined $self->percentIdentityCutoff){
+        $self->percentIdentityCutoff(85);
+    }
 }
 
 

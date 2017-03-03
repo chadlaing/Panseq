@@ -7,7 +7,7 @@ use IO::File;
 
 my $build=Module::Build->new(
 	module_name => 'Panseq',
-	dist_version => '2016',
+	dist_version => '',
 	license => 'perl',
 	dist_abstract => 'Panseq: pan-genomic sequence analysis',
 	dist_author => 'Chad Laing <chadlaing@inoutbox.com>',
@@ -31,7 +31,11 @@ my $build=Module::Build->new(
 		'Test2::Bundle::Extended'=>0,
 		'Test2::Suite'=>0,
 		'Getopt::Long'=>0,
-		'Digest::MD5'=>0
+		'Digest::MD5'=>0,
+        'File::Which'=>0,
+        'File::Path'=>0,
+        'File::Copy'=>0,
+        'Getopt::Long'=>0
 	}
 );
 $build->create_build_script();
