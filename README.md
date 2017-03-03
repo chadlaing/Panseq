@@ -152,7 +152,7 @@ Advanced Options
 
 * `nucG` [90] sets the `g` parameter when running `nucmer`.
 
-* `nucL` [20] sets the `nucL` parameter when running `nucmer`.
+* `nucL` [20] sets the `l` parameter when running `nucmer`.
 
 * `cdhit` [0] determines whether or not `cd-hit-est` is run on the pan-genome before identifying the distribution of the pan-genome (and SNPs among core regions) among the input sequences. Percent identity cutoff for `cd-hit-est` is taken from `percentIdentityCutoff`.
 
