@@ -39,16 +39,15 @@ my $cdhitDirectory = undef;
 
 #if not specified, check for cd-hit
 unless(defined $cdhitDirectory){
-    my @cdArray = fileparse(which 'cd-hit-est');
-    $cdhitDirectory = $cdArray[1];
+    my @cdArray;
+    if(which 'cd-hit-est'){
+        @cdArray = fileparse(which 'cd-hit-est');
+        $cdhitDirectory = $cdArray[1];
+    }
+    else{
+        warn "cd-hit not found\n";
+    }
 }
-else{
-    print STDERR "cdhitDirectory defined as $cdhitDirectory\n";
-}
-
-
-
-
 
 #get script location via File::Basename
 my $SCRIPT_LOCATION = dirname(__FILE__);
