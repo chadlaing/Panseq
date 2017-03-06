@@ -28,3 +28,6 @@
 Batch/*
 serverSettings.txt
 blib/
+/MYMETA.json
+/MYMETA.yml
+/MANIFEST
