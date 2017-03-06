@@ -7,7 +7,7 @@ use IO::File;
 
 my $build=Module::Build->new(
 	module_name => 'Panseq',
-	dist_version => '3.1.0',
+	dist_version => '3.1.1',
 	license => 'perl',
 	dist_abstract => 'Panseq: pan-genomic sequence analysis',
 	dist_author => 'Chad Laing <chadlaing@inoutbox.com>',
