@@ -133,7 +133,7 @@ sub _externalProgramTest{
 	my $self = shift;
 
 	if ($self->settings->cdhit){
-		unless(-e $self->settings->cdhitDirectory . 'cd-hit-est'){
+		unless(-e $self->settings->cdhitDirectory . 'cd-hit-est' || -e $self->settings->cdhitDirectory . 'cdhit-est'){
 			$self->logger->fatal($self->_missingExternalMessage($self->settings->cdhitDirectory, 'cdhitDirectory'));
 			exit(1);
 		}
