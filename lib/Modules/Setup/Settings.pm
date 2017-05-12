@@ -129,6 +129,12 @@ sub cdhitDirectory{
 	$self->{'_cdhitDirectory'} = shift // return $self->{'_cdhitDirectory'}
 }
 
+
+sub _cdhitExecutable{
+    my $self = shift;
+    $self->{'__cdhitExecutable'} = shift // return $self->{'__cdhitExecutable'}
+}
+
 sub cdhit{
 	my $self = shift;
 	$self->{'_cdhit'} = shift // return $self->{'_cdhit'}
