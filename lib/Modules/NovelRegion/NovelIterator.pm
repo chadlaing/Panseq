@@ -184,6 +184,10 @@ sub run{
 
 	my $numberOfGenomes = scalar(@{$self->settings->orderedGenomeNames});
 	$self->logger->info("We have " . $numberOfGenomes . " genomes this run");
+    foreach my $ogn (@{$self->settings->orderedGenomeNames}){
+        $self->logger->debug($ogn);
+    }
+
 	if($numberOfGenomes ==0){
 		$self->logger->fatal("Input error. Require at least 1 genome");
 		exit(1);
