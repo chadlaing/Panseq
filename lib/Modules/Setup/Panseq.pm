@@ -379,7 +379,9 @@ sub _cleanUp{
 			($file =~ m/lastNovelRegionsFile/) ||
 			($file =~ m/uniqueNovelRegions/) ||
 			($file =~ m/\.temp/) ||
-			($file =~ m/_NR$/)
+			($file =~ m/_NR$/) ||
+            ($file =~ m/Temp_out/) ||
+            ($file =~ m/Temp_in/)
 		){
 			unlink $file;
 		}
@@ -410,6 +412,7 @@ sub _performPanGenomeAnalyses{
 	my $segmenter;
 
 	if($self->settings->fragmentationSize > 0){
+
 		$segmenter = Modules::Fasta::SegmentMaker->new(
 			'inputFile'=>$panGenomeFile,
 			'outputFile'=>$self->settings->baseDirectory . 'pangenome_fragments.fasta',
@@ -417,7 +420,7 @@ sub _performPanGenomeAnalyses{
 		);
 		$segmenter->segmentTheSequence;
 		$panGenomeFile = $segmenter->outputFile;
-	}	
+	}
 
 	#run cdhit if so desired
 	my $postCdhit;
