@@ -12,7 +12,7 @@ use Getopt::Long;
 use File::Which;
 
 #set up plan
-Test2::Bundle::Extended::plan(26);
+Test2::Bundle::Extended::plan(35);
 
 #test options
 my $numberOfCores = 1;
