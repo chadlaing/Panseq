@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use Digest::SHA qw(sha1_hex);
+
 =pod
 
 =head1 NAME
@@ -415,10 +417,16 @@ sub _processBlastXML {
 			$self->logger->debug("no queryFile, using $qsn as qsn, queryName: $queryName");
 		}
 
+        my $id = $counter;
+        my $sequence = $result->{$qsn}->[0]->[11];
+        if($self->settings->sha1){
+            $id = Digest::SHA::sha1_hex($sequence);
+        }
+
 		my %locusInformation = (
-			id=>$counter,
+			id=>$id,
 			name=>$result->{$qsn}->[0]->[1],
-			sequence=>$result->{$qsn}->[0]->[11],
+			sequence=>$sequence,
 			pan=>$coreOrAccessory
 		);	
 		$self->logger->debug("locusInformation: " . Dumper(%locusInformation));
@@ -554,29 +562,21 @@ sub _printPanGenomeFastaFiles{
 	my $self = shift;
 	my $locusInformation = shift;
 
-	#fragment files
-	if($locusInformation->{pan} eq 'core'){
-		$self->_printFH->{coreFH}->print('>lcl|' 
-						 .$locusInformation->{id} 
-						 . '|' 
-						 . $locusInformation->{name} 
-						 . "\n" 
-						 . $locusInformation->{sequence} 
-						 . "\n");
-	}
-	elsif($locusInformation->{pan} eq 'accessory'){
-		$self->_printFH->{accessoryFH}->print('>lcl|'
-											 . $locusInformation->{id} 
-											 . '|'
-											 . $locusInformation->{name} 
-											 . "\n" 
-											 . $locusInformation->{sequence}
-											 . "\n");
-	}
-	else{
-		$self->logger->fatal("Unknown pan-genome fragment type! " . $locusInformation->{pan});
-		exit(1);
-	}
+    my $header = '>';
+
+    if($self->settings->sha1){
+        $header .= $locusInformation->{id} . "\n";
+    }
+    else{
+        $header .= 'lcl|'
+            .$locusInformation->{id}
+            .'|'
+            .$locusInformation->{name}
+            ."\n";
+    }
+
+    $self->_printFH->{$locusInformation->{pan} . 'FH'}->print(
+      $header . $locusInformation->{sequence} . "\n");
 }
 
 

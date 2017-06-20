@@ -184,6 +184,10 @@ sub run{
 
 	my $numberOfGenomes = scalar(@{$self->settings->orderedGenomeNames});
 	$self->logger->info("We have " . $numberOfGenomes . " genomes this run");
+    foreach my $ogn (@{$self->settings->orderedGenomeNames}){
+        $self->logger->debug($ogn);
+    }
+
 	if($numberOfGenomes ==0){
 		$self->logger->fatal("Input error. Require at least 1 genome");
 		exit(1);
@@ -382,34 +386,6 @@ sub _combineNovelRegionsAndReferenceFile{
 		$outputFile
 	);
 	return $outputFile;
-}
-
-
-=head2 _setRefFileToIgnore
-
-Need to ensure the reference file is not used for generating new novel regions
-under mode "unique". By setting the lcl|_ignore| flag, when used as a query, the novel
-region finder will ignore it. When used as a reference, will still show the query matches.
-
-=cut
-
-sub _setRefFileToIgnore{
-	my $self = shift;
-	my $refFileOriginal = shift;
-
-	my $fileName = $refFileOriginal . '_ignore';
-	my $refInFH = IO::File->new('<' . $refFileOriginal) or die "$!";
-	my $refOutFH = IO::File->new('>' . $fileName) or die "$!";
-	while(my $line = $refInFH->getline){
-		if($line =~ m/^>/){
-			$line =~ s/\W/_/g;
-			$line = '>lcl|_ignore|' . $line . "\n";
-		}
-		$refOutFH->print($line);
-	}
-	$refInFH->close();
-	$refOutFH->close();
-	return $fileName;
 }
 
 =head2 _printNovelRegionsFromQueue

@@ -156,6 +156,12 @@ sub _getName{
 	elsif($originalName =~ m/lcl\|([\w-]*)\|/){
 		$newName = $1;
 	}
+    elsif($originalName =~ m/([A-Za-z]{2}\d{6})\.\d/){
+        $newName = $1;
+    }
+    elsif($originalName =~ m/([A-Za-z]{4}\d{2})\d{6}\.\d/){
+        $newName = $1;
+    }
 	elsif($originalName =~ m/(ref\|\w\w_\w\w\w\w\w\w|gb\|\w\w\w\w\w\w\w\w|emb\|\w\w\w\w\w\w\w\w|dbj\|\w\w\w\w\w\w\w\w)/){
 		$newName = $1;
 	}

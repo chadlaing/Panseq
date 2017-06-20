@@ -12,10 +12,6 @@ If you find _**Panseq**_ useful please cite:
 > Laing C, Buchanan C, Taboada EN, Zhang Y, Kropinski A, Villegas A, Thomas JE, Gannon VP.
 > BMC Bioinformatics. 2010 Sep 15;11:461.
 
-> Identification of Salmonella enterica species- and subgroup-specific genomic regions using Panseq 2.0.
-> Laing C, Villegas A, Taboada EN, Kropinski A, Thomas JE, Gannon VP.
-> Infect Genet Evol. 2011 Dec;11(8):2151-61.
-
 
 ## USAGE
 
@@ -98,6 +94,7 @@ Advanced Options
 	nucG    90
 	nucL    20
 	cdhit   1
+	sha1    1
 
 ### Settings and their [DEFAULTS]
 
@@ -155,6 +152,12 @@ Advanced Options
 * `nucL` [20] sets the `l` parameter when running `nucmer`.
 
 * `cdhit` [0] determines whether or not `cd-hit-est` is run on the pan-genome before identifying the distribution of the pan-genome (and SNPs among core regions) among the input sequences. Percent identity cutoff for `cd-hit-est` is taken from `percentIdentityCutoff`.
+
+* `sha1` [0] sets the header and ID for all analyses as the SHA1 hash of the
+ sequence. In `novel` mode this will give the novel regions with the fasta 
+ header as the hash. In `pan` mode this will also set the fasta headers as 
+ the SHA1 hash of the sequence, and the ID column in the outputs will use 
+ the SHA1 hash.
 
 ## Format of multi-fasta files ##
 

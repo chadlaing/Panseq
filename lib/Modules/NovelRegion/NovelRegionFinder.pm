@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use Digest::SHA qw(sha1_hex);
+
 =pod
 
 =head1 NAME
@@ -157,7 +159,7 @@ sub coordsFile{
 =head3 queryFile
 
 The file containing all combined query sequences.
-File is in mult-fasta foramt.
+File is in multi-fasta foramt.
 
 =cut
 
@@ -305,8 +307,19 @@ sub printNovelRegions{
 			my($relId, $relStart, $relEnd) = $self->_getNewIdStartEnd($id,$start,$end);
 			my $relLength = ($relEnd - $relStart +1);
 
+            my $sequence = $retriever->extractRegion($id,$start,$end);
+            my $header = '>';
+            if($self->settings->runMode eq 'novel' && $self->settings->sha1){
+                $header .= Digest::SHA::sha1_hex($sequence);
+                $self->logger->debug("$header");
+            }
+            else{
+                $header .= $relId . '_(' . $relStart . '..' . $relEnd .
+                    ')'. "\n"
+            }
+
 			$self->logger->debug("original: start:$start, end:$end, length: $length\nnew    : start:$relStart, end:$relEnd, length:$relLength" );
-			$outFH->print('>' . $relId . '_(' . $relStart . '..' . $relEnd . ')'. "\n" . $retriever->extractRegion($id,$start,$end) . "\n");	
+            $outFH->print($header . "\n" . $sequence . "\n");
 		}# end while
 	}# end foreach
 	$outFH->close();	

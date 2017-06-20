@@ -129,6 +129,12 @@ sub cdhitDirectory{
 	$self->{'_cdhitDirectory'} = shift // return $self->{'_cdhitDirectory'}
 }
 
+
+sub _cdhitExecutable{
+    my $self = shift;
+    $self->{'__cdhitExecutable'} = shift // return $self->{'__cdhitExecutable'}
+}
+
 sub cdhit{
 	my $self = shift;
 	$self->{'_cdhit'} = shift // return $self->{'_cdhit'}
@@ -264,6 +270,11 @@ sub overwrite{
 	$self->{'_overwrite'} = shift // return $self->{'_overwrite'};	
 }
 
+sub sha1{
+    my $self=shift;
+    $self->{'_sha1'} = shift // return $self->{'_sha1'};
+}
+
 #methods
 sub _getSettingsFromConfigurationFile {
 	my ($self) = shift;
@@ -277,11 +288,12 @@ sub _getSettingsFromConfigurationFile {
 			
 			$line =~ s/\R//g;
 			my @la = split(/\s+/,$line);
-
-			my $setting = $la[0] // $self->_noValueSet('name');
-			my $value   = $la[1] // $self->_noValueSet($la[0]);
-			
-			$self->_setSettingValue($setting,$value);
+            if(defined $la[0] && defined $la[1]){
+                $self->_setSettingValue($la[0],$la[1]);
+            }
+            else{
+                $self->logger->debug("$line cannot be parsed");
+            }
 		}
 		$inFile->close();
 	}
@@ -464,6 +476,10 @@ sub _setDefaults{
 
     unless(defined $self->percentIdentityCutoff){
         $self->percentIdentityCutoff(85);
+    }
+
+    unless(defined $self->sha1){
+        $self->sha1(0);
     }
 }
 

@@ -133,10 +133,18 @@ sub _externalProgramTest{
 	my $self = shift;
 
 	if ($self->settings->cdhit){
-		unless(-e $self->settings->cdhitDirectory . 'cd-hit-est'){
+		unless(-e $self->settings->cdhitDirectory . 'cd-hit-est' || -e $self->settings->cdhitDirectory . 'cdhit-est'){
 			$self->logger->fatal($self->_missingExternalMessage($self->settings->cdhitDirectory, 'cdhitDirectory'));
 			exit(1);
 		}
+        else{
+            if(-e $self->settings->cdhitDirectory . 'cd-hit-est'){
+                $self->settings->_cdhitExecutable($self->settings->cdhitDirectory . 'cd-hit-est');
+            }
+            elsif(-e $self->settings->cdhitDirectory . 'cdhit-est'){
+                $self->settings->_cdhitExecutable($self->settings->cdhitDirectory . 'cdhit-est');
+            }
+        }
 	}
 
 	unless(-e $self->settings->blastDirectory . 'blastn'){
@@ -286,8 +294,8 @@ sub _runCdhit{
 
 	my $decimalPercentIdentityCutoff = $self->settings->percentIdentityCutoff / 100;
 	my $outputFile = $self->settings->baseDirectory . 'cdhit.fasta';
-	my $cdhitLine =
-		       'cd-hit-est -M 0 -T ' .
+	my $cdhitLine = $self->settings->_cdhitExecutable .
+		       ' -M 0 -T ' .
 			   $self->settings->numberOfCores .
 			   ' -c ' .
 			   $decimalPercentIdentityCutoff .
@@ -371,7 +379,9 @@ sub _cleanUp{
 			($file =~ m/lastNovelRegionsFile/) ||
 			($file =~ m/uniqueNovelRegions/) ||
 			($file =~ m/\.temp/) ||
-			($file =~ m/_NR$/)
+			($file =~ m/_NR$/) ||
+            ($file =~ m/Temp_out/) ||
+            ($file =~ m/Temp_in/)
 		){
 			unlink $file;
 		}
@@ -402,6 +412,7 @@ sub _performPanGenomeAnalyses{
 	my $segmenter;
 
 	if($self->settings->fragmentationSize > 0){
+
 		$segmenter = Modules::Fasta::SegmentMaker->new(
 			'inputFile'=>$panGenomeFile,
 			'outputFile'=>$self->settings->baseDirectory . 'pangenome_fragments.fasta',
@@ -409,7 +420,7 @@ sub _performPanGenomeAnalyses{
 		);
 		$segmenter->segmentTheSequence;
 		$panGenomeFile = $segmenter->outputFile;
-	}	
+	}
 
 	#run cdhit if so desired
 	my $postCdhit;

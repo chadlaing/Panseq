@@ -32,6 +32,7 @@ my $build=Module::Build->new(
 		'Test2::Suite'=>0,
 		'Getopt::Long'=>0,
 		'Digest::MD5'=>0,
+        'Digest::SHA'=>0,
         'File::Which'=>0,
         'File::Path'=>0,
         'File::Copy'=>0,
