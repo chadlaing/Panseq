@@ -41,34 +41,34 @@ my %testValues=(
 	},
 	'ref'=>{
 			'string'=>'ref|NC_123456|gi|148566106|gb|CP000711.1| Enterobacteria phage CUS-3, complete genome',
-			'correct'=>'ref|NC_123456'
+			'correct'=>'CP000711'
 	},
 	'gb'=>{
 			'string'=>'gi|148566106|gb|CP000711.1| Enterobacteria phage CUS-3, complete genome',
-			'correct'=>'gb|CP000711'
+			'correct'=>'CP000711'
 	},
 	'emb'=>{
 			'string'=>'gi|148566106|emb|CP000711.1| Enterobacteria phage CUS-3, complete genome',
-			'correct'=>'emb|CP000711'
+			'correct'=>'CP000711'
 	},
 	'dbj'=>{
 			'string'=>'gi|148566106|dbj|CP000711.1| Enterobacteria phage CUS-3, complete genome',
-			'correct'=>'dbj|CP000711'
+			'correct'=>'CP000711'
 	},
 	'Segment'=>{
-			'string'=>'gi_148566106_dbj_CP000711.1| Enterobacteria phage CUS-3, complete genome|Segment=125',
-			'correct'=>'gi_148566106_dbj_CP000711.1| Enterobacteria phage CUS-3, complete genome'
+			'string'=>'gi_148566106_dbj_000711.1| Enterobacteria phage CUS-3, complete genome|Segment=125',
+			'correct'=>'gi_148566106_dbj_000711.1| Enterobacteria phage CUS-3, complete genome'
 	},
 	'Length'=>{
-			'string'=>'gi_148566106_dbj_CP000711.1| Enterobacteria phage CUS-3, complete genome|Length=1245555',
-			'correct'=>'gi_148566106_dbj_CP000711.1| Enterobacteria phage CUS-3, complete genome'
+			'string'=>'gi_148566106_dbj_000711.1| Enterobacteria phage CUS-3, complete genome|Length=1245555',
+			'correct'=>'gi_148566106_dbj_000711.1| Enterobacteria phage CUS-3, complete genome'
 	},
 	'original'=>{
-			'string'=>'gi_148566106_dbj_CP000711_1_ Enterobacteria phage CUS-3, complete genome_Length=1245555',
-			'correct'=>'gi_148566106_dbj_CP000711_1_ Enterobacteria phage CUS-3, complete genome_Length=1245555'
+			'string'=>'gi_148566106_dbj_000711_1_ Enterobacteria phage CUS-3, complete genome_Length=1245555',
+			'correct'=>'gi_148566106_dbj_000711_1_ Enterobacteria phage CUS-3, complete genome_Length=1245555'
 	},
 	'gi'=>{			
-		'string'=>'gi|148566106|gret|CP000711.1| Enterobacteria phage CUS-3, complete genome',
+		'string'=>'gi|148566106|gret|000711.1| Enterobacteria phage CUS-3, complete genome',
 		'correct'=>'gi|148566106'
 	}
 );
