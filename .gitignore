@@ -32,3 +32,6 @@ blib/
 /MYMETA.yml
 /MANIFEST
 !/MANIFEST
+/t/_Inline/
+/t/sha1/
+/t/t/plasmids/
