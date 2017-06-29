@@ -365,7 +365,7 @@ sub _removeRun{
 sub _runPanseq{
 	my $t=shift;
 	
-	my $systemLine="perl $SCRIPT_LOCATION/../lib/panseq.pl $SCRIPT_LOCATION/$t.batch";
+	my $systemLine="perl $SCRIPT_LOCATION/../bin/panseq $SCRIPT_LOCATION/$t.batch";
 	print "Systemline: $systemLine\n";
 	system($systemLine);
 }
