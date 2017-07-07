@@ -47,6 +47,25 @@ and optionally
 
 * [cd-hit](http://weizhongli-lab.org/cd-hit/)
 
+## CONDA INSTALLATION
+
+ _**Panseq**_ can optionally be installed from conda:
+
+First install miniconda or anadaconda: https://conda.io/docs/install/quick.html
+
+Add necessary conda channels:
+
+> conda config --add channels bioconda
+> conda config --add channels jamez-eh
+
+Install_**Panseq**_ through conda:
+
+> conda install panseq
+
+_**Panseq**_ can now be accessed directly from the commandline:
+
+> panseq <configuration_file.conf>
+
 ## Testing your installation
 
 	perl t/output.t
