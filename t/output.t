@@ -117,25 +117,26 @@ if(defined $blastDirectory){
     $plasmidsConfig{blastDirectory} = $blastDirectory;
     $queryConfig{blastDirectory} = $blastDirectory;
     $genomesConfig{blastDirectory} = $blastDirectory;
+    $sha1Config{blastDirectory} = $blastDirectory;
 }
 
 if(defined $mummerDirectory){
     $plasmidsConfig{mummerDirectory} = $mummerDirectory;
     $queryConfig{mummerDirectory} = $mummerDirectory;
     $genomesConfig{mummerDirectory} = $mummerDirectory;
+    $sha1Config{mummerDirectory} = $mummerDirectory;
 }
 
 if(defined $muscleExecutable){
     $plasmidsConfig{muscleExecutable} = $muscleExecutable;
     $queryConfig{muscleExecutable} = $muscleExecutable;
     $genomesConfig{muscleExecutable} = $muscleExecutable;
+    $sha1Config{muscleExecutable} = $muscleExecutable;
 }
 
 if(defined $cdhitDirectory){
     $plasmidsConfig{cdhitDirectory} = $cdhitDirectory;
     $plasmidsConfig{cdhit} = 1;
-    $queryConfig{cdhitDirectory} = $cdhitDirectory;
-    $genomesConfig{cdhitDirectory} = $cdhitDirectory;
 }
 
 
@@ -166,15 +167,15 @@ my %md5Sum=(
     querySnpPhylip=>in_set('972f68dff31780ddab9c1ac87b78eddd', 'e80e1aeb58dfba9d6680fac74c435e68','8e77f99d3d9ab08b6137308ae8b670b2','edc9bbe9e0b80c7345fe7b710c723e3b'),
     queryAlleles=>in_set('7aec36d7ee53447e0dd5e82be3d2f9bc','75d9944105a3ed95041024c60e9202cc','dcd9041f5aa586ce8c0b04746cf2da62','1c73f71e9da53e2d55f1645b0a074dc6'),
     queryNameConversion=>in_set('e90cc17adc92f2d63106d58dff86860a','77023dced73042cf7e4854a1a80f155e'),
-    sha1CoreSnps=>'943a1cf71152037cb1543b0cacec2fff',
-    sha1PanGenome=>'6674c78f04dcbe10b569e247990e27b5',
-    sha1BinaryTable=>'9524c956d024e323de747623b67871e1',
-    sha1SnpTable=>'883396f6d5f8d5d5918777a0a4ee6e97',
-    sha1SnpPhylip=>'2ca6ba039d01c1ca0cf4bae11bd07cfc',
-    sha1BinaryPhylip=>'210104cefd498b805d040ae789e81f52',
+    sha1CoreSnps=>in_set('943a1cf71152037cb1543b0cacec2fff','4c34b6ea16f000281413a51e7f1a96cc'),
+    sha1PanGenome=>in_set('6674c78f04dcbe10b569e247990e27b5','a5c4a6fefc6977063c136e0126a6e2c9'),
+    sha1BinaryTable=>in_set('9524c956d024e323de747623b67871e1','facdac694c0f7f8603f74151cdefd7a6'),
+    sha1SnpTable=>in_set('883396f6d5f8d5d5918777a0a4ee6e97','92a15888a3beee351cebc43302457824'),
+    sha1SnpPhylip=>in_set('2ca6ba039d01c1ca0cf4bae11bd07cfc','d490e061720aa36303cb3acbf55b4bb3'),
+    sha1BinaryPhylip=>in_set('210104cefd498b805d040ae789e81f52','fd0779e2c1cacef90fbf5594a52cf8a6'),
     sha1NameConversion=>'23ab01d691416ec05df73c4bd1eb1f78',
-    sha1AccessoryFragments=>'203f613ce413cc2e97f15134ae3fe627',
-    sha1CoreFragments=>'bd5e19b696e6ef5602c3456e2792b493'
+    sha1AccessoryFragments=>in_set('203f613ce413cc2e97f15134ae3fe627','399c70234d36995e7660261494255098'),
+    sha1CoreFragments=>in_set('bd5e19b696e6ef5602c3456e2792b493','a277c0f894016404a5570adb5236c35f')
 );
 
 
