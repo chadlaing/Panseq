@@ -563,20 +563,22 @@ sub _printPanGenomeFastaFiles{
 	my $locusInformation = shift;
 
     my $header = '>';
+    my $lid = $locusInformation->{id};
+    $lid =~ s/\R//g;
 
     if($self->settings->sha1){
-        $header .= $locusInformation->{id} . "\n";
+        $header .= $lid . "\n";
     }
     else{
+        my $lin = $locusInformation->{name};
+        $lin =~ s/\R//g;
         $header .= 'lcl|'
-            .$locusInformation->{id}
+            . $lid
             .'|'
-            .$locusInformation->{name}
+            .$lin
             ."\n";
     }
-
-    $self->_printFH->{$locusInformation->{pan} . 'FH'}->print(
-      $header . $locusInformation->{sequence} . "\n");
+    $self->_printFH->{$locusInformation->{pan} . 'FH'}->print($header . $locusInformation->{sequence} . "\n");
 }
 
 

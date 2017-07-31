@@ -73,7 +73,8 @@ sub combineFilesIntoSingleFile{
     else{
         $filemode = '>';
     }
-    my $coutFH = IO::File->new($filemode . $outputFile) or $self->logger->logdie("Could not open $outputFile\n $!");
+
+    open(my $coutFH, $filemode, $outputFile) or $self->logger->fatal("Could not open $outputFile\n $!");
     $self->logger->debug("Combining files:");
 
     my $firstFile = 1;
@@ -84,13 +85,14 @@ sub combineFilesIntoSingleFile{
         }
 
         $self->logger->debug("Adding $file to $outputFile");
-        my $cinFH = IO::File->new('<' . $file) or $self->logger->logdie("Cannot open $file $!");
+
+        open(my $cinFH, '<', $file) or $self->logger->fatal("Cannot open $file $!");
 
         if($firstLineAdjust && ($firstFile > 1)){
             $cinFH->getline();
         }    
 
-        while(my $cline = <$cinFH>){
+        while(my $cline = $cinFH->getline()){
             $cline =~ s/\R//g;
             $coutFH->print($cline . "\n");
         }
