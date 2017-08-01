@@ -315,7 +315,7 @@ sub printNovelRegions{
             }
             else{
                 $header .= $relId . '_(' . $relStart . '..' . $relEnd .
-                    ')'. "\n"
+                    ')';
             }
 
 			$self->logger->debug("original: start:$start, end:$end, length: $length\nnew    : start:$relStart, end:$relEnd, length:$relLength" );
