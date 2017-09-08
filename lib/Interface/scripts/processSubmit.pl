@@ -135,6 +135,7 @@ sub _launchPanseq{
             numberOfCores      => $serverSettings->{'numberOfCores'},
             muscleExecutable   => $serverSettings->{'muscleExecutable'},
             outputDirectory    => $newDir,
+            percentIdentityCutoff => $serverSettings->{'percentIdentityCutoff'},
             nucB               => $cgi->param( 'nucB' ),
             nucC               => $cgi->param( 'nucC' ),
             nucD               => $cgi->param( 'nucD' ),
