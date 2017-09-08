@@ -131,6 +131,7 @@ sub _launchPanseq{
             blastDirectory     => $serverSettings->{'blastDirectory'},
             numberOfCores      => $serverSettings->{'numberOfCores'},
             baseDirectory      => $resultsDir,
+            minimumNovelRegionSize => $serverSettings->{'minimumNovelRegionSize'},
             numberOfCores      => $serverSettings->{'numberOfCores'},
             muscleExecutable   => $serverSettings->{'muscleExecutable'},
             outputDirectory    => $newDir,
