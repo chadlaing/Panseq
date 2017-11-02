@@ -175,8 +175,10 @@ sub segmentTheSequence{
 		$id =~ s/\s/_/g;
 		$self->_fragmentHash->{newId} = $id;
 
-		while(my $frag = $self->next_fragment()){
-			$outputFH->write_seq($frag);
+    if($self->_fragmentHash->{sequence}->length() >= $self->segmentSize){
+        while(my $frag = $self->next_fragment()){
+          $outputFH->write_seq($frag);
+        }
 		}		
 	}
 	$inFH->close();
