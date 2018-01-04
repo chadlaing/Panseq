@@ -3,7 +3,7 @@
 use strict;
 use warnings; 
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib/";
 use Modules::Setup::Panseq;
 use Modules::Setup::Settings;
 use Log::Log4perl qw/:easy/;
@@ -19,7 +19,7 @@ close STDERR;
 tie *STDERR, "Tie::Log4perl";
 
 my $panseq = Modules::Setup::Panseq->new($settings);
-Log::Log4perl->init("$FindBin::Bin/log4p.conf");
+Log::Log4perl->init("$FindBin::Bin/../lib/log4p.conf");
 
 $panseq->run();
 

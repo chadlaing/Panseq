@@ -1,0 +1,28 @@
+package:
+  name: panseq
+  version: "3.1.1"
+
+source:
+  git_url: https://github.com/chadlaing/Panseq.git
+ 
+requirements:
+  build:
+    - libgcc
+    - perl-threaded
+    - perl-module-build
+  run:
+    - libgcc
+    - mummer
+    - muscle
+    - perl-threaded
+    - perl-module-build
+    - blast
+    - perl-archive-zip
+    - perl-bioperl
+    - perl-tie-log4perl
+
+
+about:
+  home: https://github.com/chadlaing/Panseq
+  license: GNU GENERAL PUBLIC LICENSE
+ 
