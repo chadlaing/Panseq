@@ -1,0 +1,12 @@
+storeAlleles	1
+runMode	pan
+queryFile	t/data/testfragments.fasta
+baseDirectory	t/query/
+numberOfCores	1
+overwrite	1
+nameOrId	name
+minimumNovelRegionSize	1
+fragmentationSize	0
+coreGenomeThreshold	2
+percentIdentityCutoff	90
+queryDirectory	t/data/genomes/

@@ -714,7 +714,7 @@ sub _printResults{
 
 				foreach my $snpId(sort keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
 					$snpStringHash{$snpId}->{$genomeCounter} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
-				
+                                        $snpStringHash{$snpId}->{'loci'} = $finalResult->{locusInformation}->{name};				
 					$self->_printCoreSnpData(
 						snpId=>$snpId
 					   ,locusName=>$finalResult->{locusInformation}->{name}
@@ -846,9 +846,10 @@ sub _printSnpTable{
 	foreach my $id(sort keys %{$snpStringHash}){
 		my $printLine = "\n";
 		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
-			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome})
+			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome}) #. $snpStringHash->{$id}->{$genome})
 		}
-		push @output, $printLine;
+                my $snploci = $printLine . "\t" . $snpStringHash->{$id}->{'loci'};
+		push @output, $snploci; #, $printLine;
 	}
 	$self->_printFH->{snpTableFH}->print(@output);
 }
@@ -1157,6 +1158,7 @@ sub _getCoreResult {
 	 #this returns undef if there are no SNPs
 	 return $snpDataArrayRef;	
 }
+
 
 1;
 
