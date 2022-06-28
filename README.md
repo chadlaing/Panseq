@@ -1,4 +1,5 @@
 [![Master branch build status](https://travis-ci.org/chadlaing/Panseq.svg?branch=master "Master Build Status")](https://travis-ci.org/chadlaing/Panseq)
+# Panseq-LC: fork of Panseq, with output modified to include LocusName in SNP table
 
 ## OVERVIEW
 
