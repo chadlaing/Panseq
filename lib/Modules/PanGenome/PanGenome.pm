@@ -845,10 +845,15 @@ sub _printSnpTable{
 	my @output;
 	foreach my $id(sort keys %{$snpStringHash}){
 		my $printLine = "\n";
+                my $startbp = ''; #get ref start ID
+                
 		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
-			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome}) #. $snpStringHash->{$id}->{$genome})
+			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome});
+                        my $lociname = $snpStringHash->{$id}->{'loci'};
+                        my $refgenome = (split /|/, $lociname)[1];
+                        $startbp = 150 if $genome==$refgenome; 
 		}
-                my $snploci = $printLine . "\t" . $snpStringHash->{$id}->{'loci'};
+                my $snploci = $printLine . "\t" . $snpStringHash->{$id}->{'loci'} . "\t" . $startbp;
 		push @output, $snploci; #, $printLine;
 	}
 	$self->_printFH->{snpTableFH}->print(@output);
