@@ -1,0 +1,10 @@
+queryDirectory	t/data/genomes/
+percentIdentityCutoff	90
+coreGenomeThreshold	3
+minimumNovelRegionSize	1000
+fragmentationSize	1000
+overwrite	1
+nameOrId	name
+baseDirectory	t/genomes/
+numberOfCores	1
+runMode	pan

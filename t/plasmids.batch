@@ -1,0 +1,14 @@
+percentIdentityCutoff	90
+queryDirectory	t/data/plasmids/
+coreGenomeThreshold	2
+cdhitDirectory	/mnt/gvl/apps/linuxbrew/bin/
+minimumNovelRegionSize	500
+fragmentationSize	500
+allelesToKeep	2
+nameOrId	name
+overwrite	1
+runMode	pan
+storeAlleles	1
+numberOfCores	1
+cdhit	1
+baseDirectory	t/plasmids/

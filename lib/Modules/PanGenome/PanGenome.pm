@@ -714,7 +714,7 @@ sub _printResults{
 
 				foreach my $snpId(sort keys %{$finalResult->{genomeResults}->{$genome}->{snp}}){
 					$snpStringHash{$snpId}->{$genomeCounter} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value};
-				
+                                        $snpStringHash{$snpId}->{'loci'} = $finalResult->{locusInformation}->{name};				
 					$self->_printCoreSnpData(
 						snpId=>$snpId
 					   ,locusName=>$finalResult->{locusInformation}->{name}
@@ -723,6 +723,10 @@ sub _printResults{
 					   ,startBp=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}
 					   ,contigId=>$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{contig_id}
 					);
+					my $lname = "" . $snpStringHash{$snpId}->{'loci'};
+					my @refgenome = (split(/[|]/, $lname));
+					my $refgenome_ = $refgenome[1];
+					$snpStringHash{$snpId}->{'snp_position'} = $finalResult->{genomeResults}->{$refgenome_}->{snp}->{$snpId}->{start_bp}; #if $refgenome==$genome;
 				}
 
 				#if there are SNPs in a region, add dashes to the snp string
@@ -841,14 +845,20 @@ sub _printCoreSnpData{
 sub _printSnpTable{
 	my $self=shift;
 	my $snpStringHash = shift;
-
+	#my $finalResult = shift;
 	my @output;
 	foreach my $id(sort keys %{$snpStringHash}){
 		my $printLine = "\n";
+                my $startbp = ''; #get ref start ID
+                
 		foreach my $genome(1..scalar(@{$self->settings->orderedGenomeNames})){
-			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome})
+			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome});
+                        my $lociname = $snpStringHash->{$id}->{'loci'};
+                        my $refgenome = (split /|/, $lociname)[1];
+                        $startbp = $snpStringHash->{$id}->{'snp_position'};
 		}
-		push @output, $printLine;
+                my $snploci = $printLine . "\t" . $snpStringHash->{$id}->{'loci'} . "\t" . $startbp;
+		push @output, $snploci;
 	}
 	$self->_printFH->{snpTableFH}->print(@output);
 }
@@ -1157,6 +1167,7 @@ sub _getCoreResult {
 	 #this returns undef if there are no SNPs
 	 return $snpDataArrayRef;	
 }
+
 
 1;
 
