@@ -722,18 +722,10 @@ sub _printResults{
 					   ,snpChar=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value}
 					   ,startBp=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}
 					   ,contigId=>$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{contig_id}
-					   #,$lname= $finalResult->{locusInformation}->{name};
-					   #,$refgenome = (split /|/, $lname)[1];
-					   #,$snpStringHash{$snpId}->{'snp_position'} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp} #if $genome==$refgenome;
 					);
 					my $lname = "" . $snpStringHash{$snpId}->{'loci'};
-					#print"$lname\n";
-					#my $delim = '|';
 					my @refgenome = (split(/[|]/, $lname));
 					my $refgenome_ = $refgenome[1];
-					#print"@refgenome\n";
-					#print "$refgenome_";
-					#print"\n";
 					$snpStringHash{$snpId}->{'snp_position'} = $finalResult->{genomeResults}->{$refgenome_}->{snp}->{$snpId}->{start_bp}; #if $refgenome==$genome;
 				}
 
@@ -863,13 +855,10 @@ sub _printSnpTable{
 			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome});
                         my $lociname = $snpStringHash->{$id}->{'loci'};
                         my $refgenome = (split /|/, $lociname)[1];
-                        $startbp = $snpStringHash->{$id}->{'snp_position'}; #if $snpStringHash->{$id}->{$genome}==$refgenome;
-                        #print "$snpStringHash->{$id}"
-                        #print $params->{$id}->{$startBp}
-                        #print"$finalResult->{$genome}->{$id}->{$start_bp}";
+                        $startbp = $snpStringHash->{$id}->{'snp_position'};
 		}
                 my $snploci = $printLine . "\t" . $snpStringHash->{$id}->{'loci'} . "\t" . $startbp;
-		push @output, $snploci; #, $printLine;
+		push @output, $snploci;
 	}
 	$self->_printFH->{snpTableFH}->print(@output);
 }
