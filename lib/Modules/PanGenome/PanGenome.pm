@@ -722,6 +722,7 @@ sub _printResults{
 					   ,snpChar=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{value}
 					   ,startBp=>$finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}
 					   ,contigId=>$finalResult->{genomeResults}->{$genome}->{binary}->[0]->{contig_id}
+					   ,$snpStringHash{$snpId}->{'snp_position'} = $finalResult->{genomeResults}->{$genome}->{snp}->{$snpId}->{start_bp}
 					);
 				}
 
@@ -841,7 +842,7 @@ sub _printCoreSnpData{
 sub _printSnpTable{
 	my $self=shift;
 	my $snpStringHash = shift;
-
+	#my $finalResult = shift;
 	my @output;
 	foreach my $id(sort keys %{$snpStringHash}){
 		my $printLine = "\n";
@@ -851,7 +852,10 @@ sub _printSnpTable{
 			$printLine .= ("\t" . $snpStringHash->{$id}->{$genome});
                         my $lociname = $snpStringHash->{$id}->{'loci'};
                         my $refgenome = (split /|/, $lociname)[1];
-                        $startbp = 150 if $genome==$refgenome; 
+                        $startbp = $snpStringHash->{$id}->{'snp_position'} if $snpStringHash->{$id}->{$genome}==$refgenome;
+                        #print "$snpStringHash->{$id}"
+                        #print $params->{$id}->{$startBp}
+                        #print"$finalResult->{$genome}->{$id}->{$start_bp}";
 		}
                 my $snploci = $printLine . "\t" . $snpStringHash->{$id}->{'loci'} . "\t" . $startbp;
 		push @output, $snploci; #, $printLine;
